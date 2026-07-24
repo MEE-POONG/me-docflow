@@ -1,8 +1,10 @@
-export default function OrganizationsPage() {
+import { getPartners } from './actions';
+import OrganizationsClient from './OrganizationsClient';
+
+export default async function OrganizationsPage() {
+  const partners = await getPartners();
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Organizations</h1>
-      <p>This is the Organizations page.</p>
-    </div>
+    <OrganizationsClient initialPartners={partners} />
   );
 }
