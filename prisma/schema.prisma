@@ -1,0 +1,800 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * =========================
+ * ENUMS
+ * =========================
+ */
+
+enum SystemAdminRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+}
+
+enum CompanyStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum CompanyUserRole {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  FINANCE
+  HR
+  OPERATION
+  STAFF
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  DELETED
+}
+
+enum PlanStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  TRIAL
+}
+
+enum DocumentStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  ARCHIVED
+}
+
+enum TemplateMode {
+  FORM
+  DESIGNER
+  HTML
+}
+
+enum PaperSize {
+  A4
+  A5
+  LETTER
+  LEGAL
+}
+
+enum PaperOrientation {
+  PORTRAIT
+  LANDSCAPE
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  DATETIME
+  TEXTAREA
+  RICH_TEXT
+  IMAGE
+  FILE
+  TABLE
+  SELECT
+  CHECKBOX
+  RADIO
+  SIGNATURE
+  BOOLEAN
+  CURRENCY
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PartnerType {
+  CUSTOMER
+  VENDOR
+}
+
+/**
+ * =========================
+ * SYSTEM ADMIN
+ * แอดมินกลางของระบบ
+ * =========================
+ */
+
+model SystemAdmin {
+  id           String          @id @default(auto()) @map("_id") @db.ObjectId
+  username     String          @unique
+  email        String          @unique
+  passwordHash String
+  name         String
+  role         SystemAdminRole @default(ADMIN)
+  isActive     Boolean         @default(true)
+
+  createdTemplates DocumentTemplate[] @relation("AdminCreatedTemplates")
+  auditLogs        AuditLog[]         @relation("AdminAuditLogs")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * =========================
+ * PACKAGE / PLAN
+ * แพ็กเกจระบบ
+ * =========================
+ */
+
+model Plan {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+
+  priceSatang  Int  @default(0)
+  maxUsers     Int?
+  maxDocuments Int?
+  maxStorageMb Int?
+
+  status PlanStatus @default(ACTIVE)
+
+  companies     Company[]
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Subscription {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  planId String @db.ObjectId
+  plan   Plan   @relation(fields: [planId], references: [id])
+
+  status    SubscriptionStatus @default(TRIAL)
+  startedAt DateTime           @default(now())
+  expiredAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([planId])
+}
+
+/**
+ * =========================
+ * COMPANY / TENANT
+ * บริษัทที่มาใช้ระบบ
+ * =========================
+ */
+
+model Company {
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  legalName  String?
+  taxId      String?
+  branchCode String?
+
+  email   String?
+  phone   String?
+  address String?
+  logoUrl String?
+
+  status CompanyStatus @default(ACTIVE)
+
+  planId String? @db.ObjectId
+  plan   Plan?   @relation(fields: [planId], references: [id])
+
+  settings Json?
+
+  users                  CompanyUser[]
+  departments            Department[]
+  documentTemplates      DocumentTemplate[]
+  documentCategories     DocumentCategory[]
+  documentTypes          DocumentType[]
+  templateFields         TemplateField[]
+  documents              Document[]
+  documentFiles          DocumentFile[]
+  customers              BusinessPartner[]
+  employees              Employee[]
+  approvalFlows          ApprovalFlow[]
+  approvalSteps          ApprovalStep[]
+  documentApprovals      DocumentApproval[]
+  documentNumberSettings DocumentNumberSetting[]
+  subscriptions          Subscription[]
+  auditLogs              AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taxId])
+  @@index([status])
+}
+
+/**
+ * =========================
+ * COMPANY USER
+ * ผู้ใช้งานของแต่ละบริษัท
+ * =========================
+ */
+
+model CompanyUser {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  departmentId String?     @db.ObjectId
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  name         String
+  email        String
+  passwordHash String
+  phone        String?
+
+  role   CompanyUserRole @default(STAFF)
+  status UserStatus      @default(ACTIVE)
+
+  lastLoginAt DateTime?
+
+  createdDocuments  Document[]         @relation("DocumentCreatedBy")
+  approvedDocuments Document[]         @relation("DocumentApprovedBy")
+  uploadedFiles     DocumentFile[]     @relation("FileUploadedBy")
+  approvalActions   DocumentApproval[] @relation("ApprovalActionBy")
+  createdTemplates  DocumentTemplate[] @relation("UserCreatedTemplates")
+  auditLogs         AuditLog[]         @relation("UserAuditLogs")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, email])
+  @@index([companyId])
+  @@index([role])
+}
+
+model Department {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  name        String
+  description String?
+  isActive    Boolean @default(true)
+
+  users     CompanyUser[]
+  employees Employee[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+/**
+ * =========================
+ * DOCUMENT CATEGORY / TYPE
+ * หมวดหมู่และประเภทเอกสาร
+ * =========================
+ */
+
+model DocumentCategory {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String?  @db.ObjectId
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  name        String
+  slug        String
+  description String?
+  icon        String?
+  showOrder   Int     @default(0)
+  isGlobal    Boolean @default(false)
+  isActive    Boolean @default(true)
+
+  types     DocumentType[]
+  templates DocumentTemplate[]
+  documents Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, slug])
+  @@index([companyId])
+  @@index([isGlobal])
+  @@index([isActive])
+}
+
+model DocumentType {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String?  @db.ObjectId
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  categoryId String           @db.ObjectId
+  category   DocumentCategory @relation(fields: [categoryId], references: [id])
+
+  name        String
+  slug        String
+  description String?
+  showOrder   Int     @default(0)
+  isGlobal    Boolean @default(false)
+  isActive    Boolean @default(true)
+
+  templates              DocumentTemplate[]
+  documents              Document[]
+  approvalFlows          ApprovalFlow[]
+  documentNumberSettings DocumentNumberSetting[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, categoryId, slug])
+  @@index([companyId])
+  @@index([categoryId])
+  @@index([isGlobal])
+  @@index([isActive])
+}
+
+/**
+ * =========================
+ * DOCUMENT TEMPLATE
+ * แบบฟอร์ม / เทมเพลตเอกสาร
+ * =========================
+ */
+
+model DocumentTemplate {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String?  @db.ObjectId
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  categoryId String           @db.ObjectId
+  category   DocumentCategory @relation(fields: [categoryId], references: [id])
+
+  documentTypeId String       @db.ObjectId
+  documentType   DocumentType @relation(fields: [documentTypeId], references: [id])
+
+  name        String
+  slug        String?
+  description String?
+
+  templateMode TemplateMode @default(FORM)
+
+  /**
+   * layoutJson ใช้เก็บตำแหน่งกล่องข้อความ รูปภาพ ตาราง ลายเซ็น
+   * เหมาะกับระบบ drag & drop designer
+   */
+  layoutJson Json
+
+  /**
+   * ถ้าต้องการ render จาก HTML/CSS
+   */
+  htmlContent String?
+  cssContent  String?
+
+  paperSize   PaperSize        @default(A4)
+  orientation PaperOrientation @default(PORTRAIT)
+
+  version  Int     @default(1)
+  isGlobal Boolean @default(false)
+  isActive Boolean @default(true)
+
+  createdByUserId String?      @db.ObjectId
+  createdByUser   CompanyUser? @relation("UserCreatedTemplates", fields: [createdByUserId], references: [id])
+
+  createdByAdminId String?      @db.ObjectId
+  createdByAdmin   SystemAdmin? @relation("AdminCreatedTemplates", fields: [createdByAdminId], references: [id])
+
+  fields    TemplateField[]
+  documents Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([categoryId])
+  @@index([documentTypeId])
+  @@index([isGlobal])
+  @@index([isActive])
+}
+
+/**
+ * =========================
+ * TEMPLATE FIELD
+ * ช่องข้อมูลในเทมเพลต
+ * =========================
+ */
+
+model TemplateField {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String?  @db.ObjectId
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  templateId String           @db.ObjectId
+  template   DocumentTemplate @relation(fields: [templateId], references: [id])
+
+  key   String
+  label String
+  type  FieldType
+
+  required    Boolean @default(false)
+  placeholder String?
+
+  /**
+   * options ใช้กับ SELECT / RADIO / CHECKBOX
+   * validation ใช้กำหนด min, max, pattern
+   * config ใช้เก็บ setting เฉพาะ field
+   */
+  options      Json?
+  validation   Json?
+  defaultValue Json?
+  config       Json?
+
+  showOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, templateId, key])
+  @@index([companyId])
+  @@index([templateId])
+}
+
+/**
+ * =========================
+ * DOCUMENT
+ * เอกสารที่บริษัทสร้างจริง
+ * =========================
+ */
+
+model Document {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  templateId String?           @db.ObjectId
+  template   DocumentTemplate? @relation(fields: [templateId], references: [id])
+
+  categoryId String           @db.ObjectId
+  category   DocumentCategory @relation(fields: [categoryId], references: [id])
+
+  documentTypeId String       @db.ObjectId
+  documentType   DocumentType @relation(fields: [documentTypeId], references: [id])
+
+  customerId String?          @db.ObjectId
+  customer   BusinessPartner? @relation(fields: [customerId], references: [id])
+
+  employeeId String?   @db.ObjectId
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  documentNo String
+  title      String
+  status     DocumentStatus @default(DRAFT)
+
+  /**
+   * dataJson คือข้อมูลจริงที่กรอกในฟอร์ม
+   * เช่น ชื่อลูกค้า รายการสินค้า วันที่ จำนวนเงิน ลายเซ็น
+   */
+  dataJson Json
+
+  /**
+   * แนะนำเก็บเงินเป็นสตางค์เพื่อไม่ให้เลขเพี้ยน
+   */
+  subtotalSatang Int?
+  discountSatang Int?
+  vatSatang      Int?
+  totalSatang    Int?
+
+  pdfUrl     String?
+  previewUrl String?
+  note       String?
+
+  currentApprovalStep Int?
+  rejectedReason      String?
+
+  isLocked Boolean @default(false)
+
+  createdById String      @db.ObjectId
+  createdBy   CompanyUser @relation("DocumentCreatedBy", fields: [createdById], references: [id])
+
+  approvedById String?      @db.ObjectId
+  approvedBy   CompanyUser? @relation("DocumentApprovedBy", fields: [approvedById], references: [id])
+
+  approvedAt  DateTime?
+  rejectedAt  DateTime?
+  cancelledAt DateTime?
+
+  files     DocumentFile[]
+  approvals DocumentApproval[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, documentNo])
+  @@index([companyId])
+  @@index([categoryId])
+  @@index([documentTypeId])
+  @@index([customerId])
+  @@index([employeeId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/**
+ * =========================
+ * DOCUMENT FILE
+ * ไฟล์แนบ / PDF / รูปภาพ
+ * =========================
+ */
+
+model DocumentFile {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  documentId String   @db.ObjectId
+  document   Document @relation(fields: [documentId], references: [id])
+
+  fileName String
+  fileUrl  String
+  fileType String?
+  fileSize Int?
+
+  uploadedById String?      @db.ObjectId
+  uploadedBy   CompanyUser? @relation("FileUploadedBy", fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([documentId])
+}
+
+/**
+ * =========================
+ * BUSINESS PARTNER
+ * ลูกค้า / คู่ค้า
+ * =========================
+ */
+
+model BusinessPartner {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  type PartnerType @default(CUSTOMER)
+
+  name       String
+  taxId      String?
+  branchCode String?
+  email      String?
+  phone      String?
+  address    String?
+
+  contactName  String?
+  contactPhone String?
+
+  documents Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([type])
+  @@index([taxId])
+}
+
+/**
+ * =========================
+ * EMPLOYEE
+ * พนักงานของบริษัท
+ * =========================
+ */
+
+model Employee {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  departmentId String?     @db.ObjectId
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  code         String?
+  name         String
+  email        String?
+  phone        String?
+  position     String?
+  salarySatang Int?
+
+  startDate DateTime?
+  endDate   DateTime?
+  status    UserStatus @default(ACTIVE)
+
+  documents Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([departmentId])
+}
+
+/**
+ * =========================
+ * APPROVAL FLOW
+ * ระบบอนุมัติเอกสาร
+ * =========================
+ */
+
+model ApprovalFlow {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  documentTypeId String       @db.ObjectId
+  documentType   DocumentType @relation(fields: [documentTypeId], references: [id])
+
+  name     String
+  isActive Boolean @default(true)
+
+  steps ApprovalStep[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([documentTypeId])
+}
+
+model ApprovalStep {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  approvalFlowId String       @db.ObjectId
+  approvalFlow   ApprovalFlow @relation(fields: [approvalFlowId], references: [id])
+
+  stepOrder Int
+
+  /**
+   * ใช้ได้ 2 แบบ:
+   * 1. อนุมัติตาม role เช่น OWNER, ADMIN, ACCOUNTANT
+   * 2. อนุมัติโดย user เฉพาะคน
+   */
+  approverRole   CompanyUserRole?
+  approverUserId String?          @db.ObjectId
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, approvalFlowId, stepOrder])
+  @@index([companyId])
+  @@index([approvalFlowId])
+}
+
+model DocumentApproval {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  documentId String   @db.ObjectId
+  document   Document @relation(fields: [documentId], references: [id])
+
+  stepOrder Int
+  status    ApprovalStatus @default(PENDING)
+  note      String?
+
+  actionById String?      @db.ObjectId
+  actionBy   CompanyUser? @relation("ApprovalActionBy", fields: [actionById], references: [id])
+
+  actionAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([documentId])
+  @@index([status])
+}
+
+/**
+ * =========================
+ * DOCUMENT NUMBER SETTING
+ * ตั้งค่าเลขเอกสาร เช่น QT-2026-0001
+ * =========================
+ */
+
+model DocumentNumberSetting {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  documentTypeId String       @db.ObjectId
+  documentType   DocumentType @relation(fields: [documentTypeId], references: [id])
+
+  prefix        String
+  runningNumber Int    @default(1)
+  padding       Int    @default(4)
+
+  /**
+   * YEARLY = ขึ้นปีใหม่เริ่ม 1 ใหม่
+   * MONTHLY = ขึ้นเดือนใหม่เริ่ม 1 ใหม่
+   * NEVER = รันต่อไปเรื่อย ๆ
+   */
+  resetMode String @default("YEARLY")
+
+  currentYear  Int?
+  currentMonth Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, documentTypeId])
+  @@index([companyId])
+}
+
+/**
+ * =========================
+ * AUDIT LOG
+ * ประวัติการใช้งานระบบ
+ * =========================
+ */
+
+model AuditLog {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String?  @db.ObjectId
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  actorUserId String?      @db.ObjectId
+  actorUser   CompanyUser? @relation("UserAuditLogs", fields: [actorUserId], references: [id])
+
+  actorAdminId String?      @db.ObjectId
+  actorAdmin   SystemAdmin? @relation("AdminAuditLogs", fields: [actorAdminId], references: [id])
+
+  action    String
+  module    String
+  detail    Json?
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([actorUserId])
+  @@index([actorAdminId])
+  @@index([action])
+  @@index([createdAt])
+}
