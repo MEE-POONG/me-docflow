@@ -52,21 +52,21 @@ export default function AdminLogsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wider mb-1">Audit Trails</p>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2 font-serif">บันทึกกิจกรรมระบบ</h1>
-          <p className="text-sm text-slate-500">ตรวจสอบและสืบค้นประวัติกิจกรรม กิจกรรมความปลอดภัย และประวัติธุรกรรมทั้งหมดของแอปพลิเคชัน</p>
+          <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">Audit Trails</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-serif">บันทึกกิจกรรมระบบ</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">ตรวจสอบและสืบค้นประวัติกิจกรรม กิจกรรมความปลอดภัย และประวัติธุรกรรมทั้งหมดของแอปพลิเคชัน</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={loadLogs}
-            className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-gray-200 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer font-sans"
+            className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-gray-200 dark:border-slate-800 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer font-sans"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             โหลดประวัติใหม่
           </button>
           <button
             onClick={handleClearLogs}
-            className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-650 border border-red-200 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer font-sans"
+            className="flex items-center gap-1.5 bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-650 dark:text-red-400 border border-red-200 dark:border-red-900/40 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer font-sans"
           >
             <Trash2 className="w-3.5 h-3.5" />
             ล้างประวัติ
@@ -75,15 +75,15 @@ export default function AdminLogsPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
         <div className="relative w-full md:max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+          <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-3.5" />
           <input
             type="text"
             placeholder="ค้นหาข้อความกิจกรรม หรือบัญชีผู้กระทำ..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border border-gray-300 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+            className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200"
           />
         </div>
 
@@ -101,7 +101,7 @@ export default function AdminLogsPage() {
               className={`px-4 py-2 rounded-xl transition-all cursor-pointer font-semibold font-sans border ${
                 filterType === type.id
                   ? "bg-amber-500 text-slate-950 border-amber-500 shadow-sm"
-                  : "bg-gray-50 text-slate-600 hover:text-slate-900 border-gray-200 hover:bg-gray-100"
+                  : "bg-gray-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border-gray-200 dark:border-slate-850 hover:bg-gray-100 dark:hover:bg-slate-800"
               }`}
             >
               {type.label}
@@ -111,10 +111,10 @@ export default function AdminLogsPage() {
       </div>
 
       {/* Logs List Container */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors duration-200">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-gray-650">
-            <thead className="text-gray-500 uppercase bg-gray-50 border-b border-gray-200 font-bold">
+          <table className="w-full text-left text-xs text-gray-655 dark:text-slate-350">
+            <thead className="text-gray-500 dark:text-slate-400 uppercase bg-gray-50 dark:bg-slate-950 border-b border-gray-200 dark:border-slate-800 font-bold">
               <tr>
                 <th className="py-3.5 px-6">ระดับความสำคัญ</th>
                 <th className="py-3.5 px-6">เวลาเหตุการณ์</th>
@@ -122,41 +122,41 @@ export default function AdminLogsPage() {
                 <th className="py-3.5 px-6">กิจกรรม / คำสั่งประมวลผล</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150 font-mono">
+            <tbody className="divide-y divide-gray-150 dark:divide-slate-800 font-mono">
               {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-12 text-slate-450 font-sans">
+                  <td colSpan={4} className="text-center py-12 text-slate-450 dark:text-slate-500 font-sans">
                     ไม่พบบันทึกกิจกรรมตามเงื่อนไขที่กำหนด
                   </td>
                 </tr>
               ) : (
                 filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50/60 transition-colors">
+                  <tr key={log.id} className="hover:bg-gray-50/60 dark:hover:bg-slate-800/10 transition-colors">
                     <td className="py-4 px-6">
                       {log.type === "security" ? (
-                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-100 px-2.5 py-1 rounded-full font-sans">
-                          <ShieldAlert className="w-3.5 h-3.5 text-amber-550" />
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 px-2.5 py-1 rounded-full font-sans">
+                          <ShieldAlert className="w-3.5 h-3.5 text-amber-550 dark:text-amber-500" />
                           Security
                         </span>
                       ) : log.type === "warning" ? (
-                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-full font-sans">
-                          <AlertTriangle className="w-3.5 h-3.5 text-rose-550" />
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-rose-605 dark:text-rose-500 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 px-2.5 py-1 rounded-full font-sans">
+                          <AlertTriangle className="w-3.5 h-3.5 text-rose-550 dark:text-rose-500" />
                           Warning
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full font-sans">
-                          <Info className="w-3.5 h-3.5 text-slate-500" />
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-full font-sans">
+                          <Info className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                           Info
                         </span>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-slate-550 text-xs">
+                    <td className="py-4 px-6 text-slate-550 dark:text-slate-400 text-xs">
                       {log.timestamp}
                     </td>
-                    <td className="py-4 px-6 font-bold text-slate-900 text-xs">
+                    <td className="py-4 px-6 font-bold text-slate-900 dark:text-white text-xs">
                       {log.user}
                     </td>
-                    <td className="py-4 px-6 text-slate-600 text-xs font-sans font-light">
+                    <td className="py-4 px-6 text-slate-600 dark:text-slate-300 text-xs font-sans font-light">
                       {log.action}
                     </td>
                   </tr>
