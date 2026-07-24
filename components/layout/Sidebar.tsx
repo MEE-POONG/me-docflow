@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -17,6 +17,26 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [activeCompanyName, setActiveCompanyName] = useState("บริษัท สยาม รีเทล จำกัด (มหาชน)");
+
+  useEffect(() => {
+    const updateActiveCompany = () => {
+      const saved = localStorage.getItem("me_docflow_companies");
+      if (saved) {
+        try {
+          const list = JSON.parse(saved);
+          const active = list.find((c: any) => c.isActive);
+          if (active) {
+            setActiveCompanyName(active.companyName);
+          }
+        } catch (e) {}
+      }
+    };
+
+    updateActiveCompany();
+    window.addEventListener("activeCompanyChanged", updateActiveCompany);
+    return () => window.removeEventListener("activeCompanyChanged", updateActiveCompany);
+  }, []);
   
   // State for expanded menus
   const [expanded, setExpanded] = useState({
@@ -39,7 +59,7 @@ export default function Sidebar() {
           <ShieldCheck size={24} />
         </div>
         <div>
-          <h2 className="text-sm font-bold text-gray-800 leading-tight">Siam Retail Co., Ltd.</h2>
+          <h2 className="text-sm font-bold text-gray-800 leading-tight truncate max-w-[130px]" title={activeCompanyName}>{activeCompanyName}</h2>
           <p className="text-[11px] text-gray-500">Company Workspace</p>
         </div>
         <div className="ml-auto text-gray-400 cursor-pointer p-1 hover:bg-gray-100 rounded">
