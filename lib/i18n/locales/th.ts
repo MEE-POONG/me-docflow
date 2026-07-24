@@ -44,7 +44,7 @@ const th = {
     subtitle: "จัดการข้อมูลลูกค้า คู่ค้า (CUSTOMER/VENDOR) และเอกสารที่เกี่ยวข้อง",
     searchPlaceholder: "ค้นหาลูกค้า / คู่ค้า",
     filterPlaceholder: "CUSTOMER / VENDOR",
-    addCustomer: "+ เพิ่มลูกค้า",
+    addCustomer: "เพิ่มลูกค้า",
     editCustomer: "แก้ไขลูกค้า",
     deleteCustomer: "ลบลูกค้า",
     viewDocuments: "ดูเอกสารที่เกี่ยวข้อง",
@@ -107,7 +107,7 @@ const th = {
     confirmDelete: "คุณแน่ใจหรือไม่ว่าต้องการลบพนักงานรายนี้?",
   },
   departments: {
-    title: "แผนก (Departments)",
+    title: "แผนก",
     subtitle: "จัดการข้อมูลแผนกและฝ่ายต่างๆ ภายในองค์กร",
     addDepartment: "เพิ่มแผนก",
     searchPlaceholder: "ค้นหาชื่อแผนก หรือรายละเอียด...",
