@@ -161,6 +161,13 @@ export default function Sidebar() {
               </div>
               {expanded.settings ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
             </button>
+            {expanded.settings && (
+              <div className="pl-11 pr-3 py-1 space-y-1">
+                <Link href="/settings/company" className="block px-3 py-2 text-[13px] text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">ตั้งค่าบริษัท</Link>
+                <Link href="/settings/users" className="block px-3 py-2 text-[13px] text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">ผู้ใช้งาน</Link>
+                <Link href="/settings/documents" className="block px-3 py-2 text-[13px] text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">เลขเอกสาร</Link>
+              </div>
+            )}
           </div>
         </nav>
       </div>
