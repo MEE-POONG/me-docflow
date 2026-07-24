@@ -71,7 +71,13 @@ export default function LoginPage() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (loginIdentifier && loginPassword) {
-      router.push("/dashboard");
+      if (loginIdentifier === "admin" && loginPassword === "password") {
+        localStorage.setItem("me_docflow_admin_logged_in", "true");
+        router.push("/admin/dashboard");
+      } else {
+        localStorage.setItem("me_docflow_user_session", "true");
+        router.push("/dashboard");
+      }
     }
   };
 

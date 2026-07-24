@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   ShieldCheck, 
   LayoutDashboard, 
@@ -12,11 +12,14 @@ import {
   Settings, 
   PieChart, 
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  LogOut,
+  Key
 } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [activeCompanyName, setActiveCompanyName] = useState("บริษัท สยาม รีเทล จำกัด (มหาชน)");
 
   useEffect(() => {
@@ -49,6 +52,12 @@ export default function Sidebar() {
 
   const toggleMenu = (menu: keyof typeof expanded) => {
     setExpanded(prev => ({ ...prev, [menu]: !prev[menu] }));
+  };
+  const handleLogout = () => {
+    if (confirm("คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?")) {
+      localStorage.removeItem("me_docflow_user_session");
+      router.push("/login");
+    }
   };
 
   return (
@@ -188,6 +197,30 @@ export default function Sidebar() {
                 <Link href="/settings/documents" className="block px-3 py-2 text-[13px] text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">เลขเอกสาร</Link>
               </div>
             )}
+          </div>
+
+          {/* Change Password */}
+          <div className="pt-1">
+            <Link 
+              href="/change-password"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                pathname === '/change-password' ? 'bg-emerald-50 text-emerald-600 font-medium' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Key size={20} className={pathname === '/change-password' ? 'text-emerald-600' : 'text-gray-400'} />
+              <span className="text-sm font-medium">เปลี่ยนรหัสผ่าน</span>
+            </Link>
+          </div>
+
+          {/* Logout */}
+          <div className="pt-1">
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-left cursor-pointer font-sans"
+            >
+              <LogOut size={20} className="text-red-500" />
+              <span className="text-sm font-medium">ออกจากระบบ</span>
+            </button>
           </div>
         </nav>
       </div>

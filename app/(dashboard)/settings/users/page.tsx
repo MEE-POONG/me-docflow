@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { 
   UserPlus, 
   Edit2, 
@@ -14,7 +15,8 @@ import {
   Eye, 
   EyeOff, 
   Lock, 
-  Key 
+  Key,
+  LogOut
 } from "lucide-react";
 
 interface UserItem {
@@ -35,6 +37,7 @@ const roleNames: Record<string, string> = {
 };
 
 export default function UsersSettingsPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<UserItem[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
@@ -48,15 +51,7 @@ export default function UsersSettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
-  // My Password states (Change My Password Form)
-  const [myCurrentPassword, setMyCurrentPassword] = useState("");
-  const [myNewPassword, setMyNewPassword] = useState("");
-  const [myConfirmPassword, setMyConfirmPassword] = useState("");
-  const [showMyCurrentPass, setShowMyCurrentPass] = useState(false);
-  const [showMyNewPass, setShowMyNewPass] = useState(false);
-  const [showMyConfirmPass, setShowMyConfirmPass] = useState(false);
-  const [myPasswordSuccess, setMyPasswordSuccess] = useState(false);
-  const [myPasswordError, setMyPasswordError] = useState("");
+
 
   // Load from localStorage or seed mock data
   useEffect(() => {
@@ -143,49 +138,7 @@ export default function UsersSettingsPage() {
     setTimeout(() => setIsSaved(false), 3000);
   };
 
-  // Change currently logged-in user's password (Melisara Chaimongkol, ID: "1")
-  const handleChangeMyPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    setMyPasswordError("");
-    setMyPasswordSuccess(false);
 
-    if (!myCurrentPassword || !myNewPassword || !myConfirmPassword) {
-      setMyPasswordError("กรุณากรอกข้อมูลให้ครบทุกช่อง");
-      return;
-    }
-
-    // Find the logged-in user (Melisara Chaimongkol) which has id "1"
-    const myAccount = users.find((u) => u.id === "1");
-    const currentPassInDb = myAccount?.password || "password123";
-
-    if (myCurrentPassword !== currentPassInDb) {
-      setMyPasswordError("รหัสผ่านปัจจุบันไม่ถูกต้อง");
-      return;
-    }
-
-    if (myNewPassword !== myConfirmPassword) {
-      setMyPasswordError("รหัสผ่านใหม่และยืนยันรหัสผ่านใหม่ไม่ตรงกัน");
-      return;
-    }
-
-    if (myNewPassword.length < 6) {
-      setMyPasswordError("รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร");
-      return;
-    }
-
-    // Update the password in database
-    const updatedUsers = users.map((u) => 
-      u.id === "1" ? { ...u, password: myNewPassword } : u
-    );
-
-    saveToLocalStorage(updatedUsers);
-    setMyPasswordSuccess(true);
-    setMyCurrentPassword("");
-    setMyNewPassword("");
-    setMyConfirmPassword("");
-    
-    setTimeout(() => setMyPasswordSuccess(false), 4000);
-  };
 
   return (
     <div className="space-y-6">
@@ -425,113 +378,7 @@ export default function UsersSettingsPage() {
         </div>
       </div>
 
-      {/* ================= CHANGE MY PASSWORD SECTION ================= */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mt-8">
-        <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
-          <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600">
-            <Key className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="font-bold text-gray-800">เปลี่ยนรหัสผ่านของฉัน</h3>
-            <p className="text-xs text-gray-500">เปลี่ยนรหัสผ่านสำหรับล็อกอินเข้าสู่ระบบของบัญชีผู้ใช้นี้ (Melisara Chaimongkol)</p>
-          </div>
-        </div>
 
-        <form onSubmit={handleChangeMyPassword} className="p-6 space-y-4 max-w-2xl">
-          {/* Notification Messages */}
-          {myPasswordSuccess && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-              <p className="text-sm font-semibold">เปลี่ยนรหัสผ่านส่วนตัวของคุณสำเร็จแล้ว!</p>
-            </div>
-          )}
-
-          {myPasswordError && (
-            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-              <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-              <p className="text-sm font-semibold">{myPasswordError}</p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Current Password */}
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">รหัสผ่านปัจจุบัน</label>
-              <div className="relative">
-                <input
-                  type={showMyCurrentPass ? "text" : "password"}
-                  required
-                  value={myCurrentPassword}
-                  onChange={(e) => setMyCurrentPassword(e.target.value)}
-                  className="w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all font-mono"
-                  placeholder="รหัสผ่านปัจจุบัน"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowMyCurrentPass(!showMyCurrentPass)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                >
-                  {showMyCurrentPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* New Password */}
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">รหัสผ่านใหม่</label>
-              <div className="relative">
-                <input
-                  type={showMyNewPass ? "text" : "password"}
-                  required
-                  value={myNewPassword}
-                  onChange={(e) => setMyNewPassword(e.target.value)}
-                  className="w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all font-mono"
-                  placeholder="รหัสผ่านใหม่"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowMyNewPass(!showMyNewPass)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                >
-                  {showMyNewPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Confirm New Password */}
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">ยืนยันรหัสผ่านใหม่</label>
-              <div className="relative">
-                <input
-                  type={showMyConfirmPass ? "text" : "password"}
-                  required
-                  value={myConfirmPassword}
-                  onChange={(e) => setMyConfirmPassword(e.target.value)}
-                  className="w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all font-mono"
-                  placeholder="ยืนยันรหัสผ่านใหม่"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowMyConfirmPass(!showMyConfirmPass)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                >
-                  {showMyConfirmPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-2 flex justify-end">
-            <button
-              type="submit"
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-5 rounded-xl text-sm shadow-sm transition-colors cursor-pointer"
-            >
-              <Lock className="w-4 h-4" />
-              อัปเดตรหัสผ่านของฉัน
-            </button>
-          </div>
-        </form>
-      </div>
 
     </div>
   );
