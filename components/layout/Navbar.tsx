@@ -1,8 +1,30 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Search, Bell, Moon, ChevronDown, User } from "lucide-react";
 
 export default function Navbar() {
+  const [activeCompanyName, setActiveCompanyName] = useState("บริษัท สยาม รีเทล จำกัด (มหาชน)");
+
+  useEffect(() => {
+    const updateActiveCompany = () => {
+      const saved = localStorage.getItem("me_docflow_companies");
+      if (saved) {
+        try {
+          const list = JSON.parse(saved);
+          const active = list.find((c: any) => c.isActive);
+          if (active) {
+            setActiveCompanyName(active.companyName);
+          }
+        } catch (e) {}
+      }
+    };
+
+    updateActiveCompany();
+    window.addEventListener("activeCompanyChanged", updateActiveCompany);
+    return () => window.removeEventListener("activeCompanyChanged", updateActiveCompany);
+  }, []);
+
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6">
       
@@ -26,7 +48,7 @@ export default function Navbar() {
         
         {/* Company Dropdown */}
         <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 rounded-lg border border-transparent hover:border-gray-200 transition-colors">
-          <span className="text-sm text-gray-700">Siam Retail Co., Ltd.</span>
+          <span className="text-sm text-gray-700 truncate max-w-[150px]" title={activeCompanyName}>{activeCompanyName}</span>
           <ChevronDown className="w-4 h-4 text-gray-400" />
         </button>
 

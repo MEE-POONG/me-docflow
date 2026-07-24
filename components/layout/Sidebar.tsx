@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -17,6 +17,26 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [activeCompanyName, setActiveCompanyName] = useState("บริษัท สยาม รีเทล จำกัด (มหาชน)");
+
+  useEffect(() => {
+    const updateActiveCompany = () => {
+      const saved = localStorage.getItem("me_docflow_companies");
+      if (saved) {
+        try {
+          const list = JSON.parse(saved);
+          const active = list.find((c: any) => c.isActive);
+          if (active) {
+            setActiveCompanyName(active.companyName);
+          }
+        } catch (e) {}
+      }
+    };
+
+    updateActiveCompany();
+    window.addEventListener("activeCompanyChanged", updateActiveCompany);
+    return () => window.removeEventListener("activeCompanyChanged", updateActiveCompany);
+  }, []);
   
   // State for expanded menus
   const [expanded, setExpanded] = useState({
@@ -39,7 +59,7 @@ export default function Sidebar() {
           <ShieldCheck size={24} />
         </div>
         <div>
-          <h2 className="text-sm font-bold text-gray-800 leading-tight">Siam Retail Co., Ltd.</h2>
+          <h2 className="text-sm font-bold text-gray-800 leading-tight truncate max-w-[130px]" title={activeCompanyName}>{activeCompanyName}</h2>
           <p className="text-[11px] text-gray-500">Company Workspace</p>
         </div>
         <div className="ml-auto text-gray-400 cursor-pointer p-1 hover:bg-gray-100 rounded">
@@ -161,6 +181,13 @@ export default function Sidebar() {
               </div>
               {expanded.settings ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
             </button>
+            {expanded.settings && (
+              <div className="pl-11 pr-3 py-1 space-y-1">
+                <Link href="/settings/company" className="block px-3 py-2 text-[13px] text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">ตั้งค่าบริษัท</Link>
+                <Link href="/settings/users" className="block px-3 py-2 text-[13px] text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">ผู้ใช้งาน</Link>
+                <Link href="/settings/documents" className="block px-3 py-2 text-[13px] text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">เลขเอกสาร</Link>
+              </div>
+            )}
           </div>
         </nav>
       </div>
