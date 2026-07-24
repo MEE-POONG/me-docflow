@@ -118,7 +118,7 @@ export default function Sidebar() {
             {expanded.company && (
               <div className="pl-11 pr-3 py-1 space-y-1">
                 <Link href="/organizations" className="block px-3 py-2 text-[13px] text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">ลูกค้า / คู่ค้า</Link>
-                <Link href="/users" className="block px-3 py-2 text-[13px] text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">พนักงาน</Link>
+                <Link href="/employees" className="block px-3 py-2 text-[13px] text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">พนักงาน</Link>
                 <Link href="/departments" className="block px-3 py-2 text-[13px] text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg">แผนก</Link>
               </div>
             )}
