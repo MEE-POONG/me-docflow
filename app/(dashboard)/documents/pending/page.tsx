@@ -1,11 +1,12 @@
-import { getDocuments, getDocumentCategories, getDocumentTypes } from '../actions';
+import { getDocuments, getDocumentCategories, getDocumentTypes, getDocumentTemplates } from '../actions';
 import DocumentsClient from '../DocumentsClient';
 
 export default async function DocumentsPendingPage() {
-  const [documents, categories, docTypes] = await Promise.all([
+  const [documents, categories, docTypes, templates] = await Promise.all([
     getDocuments(),
     getDocumentCategories(),
     getDocumentTypes(),
+    getDocumentTemplates(),
   ]);
 
   // Pre-filter to only pending documents
@@ -16,6 +17,7 @@ export default async function DocumentsPendingPage() {
       initialDocuments={pendingDocs}
       categories={categories}
       docTypes={docTypes}
+      initialTemplates={templates}
     />
   );
 }

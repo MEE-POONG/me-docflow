@@ -6,7 +6,7 @@ import {
   FileText, Clock, CheckCircle, XCircle, Archive, Ban, ChevronDown
 } from 'lucide-react';
 import {
-  createDocument, updateDocument, deleteDocument,
+  createDocument, updateDocument, deleteDocument, updateDocumentStatus,
   getDocumentTypes,
 } from './actions';
 import type { DocumentWithRelations } from './actions';
@@ -14,11 +14,13 @@ import { DocumentStatus } from '@prisma/client';
 
 type Category = { id: string; name: string };
 type DocType = { id: string; name: string; categoryId: string };
+type Template = { id: string; name: string; documentTypeId: string; categoryId: string };
 
 type Props = {
   initialDocuments: DocumentWithRelations[];
   categories: Category[];
   docTypes: DocType[];
+  initialTemplates?: Template[];
 };
 
 const STATUS_CONFIG: Record<
@@ -82,9 +84,12 @@ export default function DocumentsClient({
   initialDocuments,
   categories,
   docTypes: initialDocTypes,
+  initialTemplates = [],
 }: Props) {
   const [documents, setDocuments] = useState<DocumentWithRelations[]>(initialDocuments);
   const [docTypes, setDocTypes] = useState<DocType[]>(initialDocTypes);
+  const [templates, setTemplates] = useState<Template[]>(initialTemplates);
+  const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -96,6 +101,7 @@ export default function DocumentsClient({
     title: '',
     categoryId: categories[0]?.id || '',
     documentTypeId: '',
+    templateId: '',
     status: 'DRAFT' as DocumentStatus,
     note: '',
   });
@@ -110,6 +116,17 @@ export default function DocumentsClient({
       setFormData((prev) => ({ ...prev, documentTypeId: filtered[0].id }));
     }
   }, [formData.categoryId, initialDocTypes]);
+
+  // Load templates when documentTypeId changes in form
+  useEffect(() => {
+    const filtered = templates.filter(
+      (t) => !formData.documentTypeId || t.documentTypeId === formData.documentTypeId
+    );
+    setFilteredTemplates(filtered);
+    if (filtered.length > 0 && !filtered.find((t) => t.id === formData.templateId)) {
+      setFormData((prev) => ({ ...prev, templateId: '' })); // Can default to empty or first
+    }
+  }, [formData.documentTypeId, templates]);
 
   const filteredDocuments = documents.filter((doc) => {
     const q = searchQuery.toLowerCase();
@@ -131,6 +148,7 @@ export default function DocumentsClient({
         title: doc.title,
         categoryId: doc.category.id,
         documentTypeId: doc.documentType.id,
+        templateId: (doc as any).templateId || '',
         status: doc.status,
         note: doc.note || '',
       });
@@ -140,6 +158,7 @@ export default function DocumentsClient({
         title: '',
         categoryId: categories[0]?.id || '',
         documentTypeId: '',
+        templateId: '',
         status: 'DRAFT',
         note: '',
       });
@@ -160,6 +179,7 @@ export default function DocumentsClient({
           title: formData.title,
           categoryId: formData.categoryId,
           documentTypeId: formData.documentTypeId,
+          templateId: formData.templateId || null,
           status: formData.status,
           note: formData.note || null,
         };
@@ -185,6 +205,20 @@ export default function DocumentsClient({
         } catch (error) {
           console.error('Failed to delete document', error);
           alert('เกิดข้อผิดพลาด ไม่สามารถลบเอกสารได้');
+        }
+      });
+    }
+  };
+
+  const handleApprove = (id: string, title: string) => {
+    if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการอนุมัติเอกสาร "${title}"?`)) {
+      startTransition(async () => {
+        try {
+          await updateDocumentStatus(id, 'APPROVED');
+          setDocuments(documents.map(d => d.id === id ? { ...d, status: 'APPROVED' as DocumentStatus } : d));
+        } catch (error) {
+          console.error('Failed to approve document', error);
+          alert('เกิดข้อผิดพลาด ไม่สามารถอนุมัติเอกสารได้');
         }
       });
     }
@@ -338,6 +372,20 @@ export default function DocumentsClient({
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {doc.status === 'PENDING' && (
+                          <button
+                            onClick={() => handleApprove(doc.id, doc.title)}
+                            disabled={isPending}
+                            className="flex items-center gap-1.5 px-3 py-1.5 border border-emerald-200 dark:border-emerald-800 rounded text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors font-medium disabled:opacity-60 bg-emerald-50 dark:bg-emerald-900/10"
+                          >
+                            {isPending ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-3 h-3" />
+                            )}{' '}
+                            อนุมัติ
+                          </button>
+                        )}
                         <button
                           onClick={() => handleOpenModal(doc)}
                           className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors font-medium"
@@ -459,6 +507,31 @@ export default function DocumentsClient({
                     {docTypes.map((type) => (
                       <option key={type.id} value={type.id}>
                         {type.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Template */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  รูปแบบ Template
+                </label>
+                {filteredTemplates.length === 0 ? (
+                  <div className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-800/50 text-sm text-gray-500 dark:text-gray-400">
+                    ไม่มี Template สำหรับประเภทนี้
+                  </div>
+                ) : (
+                  <select
+                    value={formData.templateId}
+                    onChange={(e) => setFormData({ ...formData, templateId: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400 transition-colors text-sm text-gray-700 dark:text-gray-200"
+                  >
+                    <option value="">-- ไม่ใช้ Template --</option>
+                    {filteredTemplates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.name}
                       </option>
                     ))}
                   </select>

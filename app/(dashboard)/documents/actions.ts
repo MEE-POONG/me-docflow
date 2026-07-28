@@ -91,10 +91,24 @@ export async function getDocumentTypes(categoryId?: string) {
   });
 }
 
+export async function getDocumentTemplates(documentTypeId?: string) {
+  const companyId = await getDefaultCompanyId();
+  return prisma.documentTemplate.findMany({
+    where: {
+      OR: [{ companyId }, { isGlobal: true }],
+      isActive: true,
+      ...(documentTypeId ? { documentTypeId } : {}),
+    },
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true, documentTypeId: true, categoryId: true },
+  });
+}
+
 export async function createDocument(data: {
   title: string;
   categoryId: string;
   documentTypeId: string;
+  templateId?: string | null;
   status: DocumentStatus;
   note?: string | null;
 }) {
@@ -111,6 +125,7 @@ export async function createDocument(data: {
       companyId,
       categoryId: data.categoryId,
       documentTypeId: data.documentTypeId,
+      templateId: data.templateId || null,
       createdById,
       documentNo,
       title: data.title,
@@ -128,6 +143,7 @@ export async function updateDocument(
     title: string;
     categoryId: string;
     documentTypeId: string;
+    templateId?: string | null;
     status: DocumentStatus;
     note?: string | null;
   }
@@ -139,9 +155,19 @@ export async function updateDocument(
       title: data.title,
       categoryId: data.categoryId,
       documentTypeId: data.documentTypeId,
+      templateId: data.templateId || null,
       status: data.status,
       note: data.note || null,
     },
+  });
+  revalidatePath('/documents');
+}
+
+export async function updateDocumentStatus(id: string, status: DocumentStatus) {
+  const companyId = await getDefaultCompanyId();
+  await prisma.document.update({
+    where: { id, companyId },
+    data: { status },
   });
   revalidatePath('/documents');
 }
