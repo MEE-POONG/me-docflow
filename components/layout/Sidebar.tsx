@@ -107,8 +107,9 @@ export default function Sidebar() {
             {expanded.documents && (
               <div className="pl-11 pr-3 py-1 space-y-1">
                 <Link href="/documents" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.allDocuments}</Link>
-                <Link href="/documents/create" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.createDocument}</Link>
                 <Link href="/documents/pending" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.pendingApproval}</Link>
+                <Link href="/categories" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">หมวดหมู่เอกสาร</Link>
+                <Link href="/types" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">ประเภทเอกสาร</Link>
               </div>
             )}
           </div>
@@ -128,8 +129,9 @@ export default function Sidebar() {
             {expanded.template && (
               <div className="pl-11 pr-3 py-1 space-y-1">
                 <Link href="/templates" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.allTemplates}</Link>
-                <Link href="/templates/create" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.createTemplate}</Link>
-                <Link href="/templates/designer" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.documentDesigner}</Link>
+                <Link href="/templates" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.createTemplate}</Link>
+                <Link href="/categories" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">หมวดหมู่เอกสาร</Link>
+                <Link href="/types" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">ประเภทเอกสาร</Link>
               </div>
             )}
           </div>

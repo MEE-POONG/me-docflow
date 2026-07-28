@@ -1,8 +1,18 @@
-export default function DocumentsPage() {
+import { getDocuments, getDocumentCategories, getDocumentTypes } from './actions';
+import DocumentsClient from './DocumentsClient';
+
+export default async function DocumentsPage() {
+  const [documents, categories, docTypes] = await Promise.all([
+    getDocuments(),
+    getDocumentCategories(),
+    getDocumentTypes(),
+  ]);
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Documents</h1>
-      <p>This is the Documents page.</p>
-    </div>
+    <DocumentsClient
+      initialDocuments={documents}
+      categories={categories}
+      docTypes={docTypes}
+    />
   );
 }

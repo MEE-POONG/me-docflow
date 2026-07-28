@@ -1,8 +1,7 @@
-export default function CategoriesPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Categories</h1>
-      <p>This is the Categories page.</p>
-    </div>
-  );
+import { getCategories } from './actions';
+import CategoriesClient from './CategoriesClient';
+
+export default async function CategoriesPage() {
+  const categories = await getCategories();
+  return <CategoriesClient initialCategories={categories} />;
 }

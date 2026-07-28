@@ -1,8 +1,18 @@
-export default function TemplatesPage() {
+import { getTemplates, getCategories, getDocumentTypes } from './actions';
+import TemplatesClient from './TemplatesClient';
+
+export default async function TemplatesPage() {
+  const [templates, categories, docTypes] = await Promise.all([
+    getTemplates(),
+    getCategories(),
+    getDocumentTypes(),
+  ]);
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Templates</h1>
-      <p>This is the Templates page.</p>
-    </div>
+    <TemplatesClient
+      initialTemplates={templates}
+      categories={categories}
+      docTypes={docTypes}
+    />
   );
 }
