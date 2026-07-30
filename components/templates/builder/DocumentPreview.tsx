@@ -10,9 +10,10 @@ import {
 
 type DocumentPreviewProps = {
   layoutJsonString: string | null
+  dataOverride?: Record<string, any>
 }
 
-export function DocumentPreview({ layoutJsonString }: DocumentPreviewProps) {
+export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPreviewProps) {
   if (!layoutJsonString) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 flex items-center justify-center min-h-[400px]">
@@ -53,7 +54,7 @@ export function DocumentPreview({ layoutJsonString }: DocumentPreviewProps) {
           }}
         >
           {layoutData.elements.filter(el => el.pageId === page.id).map(element => (
-            <ElementView key={element.id} element={element} />
+            <ElementView key={element.id} element={element} dataOverride={dataOverride} />
           ))}
         </div>
       ))}
@@ -61,7 +62,7 @@ export function DocumentPreview({ layoutJsonString }: DocumentPreviewProps) {
   )
 }
 
-function ElementView({ element }: { element: DesignerElement }) {
+function ElementView({ element, dataOverride }: { element: DesignerElement, dataOverride?: Record<string, any> }) {
   const baseStyle: CSSProperties = {
     position: 'absolute',
     left: `${element.x}px`,
@@ -71,7 +72,8 @@ function ElementView({ element }: { element: DesignerElement }) {
     ...element.style
   }
 
-  const content = renderElementContent(element, sampleDocumentData)
+  const dataToUse = dataOverride ? { ...sampleDocumentData, ...dataOverride } : sampleDocumentData;
+  const content = renderElementContent(element, dataToUse)
 
   switch (element.type) {
     case 'text':

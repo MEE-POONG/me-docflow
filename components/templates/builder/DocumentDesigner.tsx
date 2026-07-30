@@ -122,7 +122,7 @@ const initialElements: DesignerElement[] = [
   },
 ];
 
-const initialSnapshot: DesignerSnapshot = {
+const defaultInitialSnapshot: DesignerSnapshot = {
   selectedPageId: "page-1",
   selectedElementId: "element-heading",
   zoom: 0.72,
@@ -168,7 +168,27 @@ function elementDefaults(type: DesignerElementType, pageId: string): DesignerEle
   return { ...base, content: "ข้อความ" };
 }
 
-function useDocumentDesigner() {
+function useDocumentDesigner(initialLayoutJson?: string) {
+  const initialSnapshot = useMemo(() => {
+    if (initialLayoutJson) {
+      try {
+        const parsed = JSON.parse(initialLayoutJson);
+        if (parsed.pages && parsed.elements) {
+          return {
+            selectedPageId: parsed.pages[0]?.id ?? "page-1",
+            selectedElementId: null,
+            zoom: 0.72,
+            pages: parsed.pages,
+            elements: parsed.elements,
+            isDirty: false,
+            isSaving: false,
+          } as DesignerSnapshot;
+        }
+      } catch (e) {}
+    }
+    return defaultInitialSnapshot;
+  }, [initialLayoutJson]);
+
   const [history, setHistory] = useState<DesignerHistory>({ past: [], present: initialSnapshot, future: [] });
   const state = history.present;
 
@@ -380,8 +400,10 @@ function ElementView({ element, selected, onSelect }: { element: DesignerElement
   );
 }
 
-export function DocumentDesigner() {
-  const designer = useDocumentDesigner();
+import { useEffect, useRef } from "react";
+
+export function DocumentDesigner({ initialLayoutJson, onChange }: { initialLayoutJson?: string; onChange?: (json: string) => void }) {
+  const designer = useDocumentDesigner(initialLayoutJson);
   const { state } = designer;
   const selectedPage = state.pages.find((page) => page.id === state.selectedPageId) ?? state.pages[0];
   const pageElements = state.elements.filter((element) => element.pageId === selectedPage.id);
@@ -394,6 +416,17 @@ export function DocumentDesigner() {
     layoutJson: { pages: state.pages, elements: state.elements },
     dataJson: sampleDocumentData,
   }, null, 2), [selectedPage.height, selectedPage.width, state.elements, state.pages]);
+
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    if (onChangeRef.current) {
+      onChangeRef.current(layoutJson);
+    }
+  }, [layoutJson]);
 
   return (
     <div className="grid min-h-[760px] gap-4 xl:grid-cols-[250px_1fr_320px]">

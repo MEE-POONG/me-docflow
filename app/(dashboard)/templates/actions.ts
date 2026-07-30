@@ -160,6 +160,9 @@ export async function createTemplate(data: {
   documentTypeId: string;
   description?: string | null;
   templateMode: TemplateMode;
+  formType: string;
+  formSchema?: any;
+  layoutJson?: any;
   paperSize: PaperSize;
   orientation: PaperOrientation;
   isActive: boolean;
@@ -176,11 +179,13 @@ export async function createTemplate(data: {
       slug: slugify(data.name),
       description: data.description || null,
       templateMode: data.templateMode,
+      formType: data.formType,
+      formSchema: data.formSchema ? (data.formSchema as object) : undefined,
       paperSize: data.paperSize,
       orientation: data.orientation,
       isActive: data.isActive,
       isGlobal: false,
-      layoutJson: {},
+      layoutJson: data.layoutJson ? (data.layoutJson as object) : {},
       createdByUserId: userId,
     },
   });
@@ -195,6 +200,9 @@ export async function updateTemplate(
     documentTypeId: string;
     description?: string | null;
     templateMode: TemplateMode;
+    formType: string;
+    formSchema?: any;
+    layoutJson?: any;
     paperSize: PaperSize;
     orientation: PaperOrientation;
     isActive: boolean;
@@ -209,6 +217,9 @@ export async function updateTemplate(
       documentTypeId: data.documentTypeId,
       description: data.description || null,
       templateMode: data.templateMode,
+      formType: data.formType,
+      formSchema: data.formSchema ? (data.formSchema as object) : undefined,
+      layoutJson: data.layoutJson ? (data.layoutJson as object) : undefined,
       paperSize: data.paperSize,
       orientation: data.orientation,
       isActive: data.isActive,

@@ -88,6 +88,13 @@ export const sampleDocumentData = {
 };
 
 function getByPath(data: unknown, path: string): string {
+  if (data && typeof data === "object" && path in data) {
+    const directValue = (data as Record<string, unknown>)[path];
+    if (directValue !== undefined && directValue !== null) {
+      return String(directValue);
+    }
+  }
+
   const value = path.split(".").reduce<unknown>((current, key) => {
     if (current && typeof current === "object" && key in current) {
       return (current as Record<string, unknown>)[key];
@@ -110,5 +117,30 @@ export function renderElementContent(element: DesignerElement, dataJson: unknown
   }
 
   return renderDynamicFields(element.content, dataJson);
+}
+
+export function extractVariablesFromLayout(layoutJsonString: string): string[] {
+  try {
+    const layout = JSON.parse(layoutJsonString);
+    if (!layout || !layout.elements) return [];
+    
+    const variables = new Set<string>();
+    layout.elements.forEach((el: any) => {
+      if (el.type === "dynamicField") {
+        if (el.content) variables.add(el.content);
+      } else if (el.content && typeof el.content === "string") {
+        const matches = el.content.match(/\{\{\s*([\w.]+)\s*\}\}/g);
+        if (matches) {
+          matches.forEach((m: string) => {
+            const key = m.replace(/[{}]/g, "").trim();
+            variables.add(key);
+          });
+        }
+      }
+    });
+    return Array.from(variables);
+  } catch (e) {
+    return [];
+  }
 }
 

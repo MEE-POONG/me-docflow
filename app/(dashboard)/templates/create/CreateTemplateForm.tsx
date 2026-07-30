@@ -2,39 +2,79 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, ArrowLeft, Loader2, LayoutTemplate } from 'lucide-react'
+import { Save, ArrowLeft, Loader2, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
 import { DocumentDesigner } from '@/components/templates/builder/DocumentDesigner'
 import Link from 'next/link'
+import { createTemplate, updateTemplate } from '../actions'
 
 type CreateTemplateFormProps = {
   categories: any[]
   documentTypes: any[]
+  initialData?: any
 }
 
-export default function CreateTemplateForm({ categories, documentTypes }: CreateTemplateFormProps) {
+export default function CreateTemplateForm({ categories, documentTypes, initialData }: CreateTemplateFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    categoryId: '',
-    documentTypeId: '',
-    layoutJson: '',
-    htmlContent: ''
+    name: initialData?.name || '',
+    description: initialData?.description || '',
+    categoryId: initialData?.categoryId || '',
+    documentTypeId: initialData?.documentTypeId || '',
+    formType: initialData?.formType || 'STANDARD',
+    layoutJson: initialData?.layoutJson && Object.keys(initialData.layoutJson).length > 0 ? JSON.stringify(initialData.layoutJson, null, 2) : '',
+    htmlContent: initialData?.htmlContent || ''
   })
-  
-  const [builderMode, setBuilderMode] = useState<'JSON' | 'DESIGNER'>('DESIGNER')
+
+  const [customFields, setCustomFields] = useState<any[]>(
+    initialData?.formSchema && Array.isArray(initialData.formSchema) ? initialData.formSchema : []
+  )
+
+  const addCustomField = () => {
+    setCustomFields([...customFields, { key: '', label: '', type: 'text', required: false }])
+  }
+  const updateCustomField = (index: number, field: string, value: any) => {
+    const updated = [...customFields]
+    updated[index] = { ...updated[index], [field]: value }
+    setCustomFields(updated)
+  }
+  const removeCustomField = (index: number) => {
+    setCustomFields(customFields.filter((_, i) => i !== index))
+  }
 
   const filteredTypes = documentTypes.filter(t => t.categoryId === formData.categoryId)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     startTransition(async () => {
-      // Mock save
-      await new Promise(r => setTimeout(r, 1000))
-      router.push('/templates')
-      router.refresh()
+      try {
+        const payload = {
+          name: formData.name,
+          categoryId: formData.categoryId,
+          documentTypeId: formData.documentTypeId,
+          description: formData.description || null,
+          templateMode: 'DESIGNER' as const,
+          formType: formData.formType,
+          formSchema: formData.formType === 'CUSTOM' ? customFields : null,
+          layoutJson: formData.layoutJson ? JSON.parse(formData.layoutJson) : {},
+          paperSize: initialData?.paperSize || 'A4',
+          orientation: initialData?.orientation || 'PORTRAIT',
+          isActive: initialData?.isActive ?? true,
+        }
+
+        if (initialData?.id) {
+          await updateTemplate(initialData.id, payload)
+        } else {
+          await createTemplate(payload)
+        }
+
+        router.push('/templates')
+        router.refresh()
+      } catch (error) {
+        console.error(error)
+        alert('เกิดข้อผิดพลาด ไม่สามารถบันทึกเทมเพลตได้')
+      }
     })
   }
 
@@ -49,8 +89,12 @@ export default function CreateTemplateForm({ categories, documentTypes }: Create
             <LayoutTemplate className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">แบบฟอร์มสร้างเทมเพลต</h2>
-            <p className="text-sm text-gray-500">สร้างแบบฟอร์มหรือเทมเพลตเอกสารใหม่สำหรับใช้งานในองค์กร</p>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {initialData ? 'แก้ไขข้อมูลเทมเพลต' : 'แบบฟอร์มสร้างเทมเพลต'}
+            </h2>
+            <p className="text-sm text-gray-500">
+              {initialData ? 'ปรับปรุงรายละเอียดของเทมเพลต' : 'สร้างแบบฟอร์มหรือเทมเพลตเอกสารใหม่สำหรับใช้งานในองค์กร'}
+            </p>
           </div>
         </div>
       </div>
@@ -130,54 +174,92 @@ export default function CreateTemplateForm({ categories, documentTypes }: Create
           </div>
         </div>
 
-        {/* Section 3: โครงสร้างและเนื้อหา */}
+        {/* Section 3: รูปแบบฟอร์มกรอกข้อมูล */}
         <div>
-          <div className="border-b pb-2 mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">3. โครงสร้างและเนื้อหา (Structure & Content)</h3>
-            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-              <button
-                type="button"
-                onClick={() => setBuilderMode('JSON')}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${builderMode === 'JSON' ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                JSON Mode
-              </button>
-              <button
-                type="button"
-                onClick={() => setBuilderMode('DESIGNER')}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${builderMode === 'DESIGNER' ? 'bg-white dark:bg-gray-700 shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Visual Designer
-              </button>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white border-b pb-2 mb-4">3. รูปแบบฟอร์มกรอกข้อมูล (Data Entry Form)</h3>
+          
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เลือกประเภทฟอร์ม (Form Type)</label>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {[
+                { id: 'STANDARD', name: 'เอกสารซื้อขายทั่วไป', desc: 'มีข้อมูลลูกค้า ตารางสินค้า ยอดเงิน' },
+                { id: 'CONTACT', name: 'ข้อมูลผู้ติดต่อ', desc: 'ฟอร์มสร้างลูกค้า/ผู้จัดจำหน่าย' },
+                { id: 'PRODUCT', name: 'ข้อมูลสินค้า', desc: 'ฟอร์มสร้างสินค้า/บริการ' },
+                { id: 'CUSTOM', name: 'สร้างฟอร์มเอง (Custom)', desc: 'กำหนดช่องกรอกข้อมูลอิสระ' },
+              ].map(type => (
+                <div 
+                  key={type.id}
+                  onClick={() => setFormData({...formData, formType: type.id})}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.formType === type.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'}`}
+                >
+                  <h4 className="font-bold text-gray-900 dark:text-white mb-1">{type.name}</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{type.desc}</p>
+                </div>
+              ))}
             </div>
+          </div>
+
+          {formData.formType === 'CUSTOM' && (
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-semibold text-gray-900 dark:text-white">ช่องกรอกข้อมูลของฟอร์ม (Custom Fields)</h4>
+                <button type="button" onClick={addCustomField} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg text-sm font-medium transition-colors">
+                  <Plus className="w-4 h-4" /> เพิ่มช่อง
+                </button>
+              </div>
+
+              {customFields.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 text-sm">ยังไม่มีช่องกรอกข้อมูล กดปุ่ม "เพิ่มช่อง" ด้านบน</div>
+              ) : (
+                <div className="space-y-4">
+                  {customFields.map((field, idx) => (
+                    <div key={idx} className="flex flex-wrap md:flex-nowrap gap-4 items-start bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="flex-1 min-w-[200px]">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">ชื่อตัวแปร (Key)</label>
+                        <input type="text" value={field.key} onChange={e => updateCustomField(idx, 'key', e.target.value)} placeholder="เช่น customerName" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-transparent" />
+                      </div>
+                      <div className="flex-1 min-w-[200px]">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">ชื่อที่แสดง (Label)</label>
+                        <input type="text" value={field.label} onChange={e => updateCustomField(idx, 'label', e.target.value)} placeholder="เช่น ชื่อลูกค้า" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-transparent" />
+                      </div>
+                      <div className="w-full md:w-48">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">ชนิดข้อมูล (Type)</label>
+                        <select value={field.type} onChange={e => updateCustomField(idx, 'type', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-transparent">
+                          <option value="text">ข้อความสั้น (Text)</option>
+                          <option value="textarea">ข้อความยาว (Textarea)</option>
+                          <option value="number">ตัวเลข (Number)</option>
+                          <option value="date">วันที่ (Date)</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2 pt-6">
+                         <label className="flex items-center gap-1.5 text-sm text-gray-600">
+                           <input type="checkbox" checked={field.required} onChange={e => updateCustomField(idx, 'required', e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
+                           จำเป็น
+                         </label>
+                         <button type="button" onClick={() => removeCustomField(idx)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg ml-2">
+                           <Trash2 className="w-4 h-4" />
+                         </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Section 4: โครงสร้างและเนื้อหา */}
+        <div>
+          <div className="border-b pb-2 mb-4">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">4. โครงสร้างและเนื้อหา (Visual Designer)</h3>
           </div>
           
           <div className="space-y-6">
-            {builderMode === 'JSON' ? (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Layout JSON (การตั้งค่าฟิลด์) <span className="text-red-500">*</span></label>
-                <textarea
-                  required
-                  value={formData.layoutJson}
-                  onChange={e => setFormData({ ...formData, layoutJson: e.target.value })}
-                  className="w-full px-4 py-4 border border-gray-300 dark:border-gray-600 rounded-xl font-mono text-sm h-48 resize-y bg-gray-900 text-green-400 focus:ring-2 focus:ring-indigo-500 transition-all shadow-inner outline-none"
-                />
-              </div>
-            ) : (
-              <div className="min-h-[800px] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white">
-                <DocumentDesigner />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">HTML Content (ตัวเลือกเสริม)</label>
-              <textarea
-                value={formData.htmlContent}
-                onChange={e => setFormData({ ...formData, htmlContent: e.target.value })}
-                className="w-full px-4 py-4 border border-gray-300 dark:border-gray-600 rounded-xl font-mono text-sm h-32 resize-y bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
-                placeholder='<div><h1>{{title}}</h1></div>'
+            <div className="min-h-[800px] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white">
+              <DocumentDesigner 
+                initialLayoutJson={formData.layoutJson}
+                onChange={(json) => setFormData({ ...formData, layoutJson: json })}
               />
-              <p className="text-xs text-gray-500 mt-2">ใส่รหัส HTML หากต้องการออกแบบรูปแบบการแสดงผลหรือปริ้นแบบพิเศษ</p>
             </div>
           </div>
         </div>
@@ -195,7 +277,7 @@ export default function CreateTemplateForm({ categories, documentTypes }: Create
             className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            บันทึกสร้างเทมเพลต
+            {initialData ? 'บันทึกการแก้ไข' : 'บันทึกสร้างเทมเพลต'}
           </button>
         </div>
       </form>

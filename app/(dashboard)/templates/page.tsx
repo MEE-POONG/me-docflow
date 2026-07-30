@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Plus, Search, Filter, LayoutTemplate, Calendar, FileText, CheckCircle2, XCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
+import TemplateActions from './TemplateActions'
 
 const prisma = new PrismaClient()
 
@@ -77,12 +78,13 @@ export default async function TemplatesPage() {
                 <th className="px-6 py-4 font-semibold whitespace-nowrap">โหมดการสร้าง</th>
                 <th className="px-6 py-4 font-semibold whitespace-nowrap">สถานะ</th>
                 <th className="px-6 py-4 font-semibold whitespace-nowrap">วันที่อัปเดต</th>
+                <th className="px-6 py-4 font-semibold whitespace-nowrap text-right">จัดการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {templates.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                     <LayoutTemplate className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
                     <p className="text-base font-medium">ยังไม่มีเทมเพลตในระบบ</p>
                     <p className="text-sm mt-1">เริ่มต้นสร้างฟอร์มเอกสารมาตรฐานของคุณได้ที่นี่</p>
@@ -90,9 +92,9 @@ export default async function TemplatesPage() {
                 </tr>
               ) : (
                 templates.map((template) => (
-                  <tr key={template.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group cursor-pointer">
+                  <tr key={template.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                     <td className="px-6 py-4 font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                      {template.name}
+                      <Link href={`/templates/${template.id}`} className="hover:underline">{template.name}</Link>
                     </td>
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400 max-w-xs truncate">
                       {template.description || '-'}
@@ -119,6 +121,9 @@ export default async function TemplatesPage() {
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5" />
                       {format(new Date(template.updatedAt), 'dd MMM yyyy', { locale: th })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <TemplateActions id={template.id} name={template.name} />
                     </td>
                   </tr>
                 ))

@@ -109,10 +109,10 @@ export default function PendingApprovalList({ documents }: Props) {
               filteredDocs.map((doc) => (
                 <tr key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                   <td className="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400">
-                    {doc.documentNo}
+                    <Link href={`/documents/${doc.id}`} className="hover:underline">{doc.documentNo}</Link>
                   </td>
                   <td className="px-6 py-4 text-gray-900 dark:text-gray-100 font-medium">
-                    {doc.title}
+                    <Link href={`/documents/${doc.id}`} className="hover:underline">{doc.title}</Link>
                   </td>
                   <td className="px-6 py-4 text-gray-600 dark:text-gray-400 flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">
@@ -124,9 +124,9 @@ export default function PendingApprovalList({ documents }: Props) {
                     {format(new Date(doc.createdAt), 'dd MMM yyyy HH:mm', { locale: th })}
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
-                    <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="ดูรายละเอียด">
+                    <Link href={`/documents/${doc.id}`} className="inline-flex items-center justify-center p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="ดูรายละเอียด">
                       <Eye className="w-5 h-5" />
-                    </button>
+                    </Link>
                     <button 
                       onClick={() => handleApprove(doc.id)}
                       disabled={isPending && processingId === doc.id}

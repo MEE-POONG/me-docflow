@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Plus, Search, Filter, FileText, Calendar, Clock, CheckCircle2, XCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
+import DocumentActions from './DocumentActions'
 
 const prisma = new PrismaClient()
 
@@ -32,6 +33,7 @@ export default async function DocumentsPage() {
   return (
     <div className="max-w-[1600px] mx-auto pb-20 p-4 md:p-6 lg:p-8">
       {/* Header */}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -91,12 +93,13 @@ export default async function DocumentsPage() {
                 <th className="px-6 py-4 font-semibold whitespace-nowrap">สถานะ</th>
                 <th className="px-6 py-4 font-semibold whitespace-nowrap">ผู้สร้าง</th>
                 <th className="px-6 py-4 font-semibold whitespace-nowrap">วันที่สร้าง</th>
+                <th className="px-6 py-4 font-semibold whitespace-nowrap text-right">จัดการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {documents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                     <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
                     <p className="text-base font-medium">ยังไม่มีเอกสารในระบบ</p>
                     <p className="text-sm mt-1">เริ่มต้นสร้างเอกสารใหม่โดยคลิกที่ปุ่ม "สร้างเอกสารใหม่"</p>
@@ -106,10 +109,10 @@ export default async function DocumentsPage() {
                 documents.map((doc) => (
                   <tr key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                     <td className="px-6 py-4 font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                      {doc.documentNo}
+                      <Link href={`/documents/${doc.id}`} className="hover:underline">{doc.documentNo}</Link>
                     </td>
                     <td className="px-6 py-4 text-gray-900 dark:text-gray-100 font-medium">
-                      {doc.title}
+                      <Link href={`/documents/${doc.id}`} className="hover:underline">{doc.title}</Link>
                     </td>
                     <td className="px-6 py-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       {doc.category?.name || '-'}
@@ -123,6 +126,9 @@ export default async function DocumentsPage() {
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5" />
                       {format(new Date(doc.createdAt), 'dd MMM yyyy', { locale: th })}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <DocumentActions id={doc.id} title={doc.title} />
                     </td>
                   </tr>
                 ))
