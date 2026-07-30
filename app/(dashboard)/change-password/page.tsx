@@ -39,13 +39,24 @@ export default function ChangePasswordPage() {
   // Feedback states
   const [myPasswordSuccess, setMyPasswordSuccess] = useState(false);
   const [myPasswordError, setMyPasswordError] = useState("");
+  const [currentUser, setCurrentUser] = useState<UserItem | null>(null);
 
-  // Load users from localStorage
+  // Load users from localStorage and set currentUser
   useEffect(() => {
+    const userStr = localStorage.getItem("me_docflow_current_user");
+    let currentUsr: any = null;
+    if (userStr) {
+      try {
+        currentUsr = JSON.parse(userStr);
+      } catch (e) {}
+    }
+
     const savedData = localStorage.getItem("me_docflow_users");
+    let allUsers: UserItem[] = [];
     if (savedData) {
       try {
-        setUsers(JSON.parse(savedData));
+        allUsers = JSON.parse(savedData);
+        setUsers(allUsers);
       } catch (e) {
         console.error("Error parsing users", e);
       }
@@ -61,8 +72,28 @@ export default function ChangePasswordPage() {
           password: "password123"
         }
       ];
+      allUsers = defaultUsers;
       setUsers(defaultUsers);
       localStorage.setItem("me_docflow_users", JSON.stringify(defaultUsers));
+    }
+
+    if (currentUsr) {
+      const matched = allUsers.find(u => u.id === currentUsr.id || u.email.toLowerCase() === currentUsr.email.toLowerCase());
+      if (matched) {
+        setCurrentUser(matched);
+      } else {
+        setCurrentUser(currentUsr);
+      }
+    } else {
+      const matched = allUsers.find(u => u.id === "1");
+      setCurrentUser(matched || {
+        id: "1",
+        fullName: "Melisara Chaimongkol",
+        email: "melisara@siamretail.co.th",
+        role: "owner",
+        status: "active",
+        password: "password123"
+      });
     }
   }, []);
 
@@ -76,9 +107,14 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    // Find the logged-in user (Melisara Chaimongkol) which has id "1"
-    const myAccount = users.find((u) => u.id === "1");
-    const currentPassInDb = myAccount?.password || "password123";
+    // Find the logged-in user
+    const myAccount = users.find((u) => u.id === currentUser?.id || u.email.toLowerCase() === currentUser?.email.toLowerCase());
+    if (!myAccount) {
+      setMyPasswordError("ไม่พบบัญชีผู้ใช้งานปัจจุบันในระบบ");
+      return;
+    }
+
+    const currentPassInDb = myAccount.password || "password123";
 
     if (myCurrentPassword !== currentPassInDb) {
       setMyPasswordError("รหัสผ่านปัจจุบันไม่ถูกต้อง");
@@ -97,11 +133,17 @@ export default function ChangePasswordPage() {
 
     // Update the password in database
     const updatedUsers = users.map((u) => 
-      u.id === "1" ? { ...u, password: myNewPassword } : u
+      u.id === myAccount.id ? { ...u, password: myNewPassword } : u
     );
 
     setUsers(updatedUsers);
     localStorage.setItem("me_docflow_users", JSON.stringify(updatedUsers));
+    
+    // Also update currentUser in localStorage
+    const updatedUserObj = { ...myAccount, password: myNewPassword };
+    localStorage.setItem("me_docflow_current_user", JSON.stringify(updatedUserObj));
+    setCurrentUser(updatedUserObj);
+
     setMyPasswordSuccess(true);
     setMyCurrentPassword("");
     setMyNewPassword("");
@@ -113,6 +155,7 @@ export default function ChangePasswordPage() {
   const handleLogout = () => {
     if (confirm("คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?")) {
       localStorage.removeItem("me_docflow_user_session");
+      localStorage.removeItem("me_docflow_current_user");
       router.push("/login");
     }
   };
@@ -128,12 +171,21 @@ export default function ChangePasswordPage() {
 
       {/* Account Info Profile Panel */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 flex flex-col sm:flex-row items-center gap-4 max-w-4xl">
-        <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xl border border-emerald-100">
-          MC
+        <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xl border border-emerald-100 uppercase">
+          {currentUser?.fullName ? currentUser.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "MC"}
         </div>
         <div className="text-center sm:text-left space-y-1">
-          <h3 className="font-bold text-gray-800 text-lg leading-tight">Melisara Chaimongkol</h3>
-          <p className="text-xs text-gray-400 font-mono">อีเมล: melisara@siamretail.co.th | สิทธิ์: เจ้าของธุรกิจ (Owner)</p>
+          <h3 className="font-bold text-gray-800 text-lg leading-tight">{currentUser?.fullName || "Melisara Chaimongkol"}</h3>
+          <p className="text-xs text-gray-400 font-mono">
+            อีเมล: {currentUser?.email || "melisara@siamretail.co.th"} | สิทธิ์: {
+              currentUser?.role === "owner" ? "เจ้าของธุรกิจ (Owner)" :
+              currentUser?.role === "accountant_in" ? "นักบัญชีในบริษัท (Accountant)" :
+              currentUser?.role === "employee" ? "พนักงาน (Staff)" :
+              currentUser?.role === "accounting_firm" ? "สำนักงานบัญชี/นักบัญชีอิสระ" :
+              currentUser?.role === "student" ? "นักเรียน/นักศึกษา" :
+              currentUser?.role || "เจ้าของธุรกิจ (Owner)"
+            }
+          </p>
         </div>
       </div>
 
