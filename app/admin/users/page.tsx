@@ -15,6 +15,7 @@ import {
   Eye, 
   EyeOff 
 } from "lucide-react";
+import { getAdminUsers, updateAdminUser, deleteAdminUser } from "../actions";
 
 interface UserItem {
   id: string;
@@ -40,22 +41,21 @@ export default function AdminUsersPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  const fetchUsers = async () => {
+    try {
+      const data = await getAdminUsers();
+      setUsers(data);
+    } catch (e) {
+      console.error("Error fetching users", e);
+    }
+  };
+
   // Load users
   useEffect(() => {
-    const savedData = localStorage.getItem("me_docflow_users");
-    if (savedData) {
-      try {
-        setUsers(JSON.parse(savedData));
-      } catch (e) {
-        console.error("Error parsing users", e);
-      }
-    }
+    fetchUsers();
   }, []);
 
-  const saveToLocalStorage = (updated: UserItem[], logMessage: string) => {
-    setUsers(updated);
-    localStorage.setItem("me_docflow_users", JSON.stringify(updated));
-
+  const logAdminAction = (logMessage: string) => {
     // Seed audit log
     const logs = localStorage.getItem("me_docflow_audit_logs");
     const currentLogs = logs ? JSON.parse(logs) : [];
@@ -79,34 +79,36 @@ export default function AdminUsersPage() {
     setIsFormOpen(true);
   };
 
-  const handleDeleteUser = (id: string, name: string) => {
-    if (id === "1") {
-      alert("ไม่สามารถลบบัญชีหลักของระบบได้");
-      return;
-    }
+  const handleDeleteUser = async (id: string, name: string) => {
     if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบบัญชีผู้ใช้ "${name}" ออกจากระบบ?`)) {
-      const updated = users.filter((u) => u.id !== id);
-      saveToLocalStorage(updated, `ลบบัญชีผู้ใช้งาน "${name}" (อีเมล: ${users.find(u=>u.id===id)?.email})`);
+      try {
+        await deleteAdminUser(id);
+        await fetchUsers();
+        logAdminAction(`ลบบัญชีผู้ใช้งาน "${name}" (อีเมล: ${users.find(u=>u.id===id)?.email})`);
+      } catch (e) {
+        console.error(e);
+        alert("Error deleting user");
+      }
     }
   };
 
-  const handleToggleStatus = (user: UserItem) => {
-    if (user.id === "1") {
-      alert("ไม่สามารถระงับบัญชีหลักของระบบได้");
-      return;
-    }
+  const handleToggleStatus = async (user: UserItem) => {
     const nextStatus: "active" | "inactive" = user.status === "active" ? "inactive" : "active";
-    const updated = users.map((u) => 
-      u.id === user.id ? { ...u, status: nextStatus } : u
-    );
     const actionMsg = nextStatus === "active" 
       ? `ปลดบล็อกบัญชีผู้ใช้ (Activate) "${user.fullName}"` 
       : `ระงับบัญชีผู้ใช้ (Block) "${user.fullName}" ห้ามเข้าใช้ระบบชั่วคราว`;
     
-    saveToLocalStorage(updated, actionMsg);
+    try {
+      await updateAdminUser(user.id, { ...user, status: nextStatus });
+      await fetchUsers();
+      logAdminAction(actionMsg);
+    } catch (e) {
+      console.error(e);
+      alert("Error updating user status");
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !email || !role) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
@@ -114,12 +116,17 @@ export default function AdminUsersPage() {
     }
 
     if (editingUser) {
-      const updated = users.map((u) =>
-        u.id === editingUser.id
-          ? { ...u, fullName, email, role, status, password }
-          : u
-      );
-      saveToLocalStorage(updated, `แก้ไขข้อมูลผู้ใช้ "${fullName}" (อีเมล: ${email}, ตำแหน่ง: ${role})`);
+      try {
+        await updateAdminUser(editingUser.id, { 
+          fullName, email, role, status, password 
+        });
+        await fetchUsers();
+        logAdminAction(`แก้ไขข้อมูลผู้ใช้ "${fullName}" (อีเมล: ${email}, ตำแหน่ง: ${role})`);
+      } catch (e) {
+        console.error(e);
+        alert("Error updating user");
+        return;
+      }
     }
 
     setIsFormOpen(false);

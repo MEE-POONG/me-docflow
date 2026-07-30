@@ -14,6 +14,7 @@ import {
   ShieldCheck, 
   AlertCircle 
 } from "lucide-react";
+import { getAdminCompanies, updateAdminCompany, deleteAdminCompany } from "../actions";
 
 interface CompanyItem {
   id: string;
@@ -45,22 +46,21 @@ export default function AdminCompaniesPage() {
   const [ownerEmail, setOwnerEmail] = useState("");
   const [isVerified, setIsVerified] = useState(false);
 
+  const fetchCompanies = async () => {
+    try {
+      const data = await getAdminCompanies();
+      setCompanies(data);
+    } catch (e) {
+      console.error("Error fetching companies", e);
+    }
+  };
+
   // Load companies
   useEffect(() => {
-    const savedData = localStorage.getItem("me_docflow_companies");
-    if (savedData) {
-      try {
-        setCompanies(JSON.parse(savedData));
-      } catch (e) {
-        console.error("Error parsing companies", e);
-      }
-    }
+    fetchCompanies();
   }, []);
 
-  const saveToLocalStorage = (updated: CompanyItem[], logMessage: string) => {
-    setCompanies(updated);
-    localStorage.setItem("me_docflow_companies", JSON.stringify(updated));
-
+  const logAdminAction = (logMessage: string) => {
     // Seed audit log
     const logs = localStorage.getItem("me_docflow_audit_logs");
     const currentLogs = logs ? JSON.parse(logs) : [];
@@ -72,9 +72,6 @@ export default function AdminCompaniesPage() {
       type: "info"
     };
     localStorage.setItem("me_docflow_audit_logs", JSON.stringify([newLog, ...currentLogs]));
-
-    // Dispatch event to sync sidebar and navbar
-    window.dispatchEvent(new Event("activeCompanyChanged"));
   };
 
   const handleOpenEditForm = (company: CompanyItem) => {
@@ -90,25 +87,35 @@ export default function AdminCompaniesPage() {
     setIsFormOpen(true);
   };
 
-  const handleDeleteCompany = (id: string, name: string) => {
+  const handleDeleteCompany = async (id: string, name: string) => {
     if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลบริษัท "${name}" ออกจากระบบถาวร?`)) {
-      const updated = companies.filter((c) => c.id !== id);
-      saveToLocalStorage(updated, `ลบข้อมูลบริษัท "${name}" (ID: ${id}) ออกจากระบบ`);
+      try {
+        await deleteAdminCompany(id);
+        await fetchCompanies();
+        logAdminAction(`ลบข้อมูลบริษัท "${name}" (ID: ${id}) ออกจากระบบ`);
+      } catch (e) {
+        console.error(e);
+        alert("Error deleting company");
+      }
     }
   };
 
-  const handleToggleVerify = (company: CompanyItem) => {
+  const handleToggleVerify = async (company: CompanyItem) => {
     const nextVerifyState = !company.isVerified;
-    const updated = companies.map((c) => 
-      c.id === company.id ? { ...c, isVerified: nextVerifyState } : c
-    );
     const actionMsg = nextVerifyState 
       ? `กดยืนยันตัวตนบริษัท (Verify) "${company.companyName}" สำเร็จ` 
       : `ยกเลิกการยืนยันตัวตนบริษัท "${company.companyName}"`;
-    saveToLocalStorage(updated, actionMsg);
+    try {
+      await updateAdminCompany(company.id, { ...company, isVerified: nextVerifyState });
+      await fetchCompanies();
+      logAdminAction(actionMsg);
+    } catch (e) {
+      console.error(e);
+      alert("Error updating company verification");
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyName || !taxId || !address || !phone || !email || !ownerEmail) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
@@ -116,12 +123,17 @@ export default function AdminCompaniesPage() {
     }
 
     if (editingCompany) {
-      const updated = companies.map((c) =>
-        c.id === editingCompany.id
-          ? { ...c, companyName, taxId, address, phone, email, website, ownerEmail, isVerified }
-          : c
-      );
-      saveToLocalStorage(updated, `แก้ไขข้อมูลบริษัท "${companyName}" (เจ้าของ: ${ownerEmail})`);
+      try {
+        await updateAdminCompany(editingCompany.id, { 
+          companyName, taxId, address, phone, email, website, ownerEmail, isVerified 
+        });
+        await fetchCompanies();
+        logAdminAction(`แก้ไขข้อมูลบริษัท "${companyName}" (เจ้าของ: ${ownerEmail})`);
+      } catch (e) {
+        console.error(e);
+        alert("Error updating company");
+        return;
+      }
     }
 
     setIsFormOpen(false);
