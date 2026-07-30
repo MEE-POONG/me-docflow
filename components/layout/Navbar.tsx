@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Bell, Moon, Sun, ChevronDown, User } from "lucide-react";
+import { Search, Bell, Moon, Sun, ChevronDown, User, Menu } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { useSidebar } from "./SidebarContext";
 
 export default function Navbar() {
   const [activeCompanyName, setActiveCompanyName] = useState("บริษัท สยาม รีเทล จำกัด (มหาชน)");
@@ -13,6 +14,7 @@ export default function Navbar() {
   const { language, setLanguage, t } = useLanguage();
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const langMenuRef = useRef<HTMLDivElement>(null);
+  const { toggle } = useSidebar();
 
   useEffect(() => {
     setMounted(true);
