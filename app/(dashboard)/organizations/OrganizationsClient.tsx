@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Search, Loader2, Filter, FileText } from 'lucide-react';
-import { createPartner, updatePartner, deletePartner } from './actions';
+import { createPartner, updatePartner, deletePartner, getPartners } from './actions';
 
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
@@ -20,7 +20,7 @@ type Partner = {
 };
 
 export default function OrganizationsClient({ initialPartners }: { initialPartners: Partner[] }) {
-  const [partners, setPartners] = useState<Partner[]>(initialPartners);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -38,6 +38,26 @@ export default function OrganizationsClient({ initialPartners }: { initialPartne
     contactName: '',
     contactPhone: '',
   });
+
+  useEffect(() => {
+    const fetchMyPartners = async () => {
+      const userStr = localStorage.getItem("me_docflow_current_user");
+      let currentEmail = "melisara@siamretail.co.th";
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          if (u.email) currentEmail = u.email;
+        } catch (e) {}
+      }
+      try {
+        const myPartners = await getPartners(currentEmail);
+        setPartners(myPartners as any);
+      } catch (err) {
+        setPartners(initialPartners);
+      }
+    };
+    fetchMyPartners();
+  }, [initialPartners]);
 
   const filteredPartners = partners.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -81,12 +101,26 @@ export default function OrganizationsClient({ initialPartners }: { initialPartne
     e.preventDefault();
     startTransition(async () => {
       try {
-        if (editingId) {
-          await updatePartner(editingId, formData);
-        } else {
-          await createPartner(formData);
+        const userStr = localStorage.getItem("me_docflow_current_user");
+        let currentEmail = "melisara@siamretail.co.th";
+        if (userStr) {
+          try {
+            const u = JSON.parse(userStr);
+            if (u.email) currentEmail = u.email;
+          } catch (e) {}
         }
-        window.location.reload();
+
+        if (editingId) {
+          await updatePartner(editingId, currentEmail, { ...formData, partnerEmail: formData.email });
+        } else {
+          await createPartner(currentEmail, { ...formData, partnerEmail: formData.email });
+        }
+        
+        // Refetch partners after mutation to update the list locally
+        const myPartners = await getPartners(currentEmail);
+        setPartners(myPartners as any);
+        
+        setIsModalOpen(false);
       } catch (error) {
         console.error('Failed to save partner', error);
       }
@@ -94,14 +128,20 @@ export default function OrganizationsClient({ initialPartners }: { initialPartne
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลนี้? (Are you sure you want to delete this?)')) {
+    if (confirm(t.organizations.confirmDelete)) {
       startTransition(async () => {
-        try {
-          await deletePartner(id);
-          setPartners(partners.filter(p => p.id !== id));
-        } catch (error) {
-          console.error('Failed to delete partner', error);
+        const userStr = localStorage.getItem("me_docflow_current_user");
+        let currentEmail = "melisara@siamretail.co.th";
+        if (userStr) {
+          try {
+            const u = JSON.parse(userStr);
+            if (u.email) currentEmail = u.email;
+          } catch (e) {}
         }
+        await deletePartner(id, currentEmail);
+        
+        const myPartners = await getPartners(currentEmail);
+        setPartners(myPartners as any);
       });
     }
   };

@@ -67,6 +67,7 @@ const en = {
     branchBranch: "Branch",
     btnCancel: "Cancel",
     btnSave: "Save Data",
+    confirmDelete: "Are you sure you want to delete this customer/vendor?",
   },
   employees: {
     title: "Employees",

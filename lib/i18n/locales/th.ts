@@ -67,6 +67,7 @@ const th = {
     branchBranch: "สาขา",
     btnCancel: "ยกเลิก",
     btnSave: "บันทึกข้อมูล",
+    confirmDelete: "คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลลูกค้า/คู่ค้านี้?",
   },
   employees: {
     title: "พนักงาน",

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Search, Loader2 } from 'lucide-react';
-import { createDepartment, updateDepartment, deleteDepartment } from './actions';
+import { createDepartment, updateDepartment, deleteDepartment, getDepartments } from './actions';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 type Department = {
@@ -13,7 +13,7 @@ type Department = {
 };
 
 export default function DepartmentsClient({ initialDepartments }: { initialDepartments: Department[] }) {
-  const [departments, setDepartments] = useState<Department[]>(initialDepartments);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -21,6 +21,26 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
   const [filterStatus, setFilterStatus] = useState('ALL');
   const { t } = useLanguage();
   
+  useEffect(() => {
+    const fetchMyDepartments = async () => {
+      const userStr = localStorage.getItem("me_docflow_current_user");
+      let currentEmail = "melisara@siamretail.co.th";
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          if (u.email) currentEmail = u.email;
+        } catch (e) {}
+      }
+      try {
+        const myDepts = await getDepartments(currentEmail);
+        setDepartments(myDepts as any);
+      } catch (err) {
+        setDepartments(initialDepartments);
+      }
+    };
+    fetchMyDepartments();
+  }, [initialDepartments]);
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -68,12 +88,26 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
           isActive: formData.isActive,
         };
 
-        if (editingId) {
-          await updateDepartment(editingId, payload);
-        } else {
-          await createDepartment(payload);
+        const userStr = localStorage.getItem("me_docflow_current_user");
+        let currentEmail = "melisara@siamretail.co.th";
+        if (userStr) {
+          try {
+            const u = JSON.parse(userStr);
+            if (u.email) currentEmail = u.email;
+          } catch (e) {}
         }
-        window.location.reload();
+
+        if (editingId) {
+          await updateDepartment(editingId, currentEmail, payload);
+        } else {
+          await createDepartment(currentEmail, payload);
+        }
+        
+        // Refetch departments after mutation to update the list locally
+        const myDepts = await getDepartments(currentEmail);
+        setDepartments(myDepts as any);
+        
+        setIsModalOpen(false);
       } catch (error) {
         console.error('Failed to save department', error);
       }
@@ -84,8 +118,18 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
     if (confirm(t.departments.confirmDelete)) {
       startTransition(async () => {
         try {
-          await deleteDepartment(id);
-          setDepartments(departments.filter(d => d.id !== id));
+          const userStr = localStorage.getItem("me_docflow_current_user");
+          let currentEmail = "melisara@siamretail.co.th";
+          if (userStr) {
+            try {
+              const u = JSON.parse(userStr);
+              if (u.email) currentEmail = u.email;
+            } catch (e) {}
+          }
+          await deleteDepartment(id, currentEmail);
+          
+          const myDepts = await getDepartments(currentEmail);
+          setDepartments(myDepts as any);
         } catch (error) {
           console.error('Failed to delete department', error);
           alert(t.departments.deleteError);

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { CheckCircle2, XCircle, Eye, Search, Filter, Loader2, AlertCircle } from 'lucide-react'
 import { approveDocument, rejectDocument } from '@/app/actions/approval'
 import { format } from 'date-fns'
@@ -15,6 +15,7 @@ type Document = {
   createdAt: Date
   createdBy: {
     name: string
+    email?: string
   }
 }
 
@@ -28,8 +29,23 @@ export default function PendingApprovalList({ documents }: Props) {
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null)
+  
+  const [myDocuments, setMyDocuments] = useState<Document[]>(documents)
 
-  const filteredDocs = documents.filter(doc => 
+  useEffect(() => {
+    const userStr = localStorage.getItem("me_docflow_current_user");
+    let currentEmail = "melisara@siamretail.co.th";
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        if (u.email) currentEmail = u.email;
+      } catch (e) {}
+    }
+
+    setMyDocuments(documents.filter(doc => doc.createdBy?.email === currentEmail))
+  }, [documents])
+
+  const filteredDocs = myDocuments.filter(doc => 
     doc.documentNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
     doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     doc.createdBy.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -65,7 +81,7 @@ export default function PendingApprovalList({ documents }: Props) {
       <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
-          รายการรออนุมัติ ({documents.length})
+          รายการรออนุมัติ ({myDocuments.length})
         </h2>
         
         <div className="flex items-center gap-3">

@@ -3,22 +3,26 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
-// Helper to get a default company since there's no auth yet
-async function getDefaultCompanyId() {
-  let company = await prisma.company.findFirst();
+// Helper to get a company by user email
+async function getCompanyIdByEmail(email: string) {
+  let company = await prisma.company.findFirst({
+    where: { email }
+  });
   if (!company) {
     company = await prisma.company.create({
       data: {
-        name: 'Default Company',
-        legalName: 'Default Company Ltd.',
+        name: 'My Company',
+        legalName: 'My Company Ltd.',
+        email: email
       }
     });
   }
   return company.id;
 }
 
-export async function getEmployees() {
-  const companyId = await getDefaultCompanyId();
+export async function getEmployees(email?: string) {
+  if (!email) return [];
+  const companyId = await getCompanyIdByEmail(email);
   return prisma.employee.findMany({
     where: { companyId },
     include: {
@@ -28,18 +32,19 @@ export async function getEmployees() {
   });
 }
 
-export async function getDepartments() {
-  const companyId = await getDefaultCompanyId();
+export async function getDepartments(email?: string) {
+  if (!email) return [];
+  const companyId = await getCompanyIdByEmail(email);
   return prisma.department.findMany({
     where: { companyId, isActive: true },
     orderBy: { name: 'asc' }
   });
 }
 
-export async function createEmployee(data: {
+export async function createEmployee(email: string, data: {
   code?: string;
   name: string;
-  email?: string;
+  employeeEmail?: string;
   phone?: string;
   position?: string;
   departmentId?: string;
@@ -48,12 +53,12 @@ export async function createEmployee(data: {
   endDate?: Date | null;
   status: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'DELETED';
 }) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await getCompanyIdByEmail(email);
   
-  // If no code is provided, you might want to auto-generate one, but we'll leave it as is.
   await prisma.employee.create({
     data: {
       ...data,
+      email: data.employeeEmail,
       departmentId: data.departmentId || null,
       companyId,
     }
@@ -61,10 +66,10 @@ export async function createEmployee(data: {
   revalidatePath('/employees');
 }
 
-export async function updateEmployee(id: string, data: {
+export async function updateEmployee(id: string, email: string, data: {
   code?: string;
   name: string;
-  email?: string;
+  employeeEmail?: string;
   phone?: string;
   position?: string;
   departmentId?: string;
@@ -73,20 +78,21 @@ export async function updateEmployee(id: string, data: {
   endDate?: Date | null;
   status: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'DELETED';
 }) {
-  const companyId = await getDefaultCompanyId();
+  const companyId = await getCompanyIdByEmail(email);
   
   await prisma.employee.update({
     where: { id, companyId },
     data: {
       ...data,
+      email: data.employeeEmail,
       departmentId: data.departmentId || null,
     },
   });
   revalidatePath('/employees');
 }
 
-export async function deleteEmployee(id: string) {
-  const companyId = await getDefaultCompanyId();
+export async function deleteEmployee(id: string, email: string) {
+  const companyId = await getCompanyIdByEmail(email);
   await prisma.employee.delete({
     where: { id, companyId }
   });

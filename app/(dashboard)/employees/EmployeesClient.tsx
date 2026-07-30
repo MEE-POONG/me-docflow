@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Search, Loader2 } from 'lucide-react';
-import { createEmployee, updateEmployee, deleteEmployee } from './actions';
+import { createEmployee, updateEmployee, deleteEmployee, getEmployees } from './actions';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 // Types matched to schema and actions
@@ -33,7 +33,7 @@ export default function EmployeesClient({
   initialEmployees: Employee[];
   departments: Department[];
 }) {
-  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -42,6 +42,26 @@ export default function EmployeesClient({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
+  
+  useEffect(() => {
+    const fetchMyEmployees = async () => {
+      const userStr = localStorage.getItem("me_docflow_current_user");
+      let currentEmail = "melisara@siamretail.co.th";
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          if (u.email) currentEmail = u.email;
+        } catch (e) {}
+      }
+      try {
+        const myEmps = await getEmployees(currentEmail);
+        setEmployees(myEmps as any);
+      } catch (err) {
+        setEmployees(initialEmployees);
+      }
+    };
+    fetchMyEmployees();
+  }, [initialEmployees]);
   
   const [formData, setFormData] = useState({
     code: '',
@@ -123,12 +143,26 @@ export default function EmployeesClient({
           departmentId: restFormData.departmentId || undefined,
         };
 
-        if (editingId) {
-          await updateEmployee(editingId, payload);
-        } else {
-          await createEmployee(payload);
+        const userStr = localStorage.getItem("me_docflow_current_user");
+        let currentEmail = "melisara@siamretail.co.th";
+        if (userStr) {
+          try {
+            const u = JSON.parse(userStr);
+            if (u.email) currentEmail = u.email;
+          } catch (e) {}
         }
-        window.location.reload();
+
+        if (editingId) {
+          await updateEmployee(editingId, currentEmail, { ...payload, employeeEmail: payload.email });
+        } else {
+          await createEmployee(currentEmail, { ...payload, employeeEmail: payload.email });
+        }
+        
+        // Refetch employees after mutation to update the list locally
+        const myEmps = await getEmployees(currentEmail);
+        setEmployees(myEmps as any);
+        
+        setIsModalOpen(false);
       } catch (error) {
         console.error('Failed to save employee', error);
       }
@@ -139,8 +173,18 @@ export default function EmployeesClient({
     if (confirm(t.employees.confirmDelete)) {
       startTransition(async () => {
         try {
-          await deleteEmployee(id);
-          setEmployees(employees.filter(e => e.id !== id));
+          const userStr = localStorage.getItem("me_docflow_current_user");
+          let currentEmail = "melisara@siamretail.co.th";
+          if (userStr) {
+            try {
+              const u = JSON.parse(userStr);
+              if (u.email) currentEmail = u.email;
+            } catch (e) {}
+          }
+          await deleteEmployee(id, currentEmail);
+          
+          const myEmps = await getEmployees(currentEmail);
+          setEmployees(myEmps as any);
         } catch (error) {
           console.error('Failed to delete employee', error);
         }

@@ -1,19 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Building2, 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Phone, 
-  Mail, 
-  Globe, 
-  Check, 
-  X, 
-  CheckCircle2, 
-  AlertCircle, 
-  Save, 
+import {
+  Building2,
+  Plus,
+  Edit2,
+  Trash2,
+  Phone,
+  Mail,
+  Globe,
+  Check,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Save,
   Lock,
   UserCheck
 } from "lucide-react";
@@ -58,7 +58,7 @@ export default function CompanySettingsPage() {
           currentEmail = u.email;
           setCurrentUserEmail(u.email);
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const savedData = localStorage.getItem("me_docflow_companies");
@@ -198,6 +198,7 @@ export default function CompanySettingsPage() {
       saveToLocalStorage(updated);
     } else {
       // Add mode (Automatically set current user as ownerEmail)
+      const isFirstOwnCompany = companies.filter(c => c.ownerEmail === currentUserEmail).length === 0;
       const newCompany: CompanyItem = {
         id: Date.now().toString(),
         companyName,
@@ -206,16 +207,23 @@ export default function CompanySettingsPage() {
         phone,
         email,
         website,
-        isActive: companies.length === 0,
+        isActive: isFirstOwnCompany,
         ownerEmail: currentUserEmail
       };
-      saveToLocalStorage([...companies, newCompany]);
+
+      let updatedList = [...companies];
+      if (isFirstOwnCompany) {
+        updatedList = updatedList.map(c => ({ ...c, isActive: false }));
+      }
+      saveToLocalStorage([...updatedList, newCompany]);
     }
 
     setIsFormOpen(false);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
+
+  const userOwnCompanies = companies.filter(c => c.ownerEmail === currentUserEmail);
 
   return (
     <div className="space-y-6">
@@ -358,7 +366,7 @@ export default function CompanySettingsPage() {
       {/* Companies List Table */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
-          <h3 className="font-bold text-gray-800">รายชื่อบริษัททั้งหมด ({companies.length})</h3>
+          <h3 className="font-bold text-gray-800">รายชื่อบริษัททั้งหมด ({userOwnCompanies.length})</h3>
         </div>
 
         <div className="overflow-x-auto">
@@ -373,22 +381,21 @@ export default function CompanySettingsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {companies.length === 0 ? (
+              {userOwnCompanies.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-10 text-gray-400">
                     ไม่มีรายชื่อบริษัทในระบบ
                   </td>
                 </tr>
               ) : (
-                companies.map((company) => {
+                userOwnCompanies.map((company) => {
                   const isOwner = company.ownerEmail === currentUserEmail;
                   return (
                     <tr key={company.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="py-4 px-6 font-semibold text-gray-900">
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                            isOwner ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-400"
-                          }`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isOwner ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-400"
+                            }`}>
                             <Building2 className="w-4 h-4" />
                           </div>
                           <div>
@@ -453,11 +460,10 @@ export default function CompanySettingsPage() {
                           <button
                             onClick={() => handleOpenEditForm(company)}
                             disabled={!isOwner}
-                            className={`p-2 rounded-lg transition-colors ${
-                              isOwner 
-                                ? "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 cursor-pointer" 
+                            className={`p-2 rounded-lg transition-colors ${isOwner
+                                ? "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 cursor-pointer"
                                 : "text-gray-200 cursor-not-allowed"
-                            }`}
+                              }`}
                             title={isOwner ? "แก้ไขข้อมูล" : "คุณไม่มีสิทธิ์แก้ไขบริษัทอื่น"}
                           >
                             <Edit2 className="w-4 h-4" />
@@ -465,17 +471,16 @@ export default function CompanySettingsPage() {
                           <button
                             onClick={() => handleDeleteCompany(company.id)}
                             disabled={!isOwner || company.isActive}
-                            className={`p-2 rounded-lg transition-colors ${
-                              isOwner && !company.isActive
+                            className={`p-2 rounded-lg transition-colors ${isOwner && !company.isActive
                                 ? "text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer"
                                 : "text-gray-200 cursor-not-allowed"
-                            }`}
+                              }`}
                             title={
-                              !isOwner 
-                                ? "คุณไม่มีสิทธิ์ลบบริษัทอื่น" 
-                                : company.isActive 
-                                ? "ไม่สามารถลบบริษัทหลักได้" 
-                                : "ลบข้อมูลบริษัท"
+                              !isOwner
+                                ? "คุณไม่มีสิทธิ์ลบบริษัทอื่น"
+                                : company.isActive
+                                  ? "ไม่สามารถลบบริษัทหลักได้"
+                                  : "ลบข้อมูลบริษัท"
                             }
                           >
                             <Trash2 className="w-4 h-4" />
