@@ -472,20 +472,27 @@ export function DocumentDesigner({ initialLayoutJson, onChange }: { initialLayou
         </div>
 
         <div className="overflow-auto rounded-md bg-slate-200/70 p-6 dark:bg-slate-950/40">
-          <div
-            className="relative mx-auto origin-top border border-slate-300 bg-white shadow-lg"
-            style={{
-              width: selectedPage.width,
-              height: selectedPage.height,
-              transform: `scale(${state.zoom})`,
-              marginBottom: selectedPage.height * (state.zoom - 1),
-              backgroundImage: "linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)",
-              backgroundSize: "24px 24px",
+          <div 
+            className="relative mx-auto" 
+            style={{ 
+              width: selectedPage.width * state.zoom, 
+              height: selectedPage.height * state.zoom 
             }}
           >
-            {pageElements.map((element) => (
-              <ElementView key={element.id} element={element} selected={element.id === state.selectedElementId} onSelect={() => designer.selectElement(element.id)} />
-            ))}
+            <div
+              className="absolute left-0 top-0 origin-top-left border border-slate-300 bg-white shadow-lg"
+              style={{
+                width: selectedPage.width,
+                height: selectedPage.height,
+                transform: `scale(${state.zoom})`,
+                backgroundImage: "linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)",
+                backgroundSize: "24px 24px",
+              }}
+            >
+              {pageElements.map((element) => (
+                <ElementView key={element.id} element={element} selected={element.id === state.selectedElementId} onSelect={() => designer.selectElement(element.id)} />
+              ))}
+            </div>
           </div>
         </div>
 

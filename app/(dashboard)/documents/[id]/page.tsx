@@ -1,15 +1,18 @@
 import { PrismaClient } from '@prisma/client'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Calendar, FileText, User, CheckCircle2, XCircle, Clock, FileCheck } from 'lucide-react'
+import { ArrowLeft, Calendar, FileText, User, CheckCircle2, XCircle, Clock, FileCheck, Printer } from 'lucide-react'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
+import { PrintHelper, PrintButton } from './PrintHelper'
 
 const prisma = new PrismaClient()
 
-export default async function DocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DocumentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ print?: string }> }) {
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const documentId = resolvedParams.id;
+  const isPrint = resolvedSearchParams.print === 'true';
 
   const document = await prisma.document.findUnique({
     where: { id: documentId },
@@ -39,17 +42,20 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto pb-20 p-4 md:p-6 lg:p-8">
-      <div className="mb-6 flex items-center justify-between">
+    <div className={`max-w-[1200px] mx-auto pb-20 p-4 md:p-6 lg:p-8 ${isPrint ? 'print-section' : ''}`}>
+      {isPrint && <PrintHelper />}
+      <div className="mb-6 flex items-center justify-between no-print">
         <Link href="/documents" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors bg-white dark:bg-gray-900 px-4 py-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
           <ArrowLeft className="w-4 h-4" /> กลับหน้ารายการ
         </Link>
+        
+        <PrintButton />
       </div>
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
         <div className="p-6 md:p-8 border-b border-gray-200 dark:border-gray-800 flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div>
-            <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-3 mb-4 no-print">
               <span className="px-3 py-1 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400 rounded-lg text-sm font-bold tracking-wider border border-indigo-200 dark:border-indigo-800">
                 {document.documentNo}
               </span>

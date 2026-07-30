@@ -218,7 +218,13 @@ export default function CreateDocumentForm({ folders, tags, categories, document
         {/* Action icons bar */}
         <div className="flex justify-end px-6 pt-4 pb-2 gap-6 text-[#38A1C5]">
            <button type="button" className="flex flex-col items-center gap-1 hover:text-blue-700 transition-colors"><Share2 className="w-5 h-5"/> <span className="text-xs">แชร์</span></button>
-           <button type="button" className="flex flex-col items-center gap-1 hover:text-blue-700 transition-colors"><Printer className="w-5 h-5"/> <span className="text-xs">พิมพ์</span></button>
+           <button type="button" onClick={() => {
+             if (initialData?.id) {
+               window.open(`/documents/${initialData.id}?print=true`, '_blank');
+             } else {
+               alert('กรุณาบันทึกเอกสารก่อนทำการพิมพ์');
+             }
+           }} className="flex flex-col items-center gap-1 hover:text-blue-700 transition-colors"><Printer className="w-5 h-5"/> <span className="text-xs">พิมพ์</span></button>
            <button type="button" className="flex flex-col items-center gap-1 hover:text-blue-700 transition-colors"><Download className="w-5 h-5"/> <span className="text-xs">ดาวน์โหลด</span></button>
            <button type="button" className="flex flex-col items-center gap-1 hover:text-blue-700 transition-colors text-gray-500"><MoreHorizontal className="w-5 h-5"/> <span className="text-xs">เพิ่มเติม</span></button>
         </div>
