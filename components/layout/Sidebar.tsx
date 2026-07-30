@@ -3,14 +3,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { 
-  ShieldCheck, 
-  LayoutDashboard, 
-  FileText, 
-  LayoutTemplate, 
-  Building2, 
-  Settings, 
-  PieChart, 
+import {
+  ShieldCheck,
+  LayoutDashboard,
+  FileText,
+  LayoutTemplate,
+  Building2,
+  Settings,
+  PieChart,
   ChevronDown,
   ChevronRight,
   LogOut,
@@ -37,7 +37,7 @@ export default function Sidebar() {
           if (active) {
             setActiveCompanyName(active.companyName);
           }
-        } catch (e) {}
+        } catch (e) { }
       }
     };
 
@@ -45,7 +45,7 @@ export default function Sidebar() {
     window.addEventListener("activeCompanyChanged", updateActiveCompany);
     return () => window.removeEventListener("activeCompanyChanged", updateActiveCompany);
   }, []);
-  
+
   // State for expanded menus
   const [expanded, setExpanded] = useState({
     documents: true,
@@ -66,12 +66,12 @@ export default function Sidebar() {
     <>
       {/* Mobile Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity"
           onClick={close}
         />
       )}
-      
+
       <aside className={`sticky top-0 left-0 h-screen z-50 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col font-sans transition-all duration-300 ease-in-out ${isOpen ? "w-64" : "w-20"} shrink-0`}>
         {/* Logo Area */}
         <div className={`p-4 border-b border-gray-100 dark:border-gray-800 flex items-center ${isOpen ? 'justify-between' : 'justify-center'} transition-colors h-[73px]`}>
@@ -95,11 +95,10 @@ export default function Sidebar() {
         <div className="flex-1 overflow-y-auto py-4 overflow-x-hidden">
           <nav className="space-y-1 px-3">
             {/* Dashboard */}
-            <Link 
+            <Link
               href="/dashboard"
-              className={`flex items-center ${isOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg transition-colors ${
-                pathname === '/dashboard' || pathname === '/' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
+              className={`flex items-center ${isOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg transition-colors ${pathname === '/dashboard' || pathname === '/' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
               title={!isOpen ? t.sidebar.dashboard : undefined}
             >
               <LayoutDashboard size={20} className={`shrink-0 ${pathname === '/dashboard' || pathname === '/' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`} />
@@ -108,7 +107,7 @@ export default function Sidebar() {
 
             {/* Documents */}
             <div className="pt-1">
-              <button 
+              <button
                 onClick={() => toggleMenu('documents')}
                 className={`w-full flex items-center ${isOpen ? 'justify-between px-3' : 'justify-center px-0'} py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors`}
                 title={!isOpen ? t.sidebar.documents : undefined}
@@ -133,7 +132,7 @@ export default function Sidebar() {
 
             {/* Template */}
             <div className="pt-1">
-              <button 
+              <button
                 onClick={() => toggleMenu('template')}
                 className={`w-full flex items-center ${isOpen ? 'justify-between px-3' : 'justify-center px-0'} py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors`}
                 title={!isOpen ? t.sidebar.template : undefined}
@@ -149,7 +148,7 @@ export default function Sidebar() {
               {isOpen && expanded.template && (
                 <div className="pl-11 pr-3 py-1 space-y-1">
                   <Link href="/templates" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.allTemplates}</Link>
-                  <Link href="/templates" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.createTemplate}</Link>
+                  {/* <Link href="/templates" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.createTemplate}</Link> */}
                   <Link href="/categories" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">หมวดหมู่เอกสาร</Link>
                   <Link href="/types" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">ประเภทเอกสาร</Link>
                 </div>
@@ -158,7 +157,7 @@ export default function Sidebar() {
 
             {/* Company Data */}
             <div className="pt-1">
-              <button 
+              <button
                 onClick={() => toggleMenu('company')}
                 className={`w-full flex items-center ${isOpen ? 'justify-between px-3' : 'justify-center px-0'} py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors`}
                 title={!isOpen ? t.sidebar.companyData : undefined}
@@ -182,7 +181,7 @@ export default function Sidebar() {
 
             {/* Approval System */}
             <div className="pt-1">
-              <button 
+              <button
                 onClick={() => toggleMenu('approval')}
                 className={`w-full flex items-center ${isOpen ? 'justify-between px-3' : 'justify-center px-0'} py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors`}
                 title={!isOpen ? t.sidebar.approvalSystem : undefined}
@@ -199,7 +198,7 @@ export default function Sidebar() {
 
             {/* Reports */}
             <div className="pt-1">
-              <Link 
+              <Link
                 href="/reports"
                 className={`flex items-center ${isOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors`}
                 title={!isOpen ? t.sidebar.reports : undefined}
@@ -211,7 +210,7 @@ export default function Sidebar() {
 
             {/* Settings */}
             <div className="pt-1">
-              <button 
+              <button
                 onClick={() => toggleMenu('settings')}
                 className={`w-full flex items-center ${isOpen ? 'justify-between px-3' : 'justify-center px-0'} py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors`}
                 title={!isOpen ? t.sidebar.settings : undefined}
@@ -235,11 +234,10 @@ export default function Sidebar() {
 
             {/* Change Password */}
             <div className="pt-1">
-              <Link 
+              <Link
                 href="/change-password"
-                className={`flex items-center ${isOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg transition-colors ${
-                  pathname === '/change-password' ? 'bg-emerald-50 text-emerald-600 font-medium' : 'text-gray-600 hover:bg-gray-50'
-                }`}
+                className={`flex items-center ${isOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg transition-colors ${pathname === '/change-password' ? 'bg-emerald-50 text-emerald-600 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                  }`}
                 title={!isOpen ? 'เปลี่ยนรหัสผ่าน' : undefined}
               >
                 <Key size={20} className={`shrink-0 ${pathname === '/change-password' ? 'text-emerald-600' : 'text-gray-400'}`} />
@@ -248,7 +246,7 @@ export default function Sidebar() {
             </div>
           </nav>
         </div>
-        
+
         {/* Footer hint */}
         <div className={`p-4 border-t border-gray-100 dark:border-gray-800 flex items-start ${isOpen ? 'gap-2' : 'justify-center'} transition-colors`}>
           <div className="w-6 h-6 rounded-full bg-gray-800 dark:bg-gray-700 flex items-center justify-center text-white text-[10px] font-bold shrink-0">N</div>
