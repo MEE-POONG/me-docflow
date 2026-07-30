@@ -169,59 +169,59 @@ export default function OrganizationsClient({ initialPartners }: { initialPartne
       {/* Data Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+          <table className="w-full text-center text-sm">
             <thead className="text-gray-500 dark:text-gray-400 font-medium">
               <tr>
-                <th className="px-6 py-5 font-normal">{t.organizations.colName}</th>
-                <th className="px-6 py-5 font-normal">{t.organizations.colType}</th>
-                <th className="px-6 py-5 font-normal">{t.organizations.colTaxId}</th>
-                <th className="px-6 py-5 font-normal">{t.organizations.colBranch}</th>
-                <th className="px-6 py-5 font-normal">{t.organizations.colEmail}</th>
-                <th className="px-6 py-5 font-normal">{t.organizations.colPhone}</th>
-                <th className="px-6 py-5 font-normal">{t.organizations.colAddress}</th>
-                <th className="px-6 py-5 font-normal">{t.organizations.colContact}</th>
-                <th className="px-6 py-5 font-normal">{t.organizations.colDocs}</th>
-                <th className="px-6 py-5 font-normal">{t.common.manage}</th>
+                <th className="px-3 py-3 font-normal">{t.organizations.colName}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.organizations.colType}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.organizations.colTaxId}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.organizations.colBranch}</th>
+                <th className="px-3 py-3 font-normal">{t.organizations.colEmail}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.organizations.colPhone}</th>
+                <th className="px-3 py-3 font-normal">{t.organizations.colAddress}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.organizations.colContact}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.organizations.colDocs}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.common.manage}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
               {filteredPartners.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
+                  <td colSpan={10} className="px-3 py-8 text-center text-gray-400 dark:text-gray-500">
                     {t.organizations.empty}
                   </td>
                 </tr>
               ) : (
                 filteredPartners.map((partner) => (
                   <tr key={partner.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td className="px-6 py-4">{partner.name}</td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{partner.type}</td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{partner.taxId || '-'}</td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{partner.branchCode || '00000'}</td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{partner.email || '-'}</td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">{partner.phone || '-'}</td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400 max-w-[200px] truncate" title={partner.address || ''}>
+                    <td className="px-3 py-3 min-w-[120px]">{partner.name}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{partner.type}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{partner.taxId || '-'}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{partner.branchCode || '00000'}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 break-all min-w-[140px]">{partner.email || '-'}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{partner.phone || '-'}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 max-w-[200px] truncate" title={partner.address || ''}>
                       {partner.address || '-'}
                     </td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 min-w-[120px]">
                       {partner.contactName ? (
                         <span>
-                          {partner.contactName} {partner.contactPhone && <span className="text-gray-400 dark:text-gray-500">{partner.contactPhone}</span>}
+                          {partner.contactName} {partner.contactPhone && <span className="text-gray-400 dark:text-gray-500 block text-xs">{partner.contactPhone}</span>}
                         </span>
                       ) : '-'}
                     </td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400">-</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">-</td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => handleOpenModal(partner)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          className="flex items-center gap-1.5 px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           <Edit2 className="w-3 h-3" /> {t.common.edit}
                         </button>
                         <button
                           onClick={() => handleDelete(partner.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                          className="flex items-center gap-1.5 px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} {t.common.delete}
                         </button>

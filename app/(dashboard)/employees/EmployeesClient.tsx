@@ -186,7 +186,7 @@ export default function EmployeesClient({
           <Plus className="w-4 h-4" /> {t.employees.addEmployee}
         </button>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-2 flex flex-wrap items-center gap-3 transition-colors">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-3 flex flex-wrap items-center gap-3 transition-colors">
           <div className="relative min-w-[240px]">
             <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -226,42 +226,42 @@ export default function EmployeesClient({
       {/* Data Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+          <table className="w-full text-left text-sm">
             <thead className="text-gray-500 dark:text-gray-400 font-medium">
               <tr>
-                <th className="px-5 py-4 font-normal">{t.employees.colCode}</th>
-                <th className="px-5 py-4 font-normal">{t.employees.colName}</th>
-                <th className="px-5 py-4 font-normal">{t.employees.colEmail}</th>
-                <th className="px-5 py-4 font-normal">{t.employees.colPhone}</th>
-                <th className="px-5 py-4 font-normal">{t.employees.colPosition}</th>
-                <th className="px-5 py-4 font-normal">{t.employees.colDepartment}</th>
-                <th className="px-5 py-4 font-normal">{t.employees.colSalary}</th>
-                <th className="px-5 py-4 font-normal">{t.employees.colStartDate}</th>
-                <th className="px-5 py-4 font-normal">{t.employees.colEndDate}</th>
-                <th className="px-5 py-4 font-normal">{t.common.status}</th>
-                <th className="px-5 py-4 font-normal text-right">{t.common.manage}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.employees.colCode}</th>
+                <th className="px-3 py-3 font-normal">{t.employees.colName}</th>
+                <th className="px-3 py-3 font-normal">{t.employees.colEmail}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.employees.colPhone}</th>
+                <th className="px-3 py-3 font-normal">{t.employees.colPosition}</th>
+                <th className="px-3 py-3 font-normal">{t.employees.colDepartment}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.employees.colSalary}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.employees.colStartDate}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.employees.colEndDate}</th>
+                <th className="px-3 py-3 font-normal whitespace-nowrap">{t.common.status}</th>
+                <th className="px-3 py-3 font-normal text-right whitespace-nowrap">{t.common.manage}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
               {filteredEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-6 py-12 text-center text-gray-400 dark:text-gray-500">
+                  <td colSpan={11} className="px-3 py-8 text-center text-gray-400 dark:text-gray-500">
                     {t.employees.empty}
                   </td>
                 </tr>
               ) : (
                 filteredEmployees.map((emp) => (
                   <tr key={emp.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{emp.code || '-'}</td>
-                    <td className="px-5 py-3 font-medium text-gray-900 dark:text-white">{emp.name}</td>
-                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{emp.email || '-'}</td>
-                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{emp.phone || '-'}</td>
-                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{emp.position || '-'}</td>
-                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{emp.department?.name || '-'}</td>
-                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{formatCurrency(emp.salarySatang)}</td>
-                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{formatDisplayDate(emp.startDate)}</td>
-                    <td className="px-5 py-3 text-gray-500 dark:text-gray-400">{formatDisplayDate(emp.endDate)}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{emp.code || '-'}</td>
+                    <td className="px-3 py-3 font-medium text-gray-900 dark:text-white min-w-[120px]">{emp.name}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 break-all min-w-[140px]">{emp.email || '-'}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{emp.phone || '-'}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 min-w-[100px]">{emp.position || '-'}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 min-w-[100px]">{emp.department?.name || '-'}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{formatCurrency(emp.salarySatang)}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{formatDisplayDate(emp.startDate)}</td>
+                    <td className="px-3 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{formatDisplayDate(emp.endDate)}</td>
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                         emp.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 
                         emp.status === 'SUSPENDED' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
@@ -271,17 +271,17 @@ export default function EmployeesClient({
                         {emp.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-3 py-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => handleOpenModal(emp)}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors font-medium"
+                          className="flex items-center gap-1.5 px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors font-medium"
                         >
                           <Edit2 className="w-3 h-3" /> {t.common.edit}
                         </button>
                         <button
                           onClick={() => handleDelete(emp.id)}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors font-medium"
+                          className="flex items-center gap-1.5 px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors font-medium"
                         >
                           {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} {t.common.delete}
                         </button>

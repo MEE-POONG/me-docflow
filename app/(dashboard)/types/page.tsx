@@ -1,8 +1,7 @@
-export default function TypesPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Types</h1>
-      <p>This is the Types page.</p>
-    </div>
-  );
+import { getDocumentTypes, getCategories } from './actions';
+import TypesClient from './TypesClient';
+
+export default async function TypesPage() {
+  const [types, categories] = await Promise.all([getDocumentTypes(), getCategories()]);
+  return <TypesClient initialTypes={types} categories={categories} />;
 }

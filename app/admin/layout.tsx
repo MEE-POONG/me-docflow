@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import { useTheme } from "next-themes";
 import { 
   ShieldAlert, 
   LayoutDashboard, 
@@ -18,7 +19,9 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
-  Palette
+  Palette,
+  Sun,
+  Moon
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -28,8 +31,11 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
+  
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
   // Sidebar collapsible dropdowns
   const [expanded, setExpanded] = useState({
@@ -40,6 +46,10 @@ export default function AdminLayout({
   const toggleMenu = (menu: keyof typeof expanded) => {
     setExpanded((prev) => ({ ...prev, [menu]: !prev[menu] }));
   };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Check login session on mount
   useEffect(() => {
@@ -69,9 +79,9 @@ export default function AdminLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center font-sans text-slate-800">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center font-sans text-slate-800 dark:text-slate-100">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500 mb-4"></div>
-        <p className="text-sm text-slate-500">กำลังเข้าสู่ระบบควบคุมหลังบ้าน...</p>
+        <p className="text-sm text-slate-550 dark:text-slate-405">กำลังเข้าสู่ระบบควบคุมหลังบ้าน...</p>
       </div>
     );
   }
@@ -89,8 +99,8 @@ export default function AdminLayout({
           onClick={handleLinkClick}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
             pathname === "/admin/dashboard"
-              ? "bg-amber-50 text-amber-700 font-bold border-l-4 border-amber-500 shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-550 font-bold border-l-4 border-amber-500 shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
           }`}
         >
           <LayoutDashboard size={18} />
@@ -101,7 +111,7 @@ export default function AdminLayout({
         <div className="pt-1">
           <button 
             onClick={() => toggleMenu('company')}
-            className="w-full flex items-center justify-between px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all text-left cursor-pointer"
+            className="w-full flex items-center justify-between px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all text-left cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <Building2 size={18} />
@@ -110,12 +120,14 @@ export default function AdminLayout({
             {expanded.company ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
           {expanded.company && (
-            <div className="pl-9 pr-3 py-1 space-y-1 border-l border-gray-200 ml-5 mt-1 animate-in slide-in-from-top-1 duration-150">
+            <div className="pl-9 pr-3 py-1 space-y-1 border-l border-gray-200 dark:border-slate-800 ml-5 mt-1 animate-in slide-in-from-top-1 duration-150">
               <Link 
                 href="/admin/companies" 
                 onClick={handleLinkClick}
                 className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
-                  pathname === '/admin/companies' ? 'text-amber-700 font-bold bg-amber-50/60' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50/50'
+                  pathname === '/admin/companies' 
+                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
                 }`}
               >
                 รายการบริษัท
@@ -124,7 +136,9 @@ export default function AdminLayout({
                 href="/admin/users" 
                 onClick={handleLinkClick}
                 className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
-                  pathname === '/admin/users' ? 'text-amber-700 font-bold bg-amber-50/60' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50/50'
+                  pathname === '/admin/users' 
+                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                    : 'text-slate-555 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
                 }`}
               >
                 ผู้ใช้บริษัท
@@ -139,8 +153,8 @@ export default function AdminLayout({
           onClick={handleLinkClick}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
             pathname === "/admin/packages"
-              ? "bg-amber-50 text-amber-700 font-bold border-l-4 border-amber-500 shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-550 font-bold border-l-4 border-amber-500 shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
           }`}
         >
           <Package size={18} />
@@ -151,7 +165,7 @@ export default function AdminLayout({
         <div className="pt-1">
           <button 
             onClick={() => toggleMenu('documents')}
-            className="w-full flex items-center justify-between px-3 py-2.5 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-all text-left cursor-pointer"
+            className="w-full flex items-center justify-between px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all text-left cursor-pointer"
           >
             <div className="flex items-center gap-3">
               <FileText size={18} />
@@ -160,12 +174,14 @@ export default function AdminLayout({
             {expanded.documents ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
           {expanded.documents && (
-            <div className="pl-9 pr-3 py-1 space-y-1 border-l border-gray-200 ml-5 mt-1 animate-in slide-in-from-top-1 duration-150">
+            <div className="pl-9 pr-3 py-1 space-y-1 border-l border-gray-200 dark:border-slate-800 ml-5 mt-1 animate-in slide-in-from-top-1 duration-150">
               <Link 
                 href="/admin/categories" 
                 onClick={handleLinkClick}
                 className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
-                  pathname === '/admin/categories' ? 'text-amber-700 font-bold bg-amber-50/60' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50/50'
+                  pathname === '/admin/categories' 
+                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
                 }`}
               >
                 หมวดหมู่เอกสาร
@@ -174,7 +190,9 @@ export default function AdminLayout({
                 href="/admin/types" 
                 onClick={handleLinkClick}
                 className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
-                  pathname === '/admin/types' ? 'text-amber-700 font-bold bg-amber-50/60' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50/50'
+                  pathname === '/admin/types' 
+                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
                 }`}
               >
                 ประเภทเอกสาร
@@ -183,7 +201,9 @@ export default function AdminLayout({
                 href="/admin/templates" 
                 onClick={handleLinkClick}
                 className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
-                  pathname === '/admin/templates' ? 'text-amber-700 font-bold bg-amber-50/60' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50/50'
+                  pathname === '/admin/templates' 
+                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                    : 'text-slate-550 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
                 }`}
               >
                 Template กลาง
@@ -198,8 +218,8 @@ export default function AdminLayout({
           onClick={handleLinkClick}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
             pathname === "/admin/logs"
-              ? "bg-amber-50 text-amber-700 font-bold border-l-4 border-amber-500 shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-550 font-bold border-l-4 border-amber-500 shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
           }`}
         >
           <List size={18} />
@@ -212,8 +232,8 @@ export default function AdminLayout({
           onClick={handleLinkClick}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
             pathname === "/admin/ui-components"
-              ? "bg-amber-50 text-amber-700 font-bold border-l-4 border-amber-500 shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-550 font-bold border-l-4 border-amber-500 shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
           }`}
         >
           <Palette size={18} />
@@ -226,8 +246,8 @@ export default function AdminLayout({
           onClick={handleLinkClick}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
             pathname === "/admin/settings"
-              ? "bg-amber-50 text-amber-700 font-bold border-l-4 border-amber-500 shadow-sm"
-              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-550 font-bold border-l-4 border-amber-500 shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
           }`}
         >
           <Settings size={18} />
@@ -238,18 +258,18 @@ export default function AdminLayout({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-800 font-light">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans text-slate-800 dark:text-slate-100 font-light transition-colors duration-200">
       
       {/* ================= DESKTOP SIDEBAR ================= */}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 shrink-0">
+      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 shrink-0 transition-colors duration-200">
         {/* Logo */}
-        <div className="p-5 border-b border-gray-200 flex items-center gap-3">
-          <div className="bg-amber-500 p-2 rounded-xl text-slate-950 shadow-md">
+        <div className="p-5 border-b border-gray-200 dark:border-slate-800 flex items-center gap-3">
+          <div className="bg-amber-500 p-2 rounded-xl text-slate-955 shadow-md">
             <ShieldAlert size={20} />
           </div>
           <div>
-            <h2 className="text-sm font-black text-slate-800 tracking-wider leading-tight">ADMIN PORTAL</h2>
-            <p className="text-[10px] text-amber-600 font-semibold tracking-widest uppercase">Backend Control</p>
+            <h2 className="text-sm font-black text-slate-855 dark:text-white tracking-wider leading-tight">ADMIN PORTAL</h2>
+            <p className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold tracking-widest uppercase">Backend Control</p>
           </div>
         </div>
 
@@ -259,10 +279,10 @@ export default function AdminLayout({
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-gray-200 space-y-2">
+        <div className="p-4 border-t border-gray-200 dark:border-slate-800 space-y-2">
           <Link
             href="/dashboard"
-            className="flex items-center justify-between w-full px-3 py-2.5 bg-slate-100 hover:bg-slate-200/80 text-xs text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg transition-all"
+            className="flex items-center justify-between w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-205 dark:border-slate-800 rounded-lg transition-all"
           >
             <span className="flex items-center gap-2">
               <ExternalLink size={14} />
@@ -271,7 +291,7 @@ export default function AdminLayout({
           </Link>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-red-650 hover:text-red-750 hover:bg-red-50 rounded-lg transition-all text-left cursor-pointer"
+            className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-red-650 dark:text-red-400 hover:text-red-750 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-all text-left cursor-pointer"
           >
             <LogOut size={14} />
             ออกจากระบบแอดมิน
@@ -283,37 +303,37 @@ export default function AdminLayout({
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 md:hidden" onClick={() => setSidebarOpen(false)}>
           <aside 
-            className="w-64 bg-white h-full border-r border-gray-200 flex flex-col animate-in slide-in-from-left duration-200"
+            className="w-64 bg-white dark:bg-slate-900 h-full border-r border-gray-200 dark:border-slate-800 flex flex-col animate-in slide-in-from-left duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-5 border-b border-gray-200 flex items-center justify-between">
+            <div className="p-5 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="bg-amber-500 p-2 rounded-xl text-slate-950">
                   <ShieldAlert size={18} />
                 </div>
                 <div>
-                  <h2 className="text-xs font-black text-slate-800">ADMIN PORTAL</h2>
+                  <h2 className="text-xs font-black text-slate-800 dark:text-white">ADMIN PORTAL</h2>
                 </div>
               </div>
-              <button onClick={() => setSidebarOpen(false)} className="text-slate-500 hover:text-slate-900">
+              <button onClick={() => setSidebarOpen(false)} className="text-slate-500 hover:text-slate-900 dark:hover:text-white">
                 <X size={20} />
               </button>
             </div>
             <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto">
               {renderNavLinks(true, () => setSidebarOpen(false))}
             </nav>
-            <div className="p-4 border-t border-gray-200 space-y-2">
+            <div className="p-4 border-t border-gray-200 dark:border-slate-800 space-y-2">
               <Link
                 href="/dashboard"
                 onClick={() => setSidebarOpen(false)}
-                className="flex items-center gap-2 w-full px-3 py-2.5 bg-slate-100 text-xs text-slate-600 rounded-lg border border-slate-200"
+                className="flex items-center gap-2 w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 text-xs text-slate-655 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-800"
               >
                 <ExternalLink size={14} />
                 สลับไปฝั่งผู้ใช้งาน
               </Link>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-red-650 hover:bg-red-50 rounded-lg text-left"
+                className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-left"
               >
                 <LogOut size={14} />
                 ออกจากระบบแอดมิน
@@ -327,33 +347,47 @@ export default function AdminLayout({
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* Navbar */}
-        <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6">
+        <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 h-16 flex items-center justify-between px-6 transition-colors duration-200">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setSidebarOpen(true)}
-              className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg md:hidden transition-colors"
+              className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg md:hidden transition-colors"
             >
               <Menu size={20} />
             </button>
-            <h1 className="text-sm font-semibold text-slate-600">ระบบควบคุมส่วนกลางสำหรับผู้ดูแลระบบ</h1>
+            <h1 className="text-sm font-semibold text-slate-600 dark:text-slate-400">ระบบควบคุมส่วนกลางสำหรับผู้ดูแลระบบ</h1>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="h-4 w-px bg-gray-200 hidden sm:block"></div>
-            <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-amber-50/80 border border-amber-100">
-              <div className="w-7 h-7 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-xs">
+            {/* Theme Toggle Button */}
+            {mounted ? (
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="p-2 text-slate-550 hover:text-slate-855 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                title="สลับโหมดกลางวัน/กลางคืน"
+              >
+                {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+            ) : (
+              <div className="w-9 h-9" />
+            )}
+
+            <div className="h-4 w-px bg-gray-200 dark:bg-slate-800 hidden sm:block"></div>
+            
+            <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-amber-50/85 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
+              <div className="w-7 h-7 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-xs shadow-sm">
                 SA
               </div>
               <div className="hidden sm:block text-left">
-                <p className="text-xs font-bold text-slate-800 leading-tight">Super Admin</p>
-                <p className="text-[10px] text-slate-500 leading-none">admin</p>
+                <p className="text-xs font-bold text-slate-800 dark:text-white leading-tight">Super Admin</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-none">admin</p>
               </div>
             </div>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-6 overflow-y-auto bg-slate-50">
+        <main className="flex-1 p-6 overflow-y-auto bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
           <div className="max-w-7xl mx-auto space-y-6">
             {children}
           </div>

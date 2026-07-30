@@ -31,9 +31,9 @@ export default async function TemplatesPage() {
             จัดการและค้นหาแบบฟอร์มหรือเทมเพลตเอกสารทั้งหมดในระบบ
           </p>
         </div>
-        
-        <Link 
-          href="/templates/create" 
+
+        <Link
+          href="/templates/create"
           className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow-sm hover:shadow transition-all"
         >
           <Plus className="w-5 h-5" />

@@ -44,9 +44,9 @@ export default async function DocumentsPage() {
             จัดการและค้นหาเอกสารทั้งหมดภายในองค์กร
           </p>
         </div>
-        
-        <Link 
-          href="/documents/create" 
+
+        <Link
+          href="/documents/create"
           className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow-sm hover:shadow transition-all"
         >
           <Plus className="w-5 h-5" />

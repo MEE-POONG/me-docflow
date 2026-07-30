@@ -48,25 +48,25 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wider mb-1">Backend Overview</p>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2 font-serif">แผงสถิติภาพรวมระบบ</h1>
-        <p className="text-sm text-slate-500">สรุปความเคลื่อนไหวทั้งหมดของผู้ใช้งาน บริษัท และเอกสารในเครือข่ายแอปพลิเคชัน</p>
+        <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">Backend Overview</p>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-serif">แผงสถิติภาพรวมระบบ</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">สรุปความเคลื่อนไหวทั้งหมดของผู้ใช้งาน บริษัท และเอกสารในเครือข่ายแอปพลิเคชัน</p>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "บริษัทลูกค้าจดทะเบียน", value: stats.companiesCount, icon: Building2, color: "text-amber-600 bg-amber-50 border border-amber-100" },
-          { label: "สมาชิกผู้ใช้งานระบบ", value: stats.usersCount, icon: Users, color: "text-emerald-600 bg-emerald-50 border border-emerald-100" },
-          { label: "เอกสารทั้งหมดออกในแอป", value: stats.documentsCount, icon: FileText, color: "text-blue-600 bg-blue-50 border border-blue-100" },
-          { label: "เซสชันเปิดใช้งาน (Active)", value: stats.activeSessions, icon: Activity, color: "text-rose-600 bg-rose-50 border border-rose-100" },
+          { label: "บริษัทลูกค้าจดทะเบียน", value: stats.companiesCount, icon: Building2, color: "text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20" },
+          { label: "สมาชิกผู้ใช้งานระบบ", value: stats.usersCount, icon: Users, color: "text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20" },
+          { label: "เอกสารทั้งหมดออกในแอป", value: stats.documentsCount, icon: FileText, color: "text-blue-600 dark:text-blue-500 bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20" },
+          { label: "เซสชันเปิดใช้งาน (Active)", value: stats.activeSessions, icon: Activity, color: "text-rose-600 dark:text-rose-500 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20" },
         ].map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <div key={i} className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
+            <div key={i} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm flex items-center justify-between transition-colors duration-200">
               <div>
-                <p className="text-xs text-slate-550 font-medium mb-1">{stat.label}</p>
-                <p className="text-3xl font-extrabold text-slate-900 font-sans">{stat.value}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">{stat.label}</p>
+                <p className="text-3xl font-extrabold text-slate-900 dark:text-white font-sans">{stat.value}</p>
               </div>
               <div className={`p-3 rounded-xl ${stat.color}`}>
                 <Icon size={24} />
@@ -79,13 +79,13 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Recent Audit Logs */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm lg:col-span-2 space-y-4">
-          <div className="flex justify-between items-center pb-3 border-b border-gray-100">
-            <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm">
-              <Activity className="w-5 h-5 text-amber-550" />
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm lg:col-span-2 space-y-4 transition-colors duration-200">
+          <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-slate-800">
+            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+              <Activity className="w-5 h-5 text-amber-500" />
               บันทึกกิจกรรมล่าสุดของระบบ (System Logs)
             </h3>
-            <Link href="/admin/logs" className="text-xs text-amber-600 hover:text-amber-700 font-semibold transition-colors">
+            <Link href="/admin/logs" className="text-xs text-amber-600 dark:text-amber-500 hover:text-amber-700 dark:hover:text-amber-400 font-semibold transition-colors">
               ดูทั้งหมด
             </Link>
           </div>
@@ -96,23 +96,23 @@ export default function AdminDashboardPage() {
                 <li key={log.id}>
                   <div className="relative pb-8">
                     {idx !== recentLogs.length - 1 && (
-                      <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-150" aria-hidden="true"></span>
+                      <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-150 dark:bg-slate-800" aria-hidden="true"></span>
                     )}
                     <div className="relative flex space-x-3">
                       <div>
-                        <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white text-slate-900 font-bold ${
-                          log.type === "security" ? "bg-amber-100 text-amber-700 border border-amber-200" : log.type === "warning" ? "bg-rose-100 text-rose-700 border border-rose-200" : "bg-slate-100 text-slate-650"
+                        <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white dark:ring-slate-900 font-bold ${
+                          log.type === "security" ? "bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-500 border border-amber-250 dark:border-amber-500/30" : log.type === "warning" ? "bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-500 border border-rose-250 dark:border-rose-500/30" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
                         }`}>
                           {log.type === "security" ? "🔐" : log.type === "warning" ? "⚠️" : "ℹ️"}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0 pt-1.5 flex justify-between space-x-4">
                         <div>
-                          <p className="text-xs text-slate-600">
-                            {log.action} <span className="font-semibold text-slate-800">({log.user})</span>
+                          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                            {log.action} <span className="font-semibold text-slate-850 dark:text-white">({log.user})</span>
                           </p>
                         </div>
-                        <div className="text-right text-[10px] whitespace-nowrap text-slate-400 font-mono">
+                        <div className="text-right text-[10px] whitespace-nowrap text-slate-400 dark:text-slate-500 font-mono">
                           {log.timestamp}
                         </div>
                       </div>
@@ -125,38 +125,38 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Server Status & Controls */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="pb-3 border-b border-gray-100">
-            <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm">
-              <Server className="w-5 h-5 text-amber-550" />
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm flex flex-col justify-between space-y-4 transition-colors duration-200">
+          <div className="pb-3 border-b border-gray-100 dark:border-slate-800">
+            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+              <Server className="w-5 h-5 text-amber-500" />
               สถานะเซิร์ฟเวอร์หลังบ้าน
             </h3>
           </div>
           
           <div className="flex-1 flex flex-col justify-center space-y-3 py-4">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-150">
-              <span className="text-xs text-slate-500 font-medium">Database Engine</span>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-slate-950 border border-gray-150 dark:border-slate-850 transition-colors duration-200">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Database Engine</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-500/20">
                 Online
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-150">
-              <span className="text-xs text-slate-500 font-medium">Web Engine API</span>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-slate-950 border border-gray-150 dark:border-slate-850 transition-colors duration-200">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Web Engine API</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-500/20">
                 Online
               </span>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-150">
-              <span className="text-xs text-slate-500 font-medium">Storage Driver API</span>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-slate-950 border border-gray-150 dark:border-slate-850 transition-colors duration-200">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Storage Driver API</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-500/20">
                 Online
               </span>
             </div>
           </div>
 
-          <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-100 flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-[10px] text-amber-800 leading-tight">
+          <div className="bg-amber-50/50 dark:bg-amber-500/5 p-3 rounded-xl border border-amber-100 dark:border-amber-500/10 flex items-start gap-2.5 transition-colors duration-200">
+            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+            <p className="text-[10px] text-amber-800 dark:text-amber-500 leading-tight">
               สิทธิ์การเข้าถึงข้อมูลได้รับการสโคปเฉพาะระบบผู้ดูแลหลังบ้านและบันทึกทุกคำสั่งแก้ไขลง Audit Logs
             </p>
           </div>

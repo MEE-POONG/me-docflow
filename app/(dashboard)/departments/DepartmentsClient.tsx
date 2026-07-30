@@ -120,7 +120,7 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
           <Plus className="w-4 h-4" /> {t.departments.addDepartment}
         </button>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-2 flex flex-wrap items-center gap-3 transition-colors">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-3 flex flex-wrap items-center gap-3 transition-colors">
           <div className="relative min-w-[240px]">
             <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
