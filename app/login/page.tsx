@@ -64,6 +64,7 @@ export default function LoginPage() {
   
   // Register State
   const [regFullName, setRegFullName] = useState("");
+  const [regEmail, setRegEmail] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regRole, setRegRole] = useState<string>("");
@@ -74,20 +75,94 @@ export default function LoginPage() {
       if (loginIdentifier === "admin" && loginPassword === "password") {
         localStorage.setItem("me_docflow_admin_logged_in", "true");
         router.push("/admin/dashboard");
+        return;
+      }
+
+      // Load users
+      const savedData = localStorage.getItem("me_docflow_users");
+      let allUsers: any[] = [];
+      if (savedData) {
+        try {
+          allUsers = JSON.parse(savedData);
+        } catch (err) {}
       } else {
+        allUsers = [
+          { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
+          { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123" },
+          { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123" },
+        ];
+        localStorage.setItem("me_docflow_users", JSON.stringify(allUsers));
+      }
+
+      // Find user
+      const matched = allUsers.find(
+        (u: any) =>
+          (u.email.toLowerCase() === loginIdentifier.toLowerCase() || u.phone === loginIdentifier) &&
+          u.password === loginPassword
+      );
+
+      if (matched) {
+        localStorage.setItem("me_docflow_current_user", JSON.stringify(matched));
         localStorage.setItem("me_docflow_user_session", "true");
+        window.dispatchEvent(new Event("activeCompanyChanged"));
         router.push("/dashboard");
+      } else {
+        alert("อีเมล/เบอร์โทรศัพท์ หรือรหัสผ่านไม่ถูกต้อง");
       }
     }
   };
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regFullName || !regPhone || !regRole || !regPassword) {
+    if (!regFullName || !regEmail || !regPhone || !regRole || !regPassword) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
     }
-    // Simulate successful registration and redirect to dashboard
+
+    // Load existing users from localStorage or default seed
+    const savedData = localStorage.getItem("me_docflow_users");
+    let allUsers: any[] = [];
+    if (savedData) {
+      try {
+        allUsers = JSON.parse(savedData);
+      } catch (err) {}
+    } else {
+      allUsers = [
+        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
+        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123" },
+        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123" },
+      ];
+    }
+
+    // Check if email already registered
+    const exists = allUsers.some((u: any) => u.email.toLowerCase() === regEmail.toLowerCase());
+    if (exists) {
+      alert("อีเมลนี้ได้รับการลงทะเบียนแล้ว");
+      return;
+    }
+
+    const newUser = {
+      id: Date.now().toString(),
+      fullName: regFullName,
+      email: regEmail,
+      phone: regPhone,
+      role: regRole,
+      status: "active",
+      password: regPassword
+    };
+
+    const updatedUsers = [...allUsers, newUser];
+    localStorage.setItem("me_docflow_users", JSON.stringify(updatedUsers));
+    
+    // Auto login
+    localStorage.setItem("me_docflow_current_user", JSON.stringify(newUser));
+    localStorage.setItem("me_docflow_user_session", "true");
+    
+    // Dispatch activeCompanyChanged to ensure any listening components update
+    setTimeout(() => {
+      window.dispatchEvent(new Event("activeCompanyChanged"));
+    }, 100);
+
     router.push("/dashboard");
   };
 
@@ -219,6 +294,23 @@ export default function LoginPage() {
                     onChange={(e) => setRegFullName(e.target.value)}
                     className="appearance-none block w-full pl-11 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all"
                     placeholder="สมชาย ใจดี"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">อีเมล</label>
+                <div className="mt-1.5 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    className="appearance-none block w-full pl-11 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all"
+                    placeholder="you@example.com"
                   />
                 </div>
               </div>

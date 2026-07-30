@@ -36,7 +36,7 @@ export default function CompanySettingsPage() {
   const [editingCompany, setEditingCompany] = useState<CompanyItem | null>(null);
 
   // Current logged in user details
-  const currentUserEmail = "melisara@siamretail.co.th";
+  const [currentUserEmail, setCurrentUserEmail] = useState("melisara@siamretail.co.th");
 
   // Form states
   const [companyName, setCompanyName] = useState("");
@@ -49,10 +49,42 @@ export default function CompanySettingsPage() {
 
   // Load from localStorage or seed initial data
   useEffect(() => {
+    const userStr = localStorage.getItem("me_docflow_current_user");
+    let currentEmail = "melisara@siamretail.co.th";
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        if (u.email) {
+          currentEmail = u.email;
+          setCurrentUserEmail(u.email);
+        }
+      } catch (e) {}
+    }
+
     const savedData = localStorage.getItem("me_docflow_companies");
     if (savedData) {
       try {
-        setCompanies(JSON.parse(savedData));
+        const list = JSON.parse(savedData);
+        const hasCompany = list.some((c: any) => c.ownerEmail === currentEmail);
+        if (!hasCompany) {
+          const newCompany = {
+            id: Date.now().toString(),
+            companyName: "บริษัท ของคุณ จำกัด",
+            taxId: "",
+            address: "",
+            phone: "",
+            email: currentEmail,
+            website: "",
+            isActive: true,
+            ownerEmail: currentEmail
+          };
+          const updated = list.map((c: any) => ({ ...c, isActive: false })).concat(newCompany);
+          setCompanies(updated);
+          localStorage.setItem("me_docflow_companies", JSON.stringify(updated));
+          window.dispatchEvent(new Event("activeCompanyChanged"));
+        } else {
+          setCompanies(list);
+        }
       } catch (e) {
         console.error("Error parsing companies settings data", e);
       }
@@ -66,21 +98,23 @@ export default function CompanySettingsPage() {
           phone: "02-600-0000",
           email: "contact@siamretail.co.th",
           website: "www.siamretail.co.th",
-          isActive: true,
-          ownerEmail: "melisara@siamretail.co.th" // User's own company
-        },
-        {
-          id: "2",
-          companyName: "บริษัท เทคโซลูชั่นส์ แอนด์ เซอร์วิสเซส จำกัด",
-          taxId: "0105562000234",
-          address: "123 อาคารเพลินจิต พญาไท ราชเทวี กรุงเทพมหานคร 10400",
-          phone: "02-111-2222",
-          email: "info@techsolutions.com",
-          website: "www.techsolutions.com",
-          isActive: false,
-          ownerEmail: "owner@techsolutions.com" // Other user's company (Read-only)
+          isActive: currentEmail === "melisara@siamretail.co.th",
+          ownerEmail: "melisara@siamretail.co.th"
         }
       ];
+      if (currentEmail !== "melisara@siamretail.co.th") {
+        initialCompanies.push({
+          id: Date.now().toString(),
+          companyName: "บริษัท ของคุณ จำกัด",
+          taxId: "",
+          address: "",
+          phone: "",
+          email: currentEmail,
+          website: "",
+          isActive: true,
+          ownerEmail: currentEmail
+        });
+      }
       setCompanies(initialCompanies);
       localStorage.setItem("me_docflow_companies", JSON.stringify(initialCompanies));
     }

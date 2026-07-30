@@ -7,6 +7,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export default function Navbar() {
   const [activeCompanyName, setActiveCompanyName] = useState("บริษัท สยาม รีเทล จำกัด (มหาชน)");
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const { language, setLanguage, t } = useLanguage();
@@ -28,8 +29,24 @@ export default function Navbar() {
       }
     };
 
+    const updateCurrentUser = () => {
+      const userStr = localStorage.getItem("me_docflow_current_user");
+      if (userStr) {
+        try {
+          setCurrentUser(JSON.parse(userStr));
+        } catch (e) {}
+      } else {
+        setCurrentUser({
+          fullName: "Melisara Chaimongkol",
+          email: "melisara@siamretail.co.th"
+        });
+      }
+    };
+
     updateActiveCompany();
+    updateCurrentUser();
     window.addEventListener("activeCompanyChanged", updateActiveCompany);
+    window.addEventListener("activeCompanyChanged", updateCurrentUser);
 
     const handleClickOutside = (event: MouseEvent) => {
       if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
@@ -40,6 +57,7 @@ export default function Navbar() {
 
     return () => {
       window.removeEventListener("activeCompanyChanged", updateActiveCompany);
+      window.removeEventListener("activeCompanyChanged", updateCurrentUser);
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
@@ -122,10 +140,10 @@ export default function Navbar() {
 
         {/* User Profile */}
         <button className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors ml-2">
-          <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
-            <User className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 font-bold text-xs uppercase">
+            {currentUser?.fullName ? currentUser.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : <User className="w-4 h-4" />}
           </div>
-          <span className="text-sm text-gray-700 dark:text-gray-300 hidden md:block">Melisara Chaimongkol</span>
+          <span className="text-sm text-gray-700 dark:text-gray-300 hidden md:block">{currentUser?.fullName || "Melisara Chaimongkol"}</span>
         </button>
       </div>
     </header>
