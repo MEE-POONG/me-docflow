@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Bell, Moon, Sun, ChevronDown, User, Menu } from "lucide-react";
+import { Search, Bell, Moon, Sun, ChevronDown, User, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSidebar } from "./SidebarContext";
@@ -14,7 +15,17 @@ export default function Navbar() {
   const { language, setLanguage, t } = useLanguage();
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const langMenuRef = useRef<HTMLDivElement>(null);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const { toggle } = useSidebar();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    if (confirm("คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?")) {
+      localStorage.removeItem("me_docflow_user_session");
+      router.push("/login");
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -53,6 +64,9 @@ export default function Navbar() {
     const handleClickOutside = (event: MouseEvent) => {
       if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
         setIsLangMenuOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -141,12 +155,40 @@ export default function Navbar() {
         </div>
 
         {/* User Profile */}
-        <button className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors ml-2">
-          <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 font-bold text-xs uppercase">
-            {currentUser?.fullName ? currentUser.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : <User className="w-4 h-4" />}
-          </div>
-          <span className="text-sm text-gray-700 dark:text-gray-300 hidden md:block">{currentUser?.fullName || "Melisara Chaimongkol"}</span>
-        </button>
+        <div className="relative ml-2" ref={userMenuRef}>
+          <button 
+            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+            className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 font-bold text-xs uppercase shrink-0">
+              {currentUser?.fullName ? currentUser.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : <User className="w-4 h-4" />}
+            </div>
+            <span className="text-sm text-gray-700 dark:text-gray-300 hidden md:block">{currentUser?.fullName || "Melisara Chaimongkol"}</span>
+          </button>
+
+          {isUserMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden z-50">
+              <div className="p-4 flex gap-3 items-center">
+                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 font-bold text-sm uppercase shrink-0">
+                  {currentUser?.fullName ? currentUser.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : <User className="w-5 h-5" />}
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-white truncate">{currentUser?.fullName || "Melisara Chaimongkol"}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{activeCompanyName}</p>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 dark:border-gray-700 p-2">
+                <button 
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left"
+                >
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  <span>ออกจากระบบ</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

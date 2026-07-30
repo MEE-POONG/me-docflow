@@ -61,12 +61,6 @@ export default function Sidebar() {
     }
     setExpanded(prev => ({ ...prev, [menu]: !prev[menu] }));
   };
-  const handleLogout = () => {
-    if (confirm("คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?")) {
-      localStorage.removeItem("me_docflow_user_session");
-      router.push("/login");
-    }
-  };
 
   return (
     <>
@@ -251,18 +245,6 @@ export default function Sidebar() {
                 <Key size={20} className={`shrink-0 ${pathname === '/change-password' ? 'text-emerald-600' : 'text-gray-400'}`} />
                 {isOpen && <span className="text-sm font-medium truncate">เปลี่ยนรหัสผ่าน</span>}
               </Link>
-            </div>
-
-            {/* Logout */}
-            <div className="pt-1">
-              <button 
-                onClick={handleLogout}
-                className={`w-full flex items-center ${isOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-left cursor-pointer font-sans`}
-                title={!isOpen ? 'ออกจากระบบ' : undefined}
-              >
-                <LogOut size={20} className="text-red-500 shrink-0" />
-                {isOpen && <span className="text-sm font-medium truncate">ออกจากระบบ</span>}
-              </button>
             </div>
           </nav>
         </div>
