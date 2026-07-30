@@ -14,7 +14,9 @@ import {
   Users, 
   GraduationCap, 
   Check,
-  Mail
+  Mail,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 const roles = [
@@ -56,7 +58,7 @@ export default function LoginPage() {
   
   // Decide which tab to display initially based on pathname
   const initialTab = pathname === "/register" ? "register" : "login";
-  const [activeTab, setActiveTab] = useState<"login" | "register">(initialTab);
+  const [activeTab, setActiveTab] = useState<"login" | "register" | "forgot">(initialTab);
   
   // Login State
   const [loginIdentifier, setLoginIdentifier] = useState(""); // Email or Phone
@@ -68,6 +70,19 @@ export default function LoginPage() {
   const [regPhone, setRegPhone] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regRole, setRegRole] = useState<string>("");
+
+  // Forgot Password State
+  const [forgotIdentifier, setForgotIdentifier] = useState("");
+  const [forgotStep, setForgotStep] = useState<1 | 2>(1);
+  const [forgotUser, setForgotUser] = useState<any>(null);
+  const [forgotNewPassword, setForgotNewPassword] = useState("");
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
+
+  // Password Visibility States
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
+  const [showForgotConfirmPassword, setShowForgotConfirmPassword] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,6 +181,94 @@ export default function LoginPage() {
     router.push("/dashboard");
   };
 
+  const handleFindForgotAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotIdentifier) {
+      alert("กรุณากรอกอีเมลหรือเบอร์โทรศัพท์");
+      return;
+    }
+
+    // Load users
+    const savedData = localStorage.getItem("me_docflow_users");
+    let allUsers: any[] = [];
+    if (savedData) {
+      try {
+        allUsers = JSON.parse(savedData);
+      } catch (err) {}
+    } else {
+      allUsers = [
+        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
+        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123" },
+        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123" },
+      ];
+      localStorage.setItem("me_docflow_users", JSON.stringify(allUsers));
+    }
+
+    const matched = allUsers.find(
+      (u: any) =>
+        u.email.toLowerCase() === forgotIdentifier.toLowerCase() ||
+        u.phone === forgotIdentifier
+    );
+
+    if (matched) {
+      setForgotUser(matched);
+      setForgotStep(2);
+    } else {
+      alert("ไม่พบอีเมลหรือเบอร์โทรศัพท์นี้ในระบบ");
+    }
+  };
+
+  const handleResetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotNewPassword || !forgotConfirmPassword) {
+      alert("กรุณากรอกรหัสผ่านใหม่ให้ครบถ้วน");
+      return;
+    }
+
+    if (forgotNewPassword.length < 6) {
+      alert("รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร");
+      return;
+    }
+
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      alert("รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน");
+      return;
+    }
+
+    // Load users
+    const savedData = localStorage.getItem("me_docflow_users");
+    let allUsers: any[] = [];
+    if (savedData) {
+      try {
+        allUsers = JSON.parse(savedData);
+      } catch (err) {}
+    } else {
+      allUsers = [
+        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
+        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123" },
+        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123" },
+      ];
+    }
+
+    const updatedUsers = allUsers.map((u: any) => {
+      if (u.id === forgotUser.id) {
+        return { ...u, password: forgotNewPassword };
+      }
+      return u;
+    });
+
+    localStorage.setItem("me_docflow_users", JSON.stringify(updatedUsers));
+    alert("เปลี่ยนรหัสผ่านสำเร็จแล้ว! กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่");
+    
+    // Reset states and go back to login tab
+    setForgotIdentifier("");
+    setForgotStep(1);
+    setForgotUser(null);
+    setForgotNewPassword("");
+    setForgotConfirmPassword("");
+    setActiveTab("login");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -238,13 +341,20 @@ export default function LoginPage() {
                     <Lock className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
-                    type="password"
+                    type={showLoginPassword ? "text" : "password"}
                     required
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    className="appearance-none block w-full pl-11 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all"
+                    className="appearance-none block w-full pl-11 pr-10 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all"
                     placeholder="••••••••"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword(!showLoginPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                  >
+                    {showLoginPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
 
@@ -262,9 +372,17 @@ export default function LoginPage() {
                 </div>
 
                 <div className="text-sm">
-                  <a href="#" className="font-medium text-emerald-600 hover:text-emerald-500 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab("forgot");
+                      setForgotStep(1);
+                      setForgotUser(null);
+                    }}
+                    className="font-medium text-emerald-600 hover:text-emerald-500 transition-colors bg-transparent border-0 p-0 cursor-pointer"
+                  >
                     ลืมรหัสผ่าน?
-                  </a>
+                  </button>
                 </div>
               </div>
 
@@ -278,7 +396,7 @@ export default function LoginPage() {
                 </button>
               </div>
             </form>
-          ) : (
+          ) : activeTab === "register" ? (
             /* ================= REGISTER FORM ================= */
             <form onSubmit={handleRegister} className="space-y-5">
               <div>
@@ -382,13 +500,20 @@ export default function LoginPage() {
                     <Lock className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
-                    type="password"
+                    type={showRegPassword ? "text" : "password"}
                     required
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    className="appearance-none block w-full pl-11 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all"
+                    className="appearance-none block w-full pl-11 pr-10 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all"
                     placeholder="••••••••"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegPassword(!showRegPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                  >
+                    {showRegPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
 
@@ -402,6 +527,120 @@ export default function LoginPage() {
                 </button>
               </div>
             </form>
+          ) : (
+            /* ================= FORGOT PASSWORD FORM ================= */
+            <div className="space-y-5">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-2">
+                <h3 className="font-bold text-gray-800 text-lg">กู้คืนรหัสผ่าน</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("login");
+                    setForgotStep(1);
+                  }}
+                  className="text-sm font-semibold text-emerald-600 hover:text-emerald-500 cursor-pointer bg-transparent border-0 p-0"
+                >
+                  ย้อนกลับไปเข้าสู่ระบบ
+                </button>
+              </div>
+
+              {forgotStep === 1 ? (
+                <form onSubmit={handleFindForgotAccount} className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">อีเมล หรือ เบอร์โทรศัพท์ของบัญชีผู้ใช้</label>
+                    <div className="mt-1.5 relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        required
+                        value={forgotIdentifier}
+                        onChange={(e) => setForgotIdentifier(e.target.value)}
+                        className="appearance-none block w-full pl-11 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all"
+                        placeholder="you@example.com หรือ 0812345678"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all cursor-pointer"
+                    >
+                      ค้นหาบัญชีผู้ใช้
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleResetPassword} className="space-y-5">
+                  <div className="bg-emerald-50 border border-emerald-100 p-3.5 rounded-xl">
+                    <p className="text-xs text-emerald-800">
+                      <strong>พบบัญชีผู้ใช้:</strong> {forgotUser?.fullName} ({forgotUser?.email})
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">รหัสผ่านใหม่</label>
+                    <div className="mt-1.5 relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type={showForgotNewPassword ? "text" : "password"}
+                        required
+                        value={forgotNewPassword}
+                        onChange={(e) => setForgotNewPassword(e.target.value)}
+                        className="appearance-none block w-full pl-11 pr-10 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                      >
+                        {showForgotNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">ยืนยันรหัสผ่านใหม่</label>
+                    <div className="mt-1.5 relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type={showForgotConfirmPassword ? "text" : "password"}
+                        required
+                        value={forgotConfirmPassword}
+                        onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                        className="appearance-none block w-full pl-11 pr-10 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm transition-all"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotConfirmPassword(!showForgotConfirmPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                      >
+                        {showForgotConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all cursor-pointer"
+                    >
+                      ตั้งรหัสผ่านใหม่
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           )}
 
         </div>
