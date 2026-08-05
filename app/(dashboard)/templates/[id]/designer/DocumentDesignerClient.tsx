@@ -231,7 +231,7 @@ function renderElement(el: DesignerElement, selected: boolean) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function DocumentDesignerClient({ template }: { template: TemplateInfo }) {
+export default function DocumentDesignerClient({ template, onSave }: { template: TemplateInfo; onSave?: (id: string, layoutJson: unknown) => Promise<void> }) {
   // ── State ────────────────────────────────────────────────────────────────
   const [elements, setElements] = useState<DesignerElement[]>(() =>
     loadInitialElements(template.layoutJson)
@@ -356,7 +356,11 @@ export default function DocumentDesignerClient({ template }: { template: Templat
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = () => {
     startSaving(async () => {
-      await saveDesignerLayout(template.id, { elements });
+      if (onSave) {
+        await onSave(template.id, { elements });
+      } else {
+        await saveDesignerLayout(template.id, { elements });
+      }
       setIsDirty(false);
     });
   };
@@ -378,9 +382,9 @@ export default function DocumentDesignerClient({ template }: { template: Templat
       <header className="flex items-center justify-between px-4 py-2 bg-[#12131f] border-b border-white/10 shrink-0 z-10">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-xs text-gray-400">
-          <Link href="/templates" className="hover:text-white transition-colors">Template</Link>
+          <Link href={onSave ? "/admin/templates" : "/templates"} className="hover:text-white transition-colors">Template</Link>
           <ChevronRight className="w-3 h-3" />
-          <Link href={`/templates/${template.id}`} className="hover:text-white transition-colors truncate max-w-[140px]">
+          <Link href={onSave ? "/admin/templates" : `/templates/${template.id}`} className="hover:text-white transition-colors truncate max-w-[140px]">
             {template.name}
           </Link>
           <ChevronRight className="w-3 h-3" />

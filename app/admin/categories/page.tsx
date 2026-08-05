@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Folder, Plus, Edit2, Trash2, X, Save, CheckCircle2, Search, FileText } from "lucide-react";
+import { Folder, Plus, Edit2, Trash2, X, Save, CheckCircle2, Search, FileText, Eye, EyeOff } from "lucide-react";
+import { getAdminCategories, createAdminCategory, updateAdminCategory, deleteAdminCategory } from "../actions";
 
 interface CategoryItem {
   id: string;
@@ -9,6 +10,7 @@ interface CategoryItem {
   code: string;
   description: string;
   documentCount: number;
+  isActive: boolean;
 }
 
 export default function AdminCategoriesPage() {
@@ -22,33 +24,22 @@ export default function AdminCategoriesPage() {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
+  const [isActive, setIsActive] = useState(true);
+
+  const fetchCategories = async () => {
+    try {
+      const data = await getAdminCategories();
+      setCategories(data);
+    } catch (e) {
+      console.error("Error fetching categories", e);
+    }
+  };
 
   useEffect(() => {
-    const saved = localStorage.getItem("me_docflow_global_categories");
-    if (saved) {
-      try {
-        setCategories(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
-    } else {
-      const initial: CategoryItem[] = [
-        { id: "1", name: "บัญชีและการเงิน (Accounting & Finance)", code: "ACC", description: "เอกสารทางบัญชี ภาษี รายรับ-รายจ่าย ใบแจ้งหนี้", documentCount: 412 },
-        { id: "2", name: "งานทรัพยากรบุคคล (Human Resources)", code: "HR", description: "เอกสารสัญญาจ้างพนักงาน เงินเดือน ประวัติพนักงาน ข้อมูลติดต่อ", documentCount: 154 },
-        { id: "3", name: "ฝ่ายจัดซื้อและพัสดุ (Procurement)", code: "PUR", description: "เอกสารใบสั่งซื้อสินค้า ใบขอเสนอราคา ใบตรวจรับของ", documentCount: 287 },
-        { id: "4", name: "เอกสารกฎหมายและสัญญา (Legal & Contracts)", code: "LEG", description: "สัญญาบันทึกความเข้าใจ MOU เอกสารจัดตั้งนิติบุคคล สัญญาร่วมค้า", documentCount: 65 },
-        { id: "5", name: "งานขายและการตลาด (Sales & Marketing)", code: "MKT", description: "เอกสารแผนการตลาด รายงานวิเคราะห์การขาย ใบแจ้งเสนอราคา", documentCount: 198 }
-      ];
-      setCategories(initial);
-      localStorage.setItem("me_docflow_global_categories", JSON.stringify(initial));
-    }
+    fetchCategories();
   }, []);
 
-  const saveToLocalStorage = (updated: CategoryItem[], actionMsg: string) => {
-    setCategories(updated);
-    localStorage.setItem("me_docflow_global_categories", JSON.stringify(updated));
-
-    // Audit log
+  const logAdminAction = (actionMsg: string) => {
     const logs = localStorage.getItem("me_docflow_audit_logs");
     const currentLogs = logs ? JSON.parse(logs) : [];
     const newLog = {
@@ -66,6 +57,7 @@ export default function AdminCategoriesPage() {
     setName("");
     setCode("");
     setDescription("");
+    setIsActive(true);
     setIsFormOpen(true);
   };
 
@@ -74,41 +66,71 @@ export default function AdminCategoriesPage() {
     setName(cat.name);
     setCode(cat.code);
     setDescription(cat.description);
+    setIsActive(cat.isActive);
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: string, catName: string) => {
+  const handleDelete = async (id: string, catName: string) => {
     if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่เอกสาร "${catName}"?`)) {
-      const updated = categories.filter(c => c.id !== id);
-      saveToLocalStorage(updated, `ลบหมวดหมู่เอกสารส่วนกลาง "${catName}"`);
+      try {
+        await deleteAdminCategory(id);
+        await fetchCategories();
+        logAdminAction(`ลบหมวดหมู่เอกสารส่วนกลาง "${catName}"`);
+      } catch (e) {
+        console.error(e);
+        alert("ไม่สามารถลบหมวดหมู่ได้ อาจมีการใช้งานอยู่");
+      }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleToggleActive = async (cat: CategoryItem) => {
+    try {
+      const newStatus = !cat.isActive;
+      await updateAdminCategory(cat.id, {
+        name: cat.name,
+        code: cat.code,
+        description: cat.description,
+        isActive: newStatus
+      });
+      await fetchCategories();
+      logAdminAction(newStatus ? `แสดงหมวดหมู่เอกสาร "${cat.name}"` : `ซ่อนหมวดหมู่เอกสาร "${cat.name}"`);
+    } catch (e) {
+      console.error(e);
+      alert("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !code) return;
 
-    if (editingCategory) {
-      const updated = categories.map(c => 
-        c.id === editingCategory.id 
-          ? { ...c, name, code: code.toUpperCase(), description } 
-          : c
-      );
-      saveToLocalStorage(updated, `แก้ไขข้อมูลหมวดหมู่เอกสารเป็น "${name}" (รหัส: ${code.toUpperCase()})`);
-    } else {
-      const newCat: CategoryItem = {
-        id: Date.now().toString(),
-        name,
-        code: code.toUpperCase(),
-        description,
-        documentCount: 0
-      };
-      saveToLocalStorage([...categories, newCat], `เพิ่มหมวดหมู่เอกสารใหม่ "${name}" (รหัส: ${code.toUpperCase()})`);
+    try {
+      if (editingCategory) {
+        await updateAdminCategory(editingCategory.id, {
+          name,
+          code: code.toUpperCase(),
+          description,
+          isActive
+        });
+        logAdminAction(`แก้ไขข้อมูลหมวดหมู่เอกสารเป็น "${name}" (รหัส: ${code.toUpperCase()})`);
+      } else {
+        await createAdminCategory({
+          name,
+          code: code.toUpperCase(),
+          description,
+          isActive
+        });
+        logAdminAction(`เพิ่มหมวดหมู่เอกสารใหม่ "${name}" (รหัส: ${code.toUpperCase()})`);
+      }
+      
+      await fetchCategories();
+      setIsFormOpen(false);
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    } catch (e) {
+      console.error(e);
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
     }
-
-    setIsFormOpen(false);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
   };
 
   const filtered = categories.filter(c => 
@@ -166,7 +188,7 @@ export default function AdminCategoriesPage() {
               <Folder className="w-5 h-5 text-amber-550" />
               {editingCategory ? "แก้ไขข้อมูลหมวดหมู่" : "เพิ่มหมวดหมู่เอกสารใหม่"}
             </h3>
-            <button onClick={() => setIsFormOpen(false)} className="text-slate-400 dark:text-slate-550 hover:text-slate-600 dark:hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
+            <button type="button" onClick={() => setIsFormOpen(false)} className="text-slate-400 dark:text-slate-550 hover:text-slate-600 dark:hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -205,6 +227,18 @@ export default function AdminCategoriesPage() {
                   className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl p-3 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none font-sans transition-colors duration-200"
                   placeholder="รายละเอียดเอกสารที่จัดเก็บภายใต้หมวดหมู่นี้..."
                 />
+              </div>
+              
+              <div className="col-span-1 md:col-span-2">
+                <label className="flex items-center text-xs font-bold text-slate-500 dark:text-slate-400 font-sans cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    className="mr-2 h-4 w-4 text-amber-500 focus:ring-amber-500 border-gray-300 rounded"
+                  />
+                  แสดงหมวดหมู่นี้ให้ใช้งานได้ (Active)
+                </label>
               </div>
             </div>
 
@@ -250,11 +284,14 @@ export default function AdminCategoriesPage() {
                 </tr>
               ) : (
                 filtered.map((cat) => (
-                  <tr key={cat.id} className="hover:bg-gray-50/60 dark:hover:bg-slate-800/20 transition-colors">
+                  <tr key={cat.id} className={`transition-colors ${cat.isActive ? 'hover:bg-gray-50/60 dark:hover:bg-slate-800/20' : 'bg-gray-50/50 dark:bg-slate-900/50 opacity-75'}`}>
                     <td className="py-4 px-6 font-bold text-gray-900 dark:text-white">
                       <div className="flex items-center gap-2.5">
-                        <Folder className="w-4 h-4 text-amber-550 shrink-0" />
+                        <Folder className={`w-4 h-4 shrink-0 ${cat.isActive ? 'text-amber-550' : 'text-gray-400'}`} />
                         {cat.name}
+                        {!cat.isActive && (
+                          <span className="ml-2 text-[10px] bg-gray-200 dark:bg-slate-800 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded">ซ่อน</span>
+                        )}
                       </div>
                     </td>
                     <td className="py-4 px-6 font-mono text-amber-600 dark:text-amber-500 font-bold">
@@ -271,6 +308,17 @@ export default function AdminCategoriesPage() {
                     </td>
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleToggleActive(cat)}
+                          className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                            cat.isActive 
+                              ? "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" 
+                              : "text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          }`}
+                          title={cat.isActive ? "ซ่อนหมวดหมู่" : "แสดงหมวดหมู่"}
+                        >
+                          {cat.isActive ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        </button>
                         <button
                           onClick={() => handleOpenEdit(cat)}
                           className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
