@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LayoutTemplate, Plus, Edit2, Trash2, X, Save, CheckCircle2, Search, FileText, ToggleLeft, ToggleRight } from "lucide-react";
+import { LayoutTemplate, Plus, Edit2, Trash2, X, Save, CheckCircle2, Search, ToggleLeft, ToggleRight, PenTool } from "lucide-react";
+import Link from "next/link";
+import { getAdminTemplates, createAdminTemplate, updateAdminTemplate, deleteAdminTemplate } from "./actions";
 
 interface TemplateItem {
   id: string;
@@ -26,31 +28,20 @@ export default function AdminTemplatesPage() {
   const [isActive, setIsActive] = useState(true);
   const [designer, setDesigner] = useState("System Designer");
 
-  useEffect(() => {
-    const saved = localStorage.getItem("me_docflow_global_templates");
-    if (saved) {
-      try {
-        setTemplates(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
-    } else {
-      const initial: TemplateItem[] = [
-        { id: "1", name: "Classic Emerald (ใบเสนอราคาหรูหราสีเขียวมรกต)", type: "QT", description: "เทมเพลตใบเสนอราคามาตรฐาน เน้นขอบสีเขียวและตราสัญลักษณ์ด้านขวา", isActive: true, designer: "System Designer" },
-        { id: "2", name: "Corporate Midnight (ใบแจ้งหนี้แบบเป็นทางการ)", type: "INV", description: "เทมเพลตสำหรับธุรกิจขนาดกลาง โครงสีน้ำเงินเข้ม แสดงตารางภาษีชัดเจน", isActive: true, designer: "System Designer" },
-        { id: "3", name: "Minimalist Soft (ใบเสร็จสไตล์เรียบง่าย)", type: "RE", description: "แม่แบบใบเสร็จขาวดำสไตล์มินิมอล ลดการใช้หมึกพิมพ์ รายละเอียดกะทัดรัด", isActive: true, designer: "Admin Design Team" },
-        { id: "4", name: "Elegant Gold Premium (ใบเสนอราคาระดับพรีเมียม)", type: "QT", description: "เทมเพลตใบเสนอราคาสีทองหรูหรา สำหรับเสนอราคาโครงการใหญ่หรืองานแฮนด์เมด", isActive: false, designer: "Freelance Creator" }
-      ];
-      setTemplates(initial);
-      localStorage.setItem("me_docflow_global_templates", JSON.stringify(initial));
+  const fetchTemplates = async () => {
+    try {
+      const data = await getAdminTemplates();
+      setTemplates(data);
+    } catch (e) {
+      console.error("Error fetching templates", e);
     }
+  };
+
+  useEffect(() => {
+    fetchTemplates();
   }, []);
 
-  const saveToLocalStorage = (updated: TemplateItem[], actionMsg: string) => {
-    setTemplates(updated);
-    localStorage.setItem("me_docflow_global_templates", JSON.stringify(updated));
-
-    // Audit log
+  const logAdminAction = (actionMsg: string) => {
     const logs = localStorage.getItem("me_docflow_audit_logs");
     const currentLogs = logs ? JSON.parse(logs) : [];
     const newLog = {
@@ -83,47 +74,65 @@ export default function AdminTemplatesPage() {
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: string, tempName: string) => {
+  const handleDelete = async (id: string, tempName: string) => {
     if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบแม่แบบการพิมพ์ "${tempName}"?`)) {
-      const updated = templates.filter(t => t.id !== id);
-      saveToLocalStorage(updated, `ลบแม่แบบพิมพ์ส่วนกลาง "${tempName}"`);
+      try {
+        await deleteAdminTemplate(id);
+        await fetchTemplates();
+        logAdminAction(`ลบแม่แบบพิมพ์ส่วนกลาง "${tempName}"`);
+      } catch (e) {
+        console.error(e);
+        alert("เกิดข้อผิดพลาดในการลบ");
+      }
     }
   };
 
-  const toggleTemplateStatus = (id: string, tempName: string, currentStatus: boolean) => {
+  const toggleTemplateStatus = async (id: string, tempName: string, currentStatus: boolean) => {
     const nextStatus = !currentStatus;
-    const updated = templates.map(t => 
-      t.id === id ? { ...t, isActive: nextStatus } : t
-    );
-    saveToLocalStorage(updated, `${nextStatus ? "เปิดใช้" : "ปิดใช้งาน"} แม่แบบพิมพ์ "${tempName}" สำหรับบริษัทคู่ค้า`);
+    try {
+      const target = templates.find(t => t.id === id);
+      if (target) {
+        await updateAdminTemplate(id, {
+          name: target.name,
+          type: target.type,
+          description: target.description,
+          isActive: nextStatus,
+          designer: target.designer
+        });
+        await fetchTemplates();
+        logAdminAction(`${nextStatus ? "เปิดใช้" : "ปิดใช้งาน"} แม่แบบพิมพ์ "${tempName}" สำหรับบริษัทคู่ค้า`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("เกิดข้อผิดพลาดในการเปลี่ยนสถานะ");
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
 
-    if (editingTemplate) {
-      const updated = templates.map(t => 
-        t.id === editingTemplate.id 
-          ? { ...t, name, type, description, isActive, designer } 
-          : t
-      );
-      saveToLocalStorage(updated, `แก้ไขรายละเอียดแม่แบบระบบ "${name}"`);
-    } else {
-      const newTemp: TemplateItem = {
-        id: Date.now().toString(),
-        name,
-        type,
-        description,
-        isActive,
-        designer
-      };
-      saveToLocalStorage([...templates, newTemp], `สร้างแม่แบบพิมพ์ระบบตัวใหม่ "${name}" (รูปแบบ: ${type})`);
-    }
+    try {
+      if (editingTemplate) {
+        await updateAdminTemplate(editingTemplate.id, {
+          name, type, description, isActive, designer
+        });
+        logAdminAction(`แก้ไขรายละเอียดแม่แบบระบบ "${name}"`);
+      } else {
+        await createAdminTemplate({
+          name, type, description, isActive, designer
+        });
+        logAdminAction(`สร้างแม่แบบพิมพ์ระบบตัวใหม่ "${name}" (รูปแบบ: ${type})`);
+      }
 
-    setIsFormOpen(false);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+      await fetchTemplates();
+      setIsFormOpen(false);
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    } catch (e) {
+      console.error(e);
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
   };
 
   const filtered = templates.filter(t => 
@@ -182,7 +191,7 @@ export default function AdminTemplatesPage() {
               <LayoutTemplate className="w-5 h-5 text-amber-550" />
               {editingTemplate ? "ปรับปรุงแม่แบบระบบ" : "เพิ่มแม่แบบมาตรฐานกลางใหม่"}
             </h3>
-            <button onClick={() => setIsFormOpen(false)} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
+            <button type="button" onClick={() => setIsFormOpen(false)} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -266,7 +275,7 @@ export default function AdminTemplatesPage() {
                 className="flex items-center gap-1.5 px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-955 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer font-sans"
               >
                 <Save className="w-4 h-4" />
-                บันทึกเทมเพลต
+                บันทึกข้อมูลเทมเพลต
               </button>
             </div>
           </form>
@@ -291,6 +300,13 @@ export default function AdminTemplatesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  <Link 
+                    href={`/admin/templates/${temp.id}/designer`}
+                    className="p-1.5 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg cursor-pointer transition-colors"
+                    title="ออกแบบเลย์เอาต์ (Designer)"
+                  >
+                    <PenTool className="w-3.5 h-3.5" />
+                  </Link>
                   <button 
                     onClick={() => handleOpenEdit(temp)}
                     className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"

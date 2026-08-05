@@ -87,3 +87,75 @@ export async function deleteAdminUser(id: string) {
   await prisma.companyUser.delete({ where: { id } });
   revalidatePath('/admin/users');
 }
+
+export async function getAdminCategories() {
+  const categories = await prisma.documentCategory.findMany({
+    where: { isGlobal: true },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      _count: {
+        select: { documents: true }
+      }
+    }
+  });
+
+  return categories.map(c => ({
+    id: c.id,
+    name: c.name,
+    code: c.slug,
+    description: c.description || "",
+    documentCount: c._count.documents,
+    isActive: c.isActive,
+  }));
+}
+
+export async function createAdminCategory(data: { name: string; code: string; description: string; isActive?: boolean }) {
+  await prisma.documentCategory.create({
+    data: {
+      name: data.name,
+      slug: data.code,
+      description: data.description,
+      isGlobal: true,
+      isActive: data.isActive ?? true,
+    },
+  });
+  revalidatePath('/admin/categories');
+}
+
+export async function updateAdminCategory(id: string, data: { name: string; code: string; description: string; isActive?: boolean }) {
+  await prisma.documentCategory.update({
+    where: { id },
+    data: {
+      name: data.name,
+      slug: data.code,
+      description: data.description,
+      isActive: data.isActive,
+    },
+  });
+  revalidatePath('/admin/categories');
+}
+
+export async function deleteAdminCategory(id: string) {
+  // Find all global templates in this category
+  const templates = await prisma.documentTemplate.findMany({ where: { categoryId: id, isGlobal: true } });
+  
+  // Delete template fields for those templates
+  for (const t of templates) {
+    await prisma.templateField.deleteMany({ where: { templateId: t.id } });
+  }
+  
+  // Delete the templates
+  await prisma.documentTemplate.deleteMany({ where: { categoryId: id, isGlobal: true } });
+  
+  // Delete the document types
+  await prisma.documentType.deleteMany({ where: { categoryId: id, isGlobal: true } });
+
+  // Ensure no other types are still referencing it (e.g. from tenants)
+  const remainingTypes = await prisma.documentType.count({ where: { categoryId: id } });
+  if (remainingTypes > 0) {
+    throw new Error("Cannot delete category. It is being used by tenant document types.");
+  }
+
+  await prisma.documentCategory.delete({ where: { id } });
+  revalidatePath('/admin/categories');
+}
