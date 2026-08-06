@@ -45,6 +45,7 @@ export type TemplateWithRelations = {
   slug: string | null;
   description: string | null;
   templateMode: TemplateMode;
+  formType: string | null;
   paperSize: PaperSize;
   orientation: PaperOrientation;
   version: number;
@@ -81,6 +82,7 @@ export async function getTemplates(): Promise<TemplateWithRelations[]> {
       slug: true,
       description: true,
       templateMode: true,
+      formType: true,
       paperSize: true,
       orientation: true,
       version: true,
