@@ -56,7 +56,7 @@ export default function DocumentNumberSettingsPage() {
       {/* Header */}
       <div>
         <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">การตั้งค่าระบบ</p>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 font-serif">ตั้งค่าเลขรันเอกสาร</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2 font-sans">ตั้งค่าเลขรันเอกสาร</h1>
         <p className="text-sm text-gray-500">กำหนดรูปแบบคำขึ้นต้น (Prefix) ปีเดือน และจำนวนหลักของเลขเอกสารสำคัญแต่ละประเภท</p>
       </div>
 

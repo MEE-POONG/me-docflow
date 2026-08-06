@@ -146,7 +146,7 @@ export default function UsersSettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">การตั้งค่าระบบ</p>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 font-serif">จัดการผู้ใช้งาน</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 font-sans">จัดการผู้ใช้งาน</h1>
           <p className="text-sm text-gray-500">เพิ่ม ลบ หรือแก้ไขบทบาท สถานะการเข้าใช้งาน และรหัสผ่านของพนักงานภายในบริษัท</p>
         </div>
         <div>
