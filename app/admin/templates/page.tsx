@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LayoutTemplate, Plus, Edit2, Trash2, X, Save, CheckCircle2, Search, ToggleLeft, ToggleRight, PenTool } from "lucide-react";
+import { LayoutTemplate, Plus, Edit2, Trash2, X, Save, CheckCircle2, Search, ToggleLeft, ToggleRight, PenTool, Eye } from "lucide-react";
 import Link from "next/link";
 import { getAdminTemplates, createAdminTemplate, updateAdminTemplate, deleteAdminTemplate } from "./actions";
+import { DocumentPreview } from "@/components/templates/builder/DocumentPreview";
 
 interface TemplateItem {
   id: string;
@@ -12,6 +13,7 @@ interface TemplateItem {
   description: string;
   isActive: boolean;
   designer: string;
+  layoutJson?: string | null;
 }
 
 export default function AdminTemplatesPage() {
@@ -20,6 +22,7 @@ export default function AdminTemplatesPage() {
   const [editingTemplate, setEditingTemplate] = useState<TemplateItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaved, setIsSaved] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<TemplateItem | null>(null);
 
   // Form states
   const [name, setName] = useState("");
@@ -307,6 +310,13 @@ export default function AdminTemplatesPage() {
                   >
                     <PenTool className="w-3.5 h-3.5" />
                   </Link>
+                  <button
+                    onClick={() => setPreviewTemplate(temp)}
+                    className="p-1.5 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg cursor-pointer transition-colors"
+                    title="ดูตัวอย่างเทมเพลต (Preview)"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                  </button>
                   <button 
                     onClick={() => handleOpenEdit(temp)}
                     className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
@@ -343,6 +353,35 @@ export default function AdminTemplatesPage() {
           </div>
         ))}
       </div>
+
+      {/* Preview Modal */}
+      {previewTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-50 dark:bg-slate-900 w-full max-w-5xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-slate-700">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-500 rounded-lg">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-white">ตัวอย่างก่อนพิมพ์: {previewTemplate.name}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">พรีวิวรูปแบบเอกสารที่จะนำไปใช้จริง</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setPreviewTemplate(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-slate-900/50">
+              <DocumentPreview layoutJsonString={previewTemplate.layoutJson || null} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

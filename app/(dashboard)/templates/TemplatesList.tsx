@@ -9,20 +9,17 @@ import TemplateActions from './TemplateActions'
 
 export default function TemplatesList({ initialTemplates }: { initialTemplates: any[] }) {
   const [templates, setTemplates] = useState<any[]>(initialTemplates)
+  const [activeTab, setActiveTab] = useState<'company' | 'system'>('company')
 
   useEffect(() => {
-    const userStr = localStorage.getItem("me_docflow_current_user");
-    let currentEmail = "melisara@siamretail.co.th";
-    if (userStr) {
-      try {
-        const u = JSON.parse(userStr);
-        if (u.email) currentEmail = u.email;
-      } catch (e) {}
+    if (activeTab === 'company') {
+      // เทมเพลตที่สร้างเอง (ไม่ใช่ส่วนกลาง)
+      setTemplates(initialTemplates.filter(t => !t.isGlobal))
+    } else {
+      // เทมเพลตระบบส่วนกลาง (isGlobal = true)
+      setTemplates(initialTemplates.filter(t => t.isGlobal))
     }
-
-    // Filter templates by user's email (own company)
-    setTemplates(initialTemplates.filter(t => t.createdByUser?.email === currentEmail))
-  }, [initialTemplates])
+  }, [initialTemplates, activeTab])
 
   return (
     <div className="max-w-[1600px] mx-auto pb-20 p-4 md:p-6 lg:p-8">
@@ -47,6 +44,36 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
           <Plus className="w-5 h-5" />
           สร้าง Template ใหม่
         </Link>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-8 border-b border-gray-200 dark:border-gray-800 mb-6 px-2">
+        <button
+          onClick={() => setActiveTab('company')}
+          className={`pb-4 text-sm font-semibold transition-colors relative outline-none ${
+            activeTab === 'company'
+              ? 'text-indigo-600 dark:text-indigo-400'
+              : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+          }`}
+        >
+          เทมเพลตของบริษัท
+          {activeTab === 'company' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full" />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('system')}
+          className={`pb-4 text-sm font-semibold transition-colors relative outline-none ${
+            activeTab === 'system'
+              ? 'text-indigo-600 dark:text-indigo-400'
+              : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+          }`}
+        >
+          เทมเพลตจากระบบส่วนกลาง
+          {activeTab === 'system' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full" />
+          )}
+        </button>
       </div>
 
       {/* Main Content */}
@@ -101,7 +128,11 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
                 templates.map((template) => (
                   <tr key={template.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                     <td className="px-6 py-4 font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
-                      <Link href={`/templates/${template.id}`} className="hover:underline">{template.name}</Link>
+                      {activeTab === 'system' ? (
+                        <span className="text-gray-800 dark:text-gray-200">{template.name}</span>
+                      ) : (
+                        <Link href={`/templates/${template.id}`} className="hover:underline">{template.name}</Link>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400 max-w-xs truncate">
                       {template.description || '-'}
@@ -130,7 +161,7 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
                       {format(new Date(template.updatedAt), 'dd MMM yyyy', { locale: th })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <TemplateActions id={template.id} name={template.name} />
+                      <TemplateActions id={template.id} name={template.name} isGlobal={template.isGlobal} />
                     </td>
                   </tr>
                 ))

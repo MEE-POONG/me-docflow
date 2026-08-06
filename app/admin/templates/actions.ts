@@ -57,6 +57,7 @@ export async function getAdminTemplates() {
     description: t.description || "",
     isActive: t.isActive,
     designer: t.createdByAdmin?.name || t.createdByUser?.name || "System Designer",
+    layoutJson: t.layoutJson ? JSON.stringify(t.layoutJson) : null,
   }));
 }
 

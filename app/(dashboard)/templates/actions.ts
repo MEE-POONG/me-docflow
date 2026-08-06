@@ -331,3 +331,65 @@ export async function saveDesignerLayout(
   });
   revalidatePath(`/templates/${templateId}/designer`);
 }
+
+// ─── Clone System Template ──────────────────────────────────────────────────
+
+export async function cloneSystemTemplate(templateId: string) {
+  const template = await prisma.documentTemplate.findUnique({
+    where: { id: templateId },
+    include: { fields: true },
+  });
+
+  if (!template) throw new Error("Template not found");
+  if (!template.isGlobal) throw new Error("Only system templates can be cloned");
+
+  const companyId = await getDefaultCompanyId();
+  const userId = await getDefaultUserId(companyId);
+
+  const cloned = await prisma.documentTemplate.create({
+    data: {
+      name: `${template.name} (Copy)`,
+      slug: `${template.slug}-copy-${Date.now()}`,
+      description: template.description,
+      templateMode: template.templateMode,
+      formType: template.formType,
+      formSchema: template.formSchema ?? undefined,
+      layoutJson: template.layoutJson ?? {},
+      htmlContent: template.htmlContent,
+      cssContent: template.cssContent,
+      paperSize: template.paperSize,
+      orientation: template.orientation,
+      version: 1,
+      isGlobal: false,
+      isActive: true,
+      categoryId: template.categoryId,
+      documentTypeId: template.documentTypeId,
+      companyId: companyId,
+      createdByUserId: userId,
+    }
+  });
+
+  if (template.fields.length > 0) {
+    const fieldsToCreate = template.fields.map(f => ({
+      key: f.key,
+      label: f.label,
+      type: f.type,
+      required: f.required,
+      placeholder: f.placeholder,
+      options: f.options ?? undefined,
+      validation: f.validation ?? undefined,
+      defaultValue: f.defaultValue ?? undefined,
+      config: f.config ?? undefined,
+      showOrder: f.showOrder,
+      templateId: cloned.id,
+      companyId: companyId,
+    }));
+
+    await prisma.templateField.createMany({
+      data: fieldsToCreate
+    });
+  }
+
+  revalidatePath('/templates');
+  return cloned.id;
+}

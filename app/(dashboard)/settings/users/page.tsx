@@ -55,27 +55,60 @@ export default function UsersSettingsPage() {
 
   // Load from localStorage or seed mock data
   useEffect(() => {
+    const currentUserData = localStorage.getItem("me_docflow_current_user");
+    let currentUser: any = null;
+    if (currentUserData) {
+      try { currentUser = JSON.parse(currentUserData); } catch (e) {}
+    }
+
     const savedData = localStorage.getItem("me_docflow_users");
+    let allUsers: any[] = [];
     if (savedData) {
       try {
-        setUsers(JSON.parse(savedData));
+        allUsers = JSON.parse(savedData);
       } catch (e) {
         console.error("Error parsing users settings data", e);
       }
     } else {
-      const mockUsers: UserItem[] = [
+      const mockUsers = [
         { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
         { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123" },
         { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123" },
       ];
-      setUsers(mockUsers);
+      allUsers = mockUsers;
       localStorage.setItem("me_docflow_users", JSON.stringify(mockUsers));
+    }
+
+    if (currentUser && currentUser.companyId) {
+      const companyUsers = allUsers.filter((u: any) => u.companyId === currentUser.companyId);
+      setUsers(companyUsers);
+    } else {
+      setUsers(allUsers);
     }
   }, []);
 
-  const saveToLocalStorage = (updatedUsers: UserItem[]) => {
-    setUsers(updatedUsers);
-    localStorage.setItem("me_docflow_users", JSON.stringify(updatedUsers));
+  const saveToLocalStorage = (updatedCompanyUsers: any[]) => {
+    setUsers(updatedCompanyUsers);
+    
+    // Merge back with other companies' users
+    const currentUserData = localStorage.getItem("me_docflow_current_user");
+    let currentUser: any = null;
+    if (currentUserData) {
+      try { currentUser = JSON.parse(currentUserData); } catch (e) {}
+    }
+
+    const savedData = localStorage.getItem("me_docflow_users");
+    let allUsers: any[] = [];
+    if (savedData) {
+      try { allUsers = JSON.parse(savedData); } catch (e) {}
+    }
+
+    if (currentUser && currentUser.companyId) {
+      const otherUsers = allUsers.filter((u: any) => u.companyId !== currentUser.companyId);
+      localStorage.setItem("me_docflow_users", JSON.stringify([...otherUsers, ...updatedCompanyUsers]));
+    } else {
+      localStorage.setItem("me_docflow_users", JSON.stringify(updatedCompanyUsers));
+    }
   };
 
   const handleOpenAddForm = () => {
@@ -122,13 +155,20 @@ export default function UsersSettingsPage() {
       saveToLocalStorage(updated);
     } else {
       // Add mode
-      const newUser: UserItem = {
+      const currentUserData = localStorage.getItem("me_docflow_current_user");
+      let companyId = null;
+      if (currentUserData) {
+        try { companyId = JSON.parse(currentUserData).companyId; } catch (e) {}
+      }
+
+      const newUser: any = {
         id: Date.now().toString(),
         fullName,
         email,
         role,
         status,
         password,
+        companyId: companyId
       };
       saveToLocalStorage([...users, newUser]);
     }

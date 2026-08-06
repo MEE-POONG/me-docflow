@@ -8,9 +8,10 @@ import {
   Table2, Minus, Square, PenLine, Calendar,
   Hash, CheckSquare, QrCode, Barcode,
   ChevronRight, MousePointer2, Trash2,
-  ScanLine,
+  ScanLine, Eye, X
 } from 'lucide-react';
 import { saveDesignerLayout } from '../../actions';
+import { DocumentPreview } from '@/components/templates/builder/DocumentPreview';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -243,6 +244,7 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
   const [historyIdx, setHistoryIdx] = useState(0);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, startSaving] = useTransition();
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ id: string; startX: number; startY: number; elX: number; elY: number } | null>(null);
@@ -358,10 +360,14 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = () => {
     startSaving(async () => {
+      const layoutData = {
+        pages: [{ id: 'page-1', width: paperW, height: paperH, background: '#ffffff' }],
+        elements
+      };
       if (onSave) {
-        await onSave(template.id, { elements });
+        await onSave(template.id, layoutData);
       } else {
-        await saveDesignerLayout(template.id, { elements });
+        await saveDesignerLayout(template.id, layoutData);
       }
       setIsDirty(false);
     });
@@ -443,6 +449,15 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
             className="p-1.5 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
           >
             <Download className="w-4 h-4" />
+          </button>
+
+          {/* Preview */}
+          <button
+            onClick={() => setIsPreviewOpen(true)}
+            title="Preview"
+            className="p-1.5 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+          >
+            <Eye className="w-4 h-4" />
           </button>
 
           {/* Save */}
@@ -680,6 +695,40 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
           </div>
         </aside>
       </div>
+
+      {/* ── Preview Modal ──────────────────────────────────────────────── */}
+      {isPreviewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-50 dark:bg-slate-900 w-full max-w-5xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-slate-700">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-500 rounded-lg">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 dark:text-white font-sans text-left">ตัวอย่างเอกสารก่อนพิมพ์</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-sans text-left">พรีวิวรูปแบบเอกสารตามที่ได้ออกแบบไว้</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsPreviewOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-slate-900/50 text-gray-900 flex justify-center">
+              <DocumentPreview 
+                layoutJsonString={JSON.stringify({ 
+                  pages: [{ id: 'page-1', width: paperW, height: paperH, background: '#ffffff' }],
+                  elements 
+                })} 
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

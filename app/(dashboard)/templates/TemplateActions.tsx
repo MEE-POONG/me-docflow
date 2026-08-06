@@ -1,12 +1,14 @@
 'use client'
 
 import { useTransition } from 'react'
-import { Edit2, Trash2, Loader2, Settings } from 'lucide-react'
+import { Edit2, Trash2, Loader2, Settings, Copy } from 'lucide-react'
 import Link from 'next/link'
-import { deleteTemplate } from './actions'
+import { deleteTemplate, cloneSystemTemplate } from './actions'
+import { useRouter } from 'next/navigation'
 
-export default function TemplateActions({ id, name }: { id: string, name: string }) {
+export default function TemplateActions({ id, name, isGlobal }: { id: string, name: string, isGlobal?: boolean }) {
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
 
   const handleDelete = () => {
     if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบเทมเพลต "${name}"?\nการกระทำนี้ไม่สามารถเลิกทำได้`)) {
@@ -19,6 +21,36 @@ export default function TemplateActions({ id, name }: { id: string, name: string
         }
       })
     }
+  }
+
+  const handleClone = () => {
+    if (confirm(`คุณต้องการคัดลอกเทมเพลต "${name}" มาใช้ในบริษัทของคุณหรือไม่?`)) {
+      startTransition(async () => {
+        try {
+          const newId = await cloneSystemTemplate(id)
+          router.push(`/templates/${newId}`)
+        } catch (error) {
+          console.error(error)
+          alert('เกิดข้อผิดพลาด ไม่สามารถคัดลอกเทมเพลตได้')
+        }
+      })
+    }
+  }
+
+  if (isGlobal) {
+    return (
+      <div className="flex items-center gap-2 justify-end">
+        <button
+          onClick={handleClone}
+          disabled={isPending}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 rounded-lg transition-colors disabled:opacity-50"
+          title="คัดลอกมาใช้"
+        >
+          {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+          คัดลอกมาใช้
+        </button>
+      </div>
+    )
   }
 
   return (

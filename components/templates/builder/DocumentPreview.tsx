@@ -33,7 +33,7 @@ export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPrev
     )
   }
 
-  if (!layoutData || !layoutData.pages || layoutData.pages.length === 0) {
+  if (!layoutData || (!layoutData.pages && !layoutData.elements)) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 flex items-center justify-center min-h-[400px]">
         <p className="text-gray-500">เทมเพลตหน้าว่าง (Empty template)</p>
@@ -41,9 +41,14 @@ export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPrev
     )
   }
 
+  // Fallback for older layouts that only have elements
+  const pages = layoutData.pages && layoutData.pages.length > 0 
+    ? layoutData.pages 
+    : [{ id: 'default-page', width: 595, height: 842, background: '#ffffff' } as DesignerPage];
+
   return (
     <div className="flex flex-col items-center gap-8 py-8 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-auto p-4 border border-gray-200 dark:border-gray-800">
-      {layoutData.pages.map(page => (
+      {pages.map(page => (
         <div 
           key={page.id}
           className="relative bg-white shadow-md overflow-hidden"
@@ -53,7 +58,7 @@ export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPrev
             background: page.background || '#ffffff'
           }}
         >
-          {layoutData.elements.filter(el => el.pageId === page.id).map(element => (
+          {(layoutData?.elements || []).filter(el => !el.pageId || el.pageId === page.id).map(element => (
             <ElementView key={element.id} element={element} dataOverride={dataOverride} />
           ))}
         </div>

@@ -65,11 +65,21 @@ export default function LoginPage() {
   const [loginPassword, setLoginPassword] = useState("");
   
   // Register State
-  const [regFullName, setRegFullName] = useState("");
+  const [regStep, setRegStep] = useState<1 | 2 | 3>(1);
   const [regEmail, setRegEmail] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regPassword, setRegPassword] = useState("");
+  const [regConfirmPassword, setRegConfirmPassword] = useState("");
+  
+  const [regOtp, setRegOtp] = useState("");
+  
+  const [regFullName, setRegFullName] = useState("");
   const [regRole, setRegRole] = useState<string>("");
+  const [regBusinessName, setRegBusinessName] = useState("");
+  const [regBusinessPhone, setRegBusinessPhone] = useState("");
+  const [regBusinessType, setRegBusinessType] = useState("service");
+  
+  const [isRegistering, setIsRegistering] = useState(false);
 
   // Forgot Password State
   const [forgotIdentifier, setForgotIdentifier] = useState("");
@@ -81,6 +91,7 @@ export default function LoginPage() {
   // Password Visibility States
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
   const [showForgotConfirmPassword, setShowForgotConfirmPassword] = useState(false);
 
@@ -127,58 +138,99 @@ export default function LoginPage() {
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegisterStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regFullName || !regEmail || !regPhone || !regRole || !regPassword) {
+    if (!regEmail || !regPhone || !regPassword || !regConfirmPassword) {
+      alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+      return;
+    }
+    if (regPassword.length < 6) {
+      alert("รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร");
+      return;
+    }
+    if (regPassword !== regConfirmPassword) {
+      alert("รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน");
+      return;
+    }
+
+    setIsRegistering(true);
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: regEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการขอ OTP");
+      
+      alert(`[จำลองระบบ] OTP ของคุณคือ: ${data.mockOtp}`);
+      setRegStep(2);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  const handleRegisterStep2 = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regOtp) return;
+    
+    setIsRegistering(true);
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: regEmail, otp: regOtp }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "OTP ไม่ถูกต้อง");
+      
+      // Auto-fill business phone from step 1
+      setRegBusinessPhone(regPhone);
+      setRegStep(3);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  const handleRegisterFinal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regFullName || !regRole || !regBusinessName || !regBusinessType) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
     }
 
-    // Load existing users from localStorage or default seed
-    const savedData = localStorage.getItem("me_docflow_users");
-    let allUsers: any[] = [];
-    if (savedData) {
-      try {
-        allUsers = JSON.parse(savedData);
-      } catch (err) {}
-    } else {
-      allUsers = [
-        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
-        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123" },
-        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123" },
-      ];
+    setIsRegistering(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: regFullName,
+          email: regEmail,
+          phone: regPhone,
+          password: regPassword,
+          role: regRole,
+          businessName: regBusinessName,
+          businessPhone: regBusinessPhone,
+          businessType: regBusinessType
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการลงทะเบียน");
+
+      localStorage.setItem("me_docflow_current_user", JSON.stringify(data.user));
+      localStorage.setItem("me_docflow_user_session", "true");
+      setTimeout(() => { window.dispatchEvent(new Event("activeCompanyChanged")); }, 100);
+      router.push("/dashboard");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsRegistering(false);
     }
-
-    // Check if email already registered
-    const exists = allUsers.some((u: any) => u.email.toLowerCase() === regEmail.toLowerCase());
-    if (exists) {
-      alert("อีเมลนี้ได้รับการลงทะเบียนแล้ว");
-      return;
-    }
-
-    const newUser = {
-      id: Date.now().toString(),
-      fullName: regFullName,
-      email: regEmail,
-      phone: regPhone,
-      role: regRole,
-      status: "active",
-      password: regPassword
-    };
-
-    const updatedUsers = [...allUsers, newUser];
-    localStorage.setItem("me_docflow_users", JSON.stringify(updatedUsers));
-    
-    // Auto login
-    localStorage.setItem("me_docflow_current_user", JSON.stringify(newUser));
-    localStorage.setItem("me_docflow_user_session", "true");
-    
-    // Dispatch activeCompanyChanged to ensure any listening components update
-    setTimeout(() => {
-      window.dispatchEvent(new Event("activeCompanyChanged"));
-    }, 100);
-
-    router.push("/dashboard");
   };
 
   const handleFindForgotAccount = (e: React.FormEvent) => {
@@ -398,135 +450,269 @@ export default function LoginPage() {
             </form>
           ) : activeTab === "register" ? (
             /* ================= REGISTER FORM ================= */
-            <form onSubmit={handleRegister} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">ชื่อ-สกุล</label>
-                <div className="mt-1.5 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
+            <div className="space-y-5">
+              {regStep === 1 && (
+                <form onSubmit={handleRegisterStep1} className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">อีเมล</label>
+                    <div className="mt-1.5 relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="email"
+                        required
+                        value={regEmail}
+                        onChange={(e) => setRegEmail(e.target.value)}
+                        className="appearance-none block w-full pl-11 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
+                        placeholder="you@example.com"
+                      />
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    required
-                    value={regFullName}
-                    onChange={(e) => setRegFullName(e.target.value)}
-                    className="appearance-none block w-full pl-11 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
-                    placeholder="สมชาย ใจดี"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">อีเมล</label>
-                <div className="mt-1.5 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">เบอร์โทรศัพท์</label>
+                    <div className="mt-1.5 relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Phone className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="tel"
+                        required
+                        value={regPhone}
+                        onChange={(e) => setRegPhone(e.target.value)}
+                        className="appearance-none block w-full pl-11 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
+                        placeholder="0812345678"
+                      />
+                    </div>
                   </div>
-                  <input
-                    type="email"
-                    required
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    className="appearance-none block w-full pl-11 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
-                    placeholder="you@example.com"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">เบอร์โทรศัพท์ของผู้สมัครใช้งาน</label>
-                <div className="mt-1.5 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="tel"
-                    required
-                    value={regPhone}
-                    onChange={(e) => setRegPhone(e.target.value)}
-                    className="appearance-none block w-full pl-11 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
-                    placeholder="0812345678"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">คุณเป็นใครในบริษัท?</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                  {roles.map((role) => {
-                    const Icon = role.icon;
-                    const isSelected = regRole === role.id;
-                    return (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">กำหนดรหัสผ่าน</label>
+                    <div className="mt-1.5 relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type={showRegPassword ? "text" : "password"}
+                        required
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
+                        className="appearance-none block w-full pl-11 pr-10 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
+                        placeholder="อย่างน้อย 6 ตัวอักษร"
+                      />
                       <button
-                        key={role.id}
                         type="button"
-                        onClick={() => setRegRole(role.id)}
-                        className={`flex items-start text-left p-3 rounded-xl border transition-all duration-200 cursor-pointer relative ${
-                          isSelected
-                            ? "border-emerald-500 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500"
-                            : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/50"
-                        } ${role.id === "student" ? "sm:col-span-2" : ""}`}
+                        onClick={() => setShowRegPassword(!showRegPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
                       >
-                        <div className={`p-2 rounded-lg mr-3 shrink-0 ${
-                          isSelected ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-500"
-                        }`}>
-                          <Icon size={18} />
-                        </div>
-                        <div className="flex-1 min-w-0 pr-4">
-                          <p className={`text-sm font-bold truncate ${
-                            isSelected ? "text-emerald-950" : "text-gray-900"
-                          }`}>
-                            {role.title}
-                          </p>
-                          <p className="text-[11px] text-gray-500 truncate mt-0.5">
-                            {role.description}
-                          </p>
-                        </div>
-                        {isSelected && (
-                          <div className="absolute top-3 right-3 text-emerald-600 bg-emerald-100 rounded-full p-0.5 animate-in fade-in zoom-in duration-200">
-                            <Check size={12} strokeWidth={3} />
-                          </div>
-                        )}
+                        {showRegPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">กำหนดรหัสผ่าน</label>
-                <div className="mt-1.5 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                    </div>
                   </div>
-                  <input
-                    type={showRegPassword ? "text" : "password"}
-                    required
-                    value={regPassword}
-                    onChange={(e) => setRegPassword(e.target.value)}
-                    className="appearance-none block w-full pl-11 pr-10 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRegPassword(!showRegPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
-                  >
-                    {showRegPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-              </div>
 
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all cursor-pointer"
-                >
-                  สมัครใช้งานสมาชิก
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </button>
-              </div>
-            </form>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">ยืนยันรหัสผ่าน</label>
+                    <div className="mt-1.5 relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type={showRegConfirmPassword ? "text" : "password"}
+                        required
+                        value={regConfirmPassword}
+                        onChange={(e) => setRegConfirmPassword(e.target.value)}
+                        className="appearance-none block w-full pl-11 pr-10 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRegConfirmPassword(!showRegConfirmPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                      >
+                        {showRegConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={isRegistering}
+                      className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all cursor-pointer"
+                    >
+                      {isRegistering ? "กำลังดำเนินการ..." : "สมัครใช้งาน"}
+                      {!isRegistering && <ArrowRight className="ml-2 h-4 w-4" />}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {regStep === 2 && (
+                <form onSubmit={handleRegisterStep2} className="space-y-5 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl mb-4 text-center">
+                    <p className="text-sm text-emerald-800">
+                      กรุณากรอกรหัส OTP 6 หลักที่ถูกส่งไปยัง<br />
+                      <strong>{regEmail}</strong>
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 text-center mb-2">รหัส OTP 6 หลัก</label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={regOtp}
+                      onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, ''))}
+                      className="appearance-none block w-full text-center text-2xl tracking-[0.5em] py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 transition-all"
+                      placeholder="000000"
+                    />
+                  </div>
+
+                  <div className="pt-4 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setRegStep(1)}
+                      className="flex-1 py-3 px-4 border border-gray-300 rounded-xl shadow-sm text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none transition-all cursor-pointer"
+                    >
+                      ย้อนกลับ
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isRegistering || regOtp.length !== 6}
+                      className="flex-1 flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all cursor-pointer"
+                    >
+                      {isRegistering ? "ตรวจสอบ..." : "ยืนยันรหัส"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {regStep === 3 && (
+                <form onSubmit={handleRegisterFinal} className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  
+                  {/* ข้อมูลส่วนตัว */}
+                  <div className="border-b border-gray-100 pb-5">
+                    <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <User className="w-4 h-4 text-emerald-600" /> ข้อมูลส่วนตัว
+                    </h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">ชื่อ-สกุล</label>
+                        <input
+                          type="text"
+                          required
+                          value={regFullName}
+                          onChange={(e) => setRegFullName(e.target.value)}
+                          className="mt-1 appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
+                          placeholder="สมชาย ใจดี"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">คุณเป็นใครในบริษัท?</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                          {roles.map((role) => {
+                            const Icon = role.icon;
+                            const isSelected = regRole === role.id;
+                            return (
+                              <button
+                                key={role.id}
+                                type="button"
+                                onClick={() => setRegRole(role.id)}
+                                className={`flex items-start text-left p-2.5 rounded-xl border transition-all duration-200 cursor-pointer relative ${
+                                  isSelected
+                                    ? "border-emerald-500 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500"
+                                    : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/50"
+                                }`}
+                              >
+                                <div className={`p-1.5 rounded-lg mr-2 shrink-0 ${
+                                  isSelected ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-500"
+                                }`}>
+                                  <Icon size={16} />
+                                </div>
+                                <div className="flex-1 min-w-0 pr-4">
+                                  <p className={`text-xs font-bold truncate ${
+                                    isSelected ? "text-emerald-950" : "text-gray-900"
+                                  }`}>
+                                    {role.title}
+                                  </p>
+                                </div>
+                                {isSelected && (
+                                  <div className="absolute top-2.5 right-2 text-emerald-600 bg-emerald-100 rounded-full p-0.5 animate-in fade-in zoom-in duration-200">
+                                    <Check size={10} strokeWidth={3} />
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ข้อมูลธุรกิจ */}
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <Briefcase className="w-4 h-4 text-emerald-600" /> ข้อมูลธุรกิจ
+                    </h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">ชื่อธุรกิจ / บริษัท</label>
+                        <input
+                          type="text"
+                          required
+                          value={regBusinessName}
+                          onChange={(e) => setRegBusinessName(e.target.value)}
+                          className="mt-1 appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
+                          placeholder="บจก. สมชายใจดี"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">เบอร์ติดต่อธุรกิจ</label>
+                        <input
+                          type="tel"
+                          required
+                          value={regBusinessPhone}
+                          onChange={(e) => setRegBusinessPhone(e.target.value)}
+                          className="mt-1 appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
+                          placeholder="0812345678"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">ลักษณะการประกอบธุรกิจ</label>
+                        <select
+                          value={regBusinessType}
+                          onChange={(e) => setRegBusinessType(e.target.value)}
+                          className="mt-1 appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all bg-white"
+                        >
+                          <option value="service">ธุรกิจบริการ</option>
+                          <option value="freelance">อาชีพอิสระ / ฟรีแลนซ์</option>
+                          <option value="restaurant">ร้านอาหาร / คาเฟ่</option>
+                          <option value="retail">ค้าปลีก / ขายของออนไลน์</option>
+                          <option value="manufacturing">โรงงานผลิต</option>
+                          <option value="other">อื่นๆ</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={isRegistering}
+                      className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all cursor-pointer"
+                    >
+                      {isRegistering ? "กำลังสร้างบัญชี..." : "เสร็จสิ้น และเริ่มใช้งาน"}
+                      {!isRegistering && <ArrowRight className="ml-2 h-4 w-4" />}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           ) : (
             /* ================= FORGOT PASSWORD FORM ================= */
             <div className="space-y-5">

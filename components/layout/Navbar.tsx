@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Bell, Moon, Sun, ChevronDown, User, LogOut } from "lucide-react";
+import { Search, Bell, Moon, Sun, ChevronDown, User, LogOut, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
@@ -24,6 +24,46 @@ export default function Navbar() {
     if (confirm("คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?")) {
       localStorage.removeItem("me_docflow_user_session");
       router.push("/login");
+    }
+  };
+
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (!currentUser || !currentUser.id) {
+      alert("ไม่พบข้อมูลผู้ใช้งาน (อาจเป็นบัญชีจำลอง)");
+      return;
+    }
+    
+    const isOwner = currentUser.role === "OWNER";
+    const confirmMsg = isOwner 
+      ? "⚠️ คำเตือน: คุณคือเจ้าของธุรกิจ (OWNER)\n\nการลบบัญชีจะส่งผลให้ **ข้อมูลทั้งหมดของบริษัท** รวมถึงเอกสาร, พนักงาน, ลูกค้า และข้อมูลอื่นๆ ถูกลบอย่างถาวร!\n\nคุณแน่ใจหรือไม่ว่าต้องการลบบัญชีและลบข้อมูลบริษัท?"
+      : "คุณแน่ใจหรือไม่ว่าต้องการลบบัญชีผู้ใช้ของคุณ? ข้อมูลนี้จะไม่สามารถกู้คืนได้";
+
+    if (window.confirm(confirmMsg)) {
+      try {
+        setIsDeleting(true);
+        const res = await fetch("/api/auth/delete-account", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: currentUser.id, companyId: currentUser.companyId })
+        });
+        
+        if (res.ok) {
+          alert("ลบบัญชีและข้อมูลสำเร็จ");
+          localStorage.removeItem("me_docflow_user_session");
+          localStorage.removeItem("me_docflow_current_user");
+          localStorage.removeItem("me_docflow_companies");
+          router.push("/login");
+        } else {
+          const data = await res.json();
+          alert("เกิดข้อผิดพลาด: " + (data.error || "ไม่สามารถลบข้อมูลได้"));
+        }
+      } catch (err) {
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -179,8 +219,16 @@ export default function Navbar() {
               </div>
               <div className="border-t border-gray-100 dark:border-gray-700 p-2">
                 <button 
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left mb-1 disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4 shrink-0" />
+                  <span>{isDeleting ? "กำลังลบข้อมูล..." : "ลบบัญชีผู้ใช้งาน"}</span>
+                </button>
+                <button 
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors text-left"
                 >
                   <LogOut className="w-4 h-4 shrink-0" />
                   <span>ออกจากระบบ</span>

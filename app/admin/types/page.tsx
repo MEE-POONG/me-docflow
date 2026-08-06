@@ -19,6 +19,8 @@ export default function AdminDocumentTypesPage() {
   const [editingType, setEditingType] = useState<TypeItem | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaved, setIsSaved] = useState(false);
+  const [filterCategory, setFilterCategory] = useState<string>("ALL");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // Form states
   const [name, setName] = useState("");
@@ -113,11 +115,21 @@ export default function AdminDocumentTypesPage() {
     }
   };
 
-  const filtered = types.filter(t => 
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.prefix.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.categoryCode.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = types
+    .filter(t => {
+      const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            t.prefix.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            t.categoryCode.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = filterCategory === "ALL" || t.categoryCode === filterCategory;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      if (sortOrder === "asc") {
+        return a.categoryCode.localeCompare(b.categoryCode) || a.name.localeCompare(b.name);
+      } else {
+        return b.categoryCode.localeCompare(a.categoryCode) || a.name.localeCompare(b.name);
+      }
+    });
 
   return (
     <div className="space-y-6 font-light">
@@ -145,19 +157,41 @@ export default function AdminDocumentTypesPage() {
         </div>
       )}
 
-      {/* Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
-        <div className="relative w-full sm:max-w-md">
-          <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-3.5" />
-          <input
-            type="text"
-            placeholder="ค้นหาตามชื่อประเภท คำนำหน้า หรือหมวดหมู่..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200"
-          />
+      {/* Filters and Search Bar */}
+      <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
+        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-3.5" />
+            <input
+              type="text"
+              placeholder="ค้นหาตามชื่อ หรือ Prefix..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200"
+            />
+          </div>
+          
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="w-full sm:w-56 bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200 cursor-pointer"
+          >
+            <option value="ALL">ทุกหมวดหมู่ (All Categories)</option>
+            {categories.map(c => (
+              <option key={c.code} value={c.code}>[{c.code}] {c.name}</option>
+            ))}
+          </select>
+          
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+            className="w-full sm:w-48 bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200 cursor-pointer"
+          >
+            <option value="asc">เรียงหมวดหมู่ (A-Z)</option>
+            <option value="desc">เรียงหมวดหมู่ (Z-A)</option>
+          </select>
         </div>
-        <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+        <div className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap w-full xl:w-auto text-right xl:text-left">
           พบทั้งหมด <span className="text-slate-800 dark:text-white font-bold">{filtered.length}</span> ชนิดเอกสาร
         </div>
       </div>
