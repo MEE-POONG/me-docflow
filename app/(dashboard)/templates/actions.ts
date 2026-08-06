@@ -33,6 +33,20 @@ async function getDefaultUserId(companyId: string) {
   return user.id;
 }
 
+async function getGlobalCondition(companyId: string, idField: 'id' | 'categoryId' = 'id') {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { settings: true }
+  });
+  const settings = (company?.settings as any) || {};
+  const enabledIds = settings.enabledGlobalCategoryIds;
+  
+  if (Array.isArray(enabledIds)) {
+    return { isGlobal: true, [idField]: { in: enabledIds } };
+  }
+  return { isGlobal: true };
+}
+
 function slugify(text: string) {
   return text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
@@ -73,8 +87,9 @@ export type TemplateFieldData = {
 
 export async function getTemplates(): Promise<TemplateWithRelations[]> {
   const companyId = await getDefaultCompanyId();
+  const globalCond = await getGlobalCondition(companyId, 'categoryId');
   return prisma.documentTemplate.findMany({
-    where: { OR: [{ companyId }, { isGlobal: true }] },
+    where: { OR: [{ companyId }, globalCond] },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -136,8 +151,9 @@ export async function getTemplateById(id: string) {
 
 export async function getCategories() {
   const companyId = await getDefaultCompanyId();
+  const globalCond = await getGlobalCondition(companyId, 'id');
   return prisma.documentCategory.findMany({
-    where: { OR: [{ companyId }, { isGlobal: true }], isActive: true },
+    where: { OR: [{ companyId }, globalCond], isActive: true },
     orderBy: { showOrder: 'asc' },
     select: { id: true, name: true },
   });
@@ -145,9 +161,10 @@ export async function getCategories() {
 
 export async function getDocumentTypes(categoryId?: string) {
   const companyId = await getDefaultCompanyId();
+  const globalCond = await getGlobalCondition(companyId, 'categoryId');
   return prisma.documentType.findMany({
     where: {
-      OR: [{ companyId }, { isGlobal: true }],
+      OR: [{ companyId }, globalCond],
       isActive: true,
       ...(categoryId ? { categoryId } : {}),
     },
@@ -172,7 +189,7 @@ export async function createTemplate(data: {
   const companyId = await getDefaultCompanyId();
   const userId = await getDefaultUserId(companyId);
 
-  await prisma.documentTemplate.create({
+  const template = await prisma.documentTemplate.create({
     data: {
       companyId,
       categoryId: data.categoryId,
@@ -192,6 +209,7 @@ export async function createTemplate(data: {
     },
   });
   revalidatePath('/templates');
+  return template;
 }
 
 export async function updateTemplate(

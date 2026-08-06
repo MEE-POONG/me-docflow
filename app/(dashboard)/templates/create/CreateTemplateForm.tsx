@@ -65,11 +65,15 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
 
         if (initialData?.id) {
           await updateTemplate(initialData.id, payload)
+          router.push('/templates')
         } else {
-          await createTemplate(payload)
+          const newTemplate = await createTemplate(payload)
+          if (newTemplate?.id) {
+            router.push(`/templates/${newTemplate.id}/designer`)
+          } else {
+            router.push('/templates')
+          }
         }
-
-        router.push('/templates')
         router.refresh()
       } catch (error) {
         console.error(error)
@@ -174,95 +178,7 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
           </div>
         </div>
 
-        {/* Section 3: รูปแบบฟอร์มกรอกข้อมูล */}
-        <div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white border-b pb-2 mb-4">3. รูปแบบฟอร์มกรอกข้อมูล (Data Entry Form)</h3>
-          
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เลือกประเภทฟอร์ม (Form Type)</label>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {[
-                { id: 'STANDARD', name: 'เอกสารซื้อขายทั่วไป', desc: 'มีข้อมูลลูกค้า ตารางสินค้า ยอดเงิน' },
-                { id: 'CONTACT', name: 'ข้อมูลผู้ติดต่อ', desc: 'ฟอร์มสร้างลูกค้า/ผู้จัดจำหน่าย' },
-                { id: 'PRODUCT', name: 'ข้อมูลสินค้า', desc: 'ฟอร์มสร้างสินค้า/บริการ' },
-                { id: 'CUSTOM', name: 'สร้างฟอร์มเอง (Custom)', desc: 'กำหนดช่องกรอกข้อมูลอิสระ' },
-              ].map(type => (
-                <div 
-                  key={type.id}
-                  onClick={() => setFormData({...formData, formType: type.id})}
-                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.formType === type.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'}`}
-                >
-                  <h4 className="font-bold text-gray-900 dark:text-white mb-1">{type.name}</h4>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{type.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          {formData.formType === 'CUSTOM' && (
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="font-semibold text-gray-900 dark:text-white">ช่องกรอกข้อมูลของฟอร์ม (Custom Fields)</h4>
-                <button type="button" onClick={addCustomField} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 rounded-lg text-sm font-medium transition-colors">
-                  <Plus className="w-4 h-4" /> เพิ่มช่อง
-                </button>
-              </div>
-
-              {customFields.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 text-sm">ยังไม่มีช่องกรอกข้อมูล กดปุ่ม "เพิ่มช่อง" ด้านบน</div>
-              ) : (
-                <div className="space-y-4">
-                  {customFields.map((field, idx) => (
-                    <div key={idx} className="flex flex-wrap md:flex-nowrap gap-4 items-start bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <div className="flex-1 min-w-[200px]">
-                        <label className="block text-xs font-medium text-gray-500 mb-1">ชื่อตัวแปร (Key)</label>
-                        <input type="text" value={field.key} onChange={e => updateCustomField(idx, 'key', e.target.value)} placeholder="เช่น customerName" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-transparent" />
-                      </div>
-                      <div className="flex-1 min-w-[200px]">
-                        <label className="block text-xs font-medium text-gray-500 mb-1">ชื่อที่แสดง (Label)</label>
-                        <input type="text" value={field.label} onChange={e => updateCustomField(idx, 'label', e.target.value)} placeholder="เช่น ชื่อลูกค้า" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-transparent" />
-                      </div>
-                      <div className="w-full md:w-48">
-                        <label className="block text-xs font-medium text-gray-500 mb-1">ชนิดข้อมูล (Type)</label>
-                        <select value={field.type} onChange={e => updateCustomField(idx, 'type', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-transparent">
-                          <option value="text">ข้อความสั้น (Text)</option>
-                          <option value="textarea">ข้อความยาว (Textarea)</option>
-                          <option value="number">ตัวเลข (Number)</option>
-                          <option value="date">วันที่ (Date)</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2 pt-6">
-                         <label className="flex items-center gap-1.5 text-sm text-gray-600">
-                           <input type="checkbox" checked={field.required} onChange={e => updateCustomField(idx, 'required', e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
-                           จำเป็น
-                         </label>
-                         <button type="button" onClick={() => removeCustomField(idx)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg ml-2">
-                           <Trash2 className="w-4 h-4" />
-                         </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Section 4: โครงสร้างและเนื้อหา */}
-        <div>
-          <div className="border-b pb-2 mb-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">4. โครงสร้างและเนื้อหา (Visual Designer)</h3>
-          </div>
-          
-          <div className="space-y-6">
-            <div className="min-h-[800px] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white">
-              <DocumentDesigner 
-                initialLayoutJson={formData.layoutJson}
-                onChange={(json) => setFormData({ ...formData, layoutJson: json })}
-              />
-            </div>
-          </div>
-        </div>
 
         <div className="flex justify-end gap-4 pt-6 border-t border-gray-100 dark:border-gray-700">
           <Link
@@ -277,7 +193,7 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
             className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            {initialData ? 'บันทึกการแก้ไข' : 'บันทึกสร้างเทมเพลต'}
+            {initialData ? 'บันทึกการแก้ไข' : 'ถัดไป: ออกแบบเอกสาร'}
           </button>
         </div>
       </form>

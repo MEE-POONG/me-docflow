@@ -30,7 +30,6 @@ export default function Navbar() {
     }
   };
 
-<<<<<<< HEAD
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteAccount = async () => {
@@ -69,7 +68,8 @@ export default function Navbar() {
         setIsDeleting(false);
       }
     }
-=======
+  };
+
   const handleSelectCompany = (companyId: string) => {
     const updatedCompanies = companies.map(c => ({
       ...c,
@@ -79,7 +79,6 @@ export default function Navbar() {
     setIsCompanyMenuOpen(false);
     window.dispatchEvent(new Event("activeCompanyChanged"));
     window.location.reload();
->>>>>>> e4d214de1958685caa5bb44ac7b71f442f515377
   };
 
   useEffect(() => {

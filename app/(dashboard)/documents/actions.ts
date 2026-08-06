@@ -36,6 +36,22 @@ async function getDefaultUserId(companyId: string) {
   return user.id;
 }
 
+async function getGlobalCondition(companyId: string, idField: 'id' | 'categoryId' | 'documentTypeId' = 'id') {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { settings: true }
+  });
+  const settings = (company?.settings as any) || {};
+  const enabledIds = settings.enabledGlobalCategoryIds;
+  
+  if (Array.isArray(enabledIds)) {
+    // If we're filtering documentTypes or templates, their parent is categoryId
+    const field = idField === 'id' ? 'id' : 'categoryId';
+    return { isGlobal: true, [field]: { in: enabledIds } };
+  }
+  return { isGlobal: true };
+}
+
 export type DocumentWithRelations = {
   id: string;
   documentNo: string;
@@ -71,8 +87,9 @@ export async function getDocuments(): Promise<DocumentWithRelations[]> {
 
 export async function getDocumentCategories() {
   const companyId = await getDefaultCompanyId();
+  const globalCond = await getGlobalCondition(companyId, 'id');
   return prisma.documentCategory.findMany({
-    where: { OR: [{ companyId }, { isGlobal: true }], isActive: true },
+    where: { OR: [{ companyId }, globalCond], isActive: true },
     orderBy: { showOrder: 'asc' },
     select: { id: true, name: true },
   });
@@ -80,9 +97,10 @@ export async function getDocumentCategories() {
 
 export async function getDocumentTypes(categoryId?: string) {
   const companyId = await getDefaultCompanyId();
+  const globalCond = await getGlobalCondition(companyId, 'categoryId');
   return prisma.documentType.findMany({
     where: {
-      OR: [{ companyId }, { isGlobal: true }],
+      OR: [{ companyId }, globalCond],
       isActive: true,
       ...(categoryId ? { categoryId } : {}),
     },
@@ -93,9 +111,10 @@ export async function getDocumentTypes(categoryId?: string) {
 
 export async function getDocumentTemplates(documentTypeId?: string) {
   const companyId = await getDefaultCompanyId();
+  const globalCond = await getGlobalCondition(companyId, 'documentTypeId');
   return prisma.documentTemplate.findMany({
     where: {
-      OR: [{ companyId }, { isGlobal: true }],
+      OR: [{ companyId }, globalCond],
       isActive: true,
       ...(documentTypeId ? { documentTypeId } : {}),
     },

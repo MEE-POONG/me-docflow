@@ -13,6 +13,20 @@ async function getDefaultCompanyId() {
   return company.id;
 }
 
+async function getGlobalCondition(companyId: string) {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { settings: true }
+  });
+  const settings = (company?.settings as any) || {};
+  const enabledIds = settings.enabledGlobalCategoryIds;
+  
+  if (Array.isArray(enabledIds)) {
+    return { isGlobal: true, id: { in: enabledIds } };
+  }
+  return { isGlobal: true };
+}
+
 export type CategoryWithCount = {
   id: string;
   name: string;
@@ -26,8 +40,9 @@ export type CategoryWithCount = {
 
 export async function getCategories(): Promise<CategoryWithCount[]> {
   const companyId = await getDefaultCompanyId();
+  const globalCond = await getGlobalCondition(companyId);
   return prisma.documentCategory.findMany({
-    where: { OR: [{ companyId }, { isGlobal: true }] },
+    where: { OR: [{ companyId }, globalCond] },
     orderBy: { showOrder: 'asc' },
     select: {
       id: true,
