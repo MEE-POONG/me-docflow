@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useTransition } from 'react';
 import Link from 'next/link';
 import {
   Undo2, Redo2, ZoomIn, ZoomOut, Download, Save,
-  Type, Heading1, AlignLeft, Image, Building2,
+  Type, Heading1, AlignLeft, AlignCenter, AlignRight, AlignJustify, Image, Building2,
   Table2, Minus, Square, PenLine, Calendar,
   Hash, CheckSquare, QrCode, Barcode,
   ChevronRight, MousePointer2, Trash2,
@@ -30,6 +30,7 @@ interface DesignerElement {
   fontSize?: number;
   fontWeight?: string;
   color?: string;
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
 }
 
 type TemplateInfo = {
@@ -231,7 +232,7 @@ function renderElement(el: DesignerElement, selected: boolean) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function DocumentDesignerClient({ template }: { template: TemplateInfo }) {
+export default function DocumentDesignerClient({ template, onSave }: { template: TemplateInfo; onSave?: (id: string, layoutJson: unknown) => Promise<void> }) {
   // ── State ────────────────────────────────────────────────────────────────
   const [elements, setElements] = useState<DesignerElement[]>(() =>
     loadInitialElements(template.layoutJson)
@@ -312,13 +313,14 @@ export default function DocumentDesignerClient({ template }: { template: Templat
     dragRef.current = { id, startX: e.clientX, startY: e.clientY, elX: el.x, elY: el.y };
 
     const onMove = (mv: MouseEvent) => {
-      if (!dragRef.current) return;
+      const currentDrag = dragRef.current;
+      if (!currentDrag) return;
       const scale = zoom / 100;
-      const dx = (mv.clientX - dragRef.current.startX) / scale;
-      const dy = (mv.clientY - dragRef.current.startY) / scale;
+      const dx = (mv.clientX - currentDrag.startX) / scale;
+      const dy = (mv.clientY - currentDrag.startY) / scale;
       setElements(prev => prev.map(el =>
-        el.id === dragRef.current!.id
-          ? { ...el, x: Math.max(0, dragRef.current!.elX + dx), y: Math.max(0, dragRef.current!.elY + dy) }
+        el.id === currentDrag.id
+          ? { ...el, x: Math.max(0, currentDrag.elX + dx), y: Math.max(0, currentDrag.elY + dy) }
           : el
       ));
     };
@@ -356,7 +358,11 @@ export default function DocumentDesignerClient({ template }: { template: Templat
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = () => {
     startSaving(async () => {
-      await saveDesignerLayout(template.id, { elements });
+      if (onSave) {
+        await onSave(template.id, { elements });
+      } else {
+        await saveDesignerLayout(template.id, { elements });
+      }
       setIsDirty(false);
     });
   };
@@ -378,9 +384,9 @@ export default function DocumentDesignerClient({ template }: { template: Templat
       <header className="flex items-center justify-between px-4 py-2 bg-[#12131f] border-b border-white/10 shrink-0 z-10">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-xs text-gray-400">
-          <Link href="/templates" className="hover:text-white transition-colors">Template</Link>
+          <Link href={onSave ? "/admin/templates" : "/templates"} className="hover:text-white transition-colors">Template</Link>
           <ChevronRight className="w-3 h-3" />
-          <Link href={`/templates/${template.id}`} className="hover:text-white transition-colors truncate max-w-[140px]">
+          <Link href={onSave ? "/admin/templates" : `/templates/${template.id}`} className="hover:text-white transition-colors truncate max-w-[140px]">
             {template.name}
           </Link>
           <ChevronRight className="w-3 h-3" />
@@ -512,6 +518,7 @@ export default function DocumentDesignerClient({ template }: { template: Templat
                     fontSize: (el.fontSize ?? 14) * (zoom / 100),
                     fontWeight: el.fontWeight ?? 'normal',
                     color: el.color ?? '#111827',
+                    textAlign: el.textAlign ?? 'left',
                     lineHeight: 1.4,
                     padding: el.type === 'line' ? 0 : `${2 * (zoom / 100)}px ${4 * (zoom / 100)}px`,
                     whiteSpace: 'pre-wrap',
@@ -519,7 +526,7 @@ export default function DocumentDesignerClient({ template }: { template: Templat
                     overflow: 'hidden',
                     background: el.type === 'box' ? 'transparent' : (el.type === 'image' || el.type === 'logo') ? '#f3f4f6' : 'transparent',
                     border: el.type === 'box' ? `1px dashed #9ca3af` : undefined,
-                    display: 'flex',
+                    display: ['text', 'heading', 'paragraph', 'date', 'page_number'].includes(el.type) ? 'block' : 'flex',
                     alignItems: el.type === 'line' ? 'center' : 'flex-start',
                     justifyContent: (el.type === 'image' || el.type === 'logo' || el.type === 'qr_code' || el.type === 'barcode' || el.type === 'checkbox') ? 'center' : 'flex-start',
                   }}
@@ -626,6 +633,34 @@ export default function DocumentDesignerClient({ template }: { template: Templat
                 {/* Font Size */}
                 {selectedEl.fontSize !== undefined && (
                   <PropNumber label="Font Size" value={selectedEl.fontSize} onChange={v => { updateProp('fontSize', v); commitProp(); }} />
+                )}
+
+                {/* Text Align */}
+                {!['line','image','logo','qr_code','barcode','checkbox','table','signature','box'].includes(selectedEl.type) && (
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-1">Text Align</label>
+                    <div className="flex gap-1 bg-[#1e1f30] p-1 rounded border border-white/10">
+                      {[
+                        { val: 'left', icon: AlignLeft },
+                        { val: 'center', icon: AlignCenter },
+                        { val: 'right', icon: AlignRight },
+                        { val: 'justify', icon: AlignJustify }
+                      ].map(a => (
+                        <button
+                          key={a.val}
+                          onClick={() => { updateProp('textAlign', a.val); commitProp(); }}
+                          title={`Align ${a.val}`}
+                          className={`flex-1 flex justify-center p-1.5 rounded transition-colors ${
+                            (selectedEl.textAlign || 'left') === a.val
+                              ? 'bg-blue-600 text-white shadow-sm'
+                              : 'text-gray-400 hover:text-gray-200 hover:bg-white/10'
+                          }`}
+                        >
+                          <a.icon className="w-3.5 h-3.5" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 {/* X */}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { FileCode, Plus, Edit2, Trash2, X, Save, CheckCircle2, Search, FolderOpen } from "lucide-react";
+import { getAdminDocumentTypes, createAdminDocumentType, updateAdminDocumentType, deleteAdminDocumentType, getAdminCategories } from "../actions";
 
 interface TypeItem {
   id: string;
@@ -25,53 +26,31 @@ export default function AdminDocumentTypesPage() {
   const [categoryCode, setCategoryCode] = useState("ACC");
   const [description, setDescription] = useState("");
 
-  useEffect(() => {
-    // Load categories for dropdown
-    const savedCats = localStorage.getItem("me_docflow_global_categories");
-    if (savedCats) {
-      setCategories(JSON.parse(savedCats));
-    } else {
-      setCategories([
-        { name: "บัญชีและการเงิน", code: "ACC" },
-        { name: "งานทรัพยากรบุคคล", code: "HR" },
-        { name: "ฝ่ายจัดซื้อและพัสดุ", code: "PUR" },
-        { name: "เอกสารกฎหมายและสัญญา", code: "LEG" },
-        { name: "งานขายและการตลาด", code: "MKT" }
-      ]);
-    }
+  const fetchCategoriesAndTypes = async () => {
+    try {
+      const cats = await getAdminCategories();
+      setCategories(cats.map(c => ({ name: c.name, code: c.code })));
 
-    const saved = localStorage.getItem("me_docflow_global_types");
-    if (saved) {
-      try {
-        setTypes(JSON.parse(saved));
-      } catch (e) {
-        console.error(e);
-      }
-    } else {
-      const initial: TypeItem[] = [
-        { id: "1", name: "ใบเสนอราคา (Quotation)", prefix: "QT", categoryCode: "MKT", description: "เอกสารการเสนอราคาของงานขายโครงการหรือบริการลูกค้า" },
-        { id: "2", name: "ใบสั่งซื้อสินค้า (Purchase Order)", prefix: "PO", categoryCode: "PUR", description: "ใบสั่งซื้อสินค้าหรือวัตถุดิบส่งผู้จัดจำหน่ายคู่ค้า" },
-        { id: "3", name: "ใบแจ้งหนี้ / ใบกำกับภาษี (Invoice / Tax Invoice)", prefix: "INV", categoryCode: "ACC", description: "เอกสารเรียกเก็บเงินภาษีมูลค่าเพิ่มสำหรับการค้าเชิงพาณิชย์" },
-        { id: "4", name: "ใบเสร็จรับเงิน / ใบกำกับภาษี (Receipt / Tax Invoice)", prefix: "RE", categoryCode: "ACC", description: "ใบยืนยันการรับเงินค่าสินค้าและบริการแก่ลูกค้า" },
-        { id: "5", name: "สัญญาจ้างงานพนักงาน (Employment Contract)", prefix: "EMP", categoryCode: "HR", description: "สัญญาว่าจ้างบุคลากรและข้อตกลงอัตราเงินเดือนพนักงานใหม่" }
-      ];
-      setTypes(initial);
-      localStorage.setItem("me_docflow_global_types", JSON.stringify(initial));
+      const data = await getAdminDocumentTypes();
+      setTypes(data);
+    } catch (e) {
+      console.error(e);
     }
+  };
+
+  useEffect(() => {
+    fetchCategoriesAndTypes();
   }, []);
 
-  const saveToLocalStorage = (updated: TypeItem[], actionMsg: string) => {
-    setTypes(updated);
-    localStorage.setItem("me_docflow_global_types", JSON.stringify(updated));
-
-    // Audit log
+  const logAdminAction = (logMessage: string) => {
+    // Seed audit log
     const logs = localStorage.getItem("me_docflow_audit_logs");
     const currentLogs = logs ? JSON.parse(logs) : [];
     const newLog = {
       id: Date.now().toString(),
       timestamp: new Date().toLocaleString(),
       user: "System Admin (admin)",
-      action: actionMsg,
+      action: logMessage,
       type: "info"
     };
     localStorage.setItem("me_docflow_audit_logs", JSON.stringify([newLog, ...currentLogs]));
@@ -95,38 +74,43 @@ export default function AdminDocumentTypesPage() {
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: string, typeName: string) => {
+  const handleDelete = async (id: string, typeName: string) => {
     if (confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบประเภทเอกสาร "${typeName}"?`)) {
-      const updated = types.filter(t => t.id !== id);
-      saveToLocalStorage(updated, `ลบประเภทเอกสารส่วนกลาง "${typeName}"`);
+      try {
+        await deleteAdminDocumentType(id);
+        await fetchCategoriesAndTypes();
+        logAdminAction(`ลบประเภทเอกสารส่วนกลาง "${typeName}"`);
+      } catch (e: any) {
+        alert(e.message || "Error deleting document type");
+      }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !prefix) return;
 
-    if (editingType) {
-      const updated = types.map(t => 
-        t.id === editingType.id 
-          ? { ...t, name, prefix: prefix.toUpperCase(), categoryCode, description } 
-          : t
-      );
-      saveToLocalStorage(updated, `แก้ไขข้อมูลประเภทเอกสารเป็น "${name}" (คำนำหน้า: ${prefix.toUpperCase()})`);
-    } else {
-      const newType: TypeItem = {
-        id: Date.now().toString(),
-        name,
-        prefix: prefix.toUpperCase(),
-        categoryCode,
-        description
-      };
-      saveToLocalStorage([...types, newType], `เพิ่มประเภทเอกสารใหม่ "${name}" (คำนำหน้า: ${prefix.toUpperCase()})`);
+    try {
+      if (editingType) {
+        await updateAdminDocumentType(editingType.id, {
+          name, prefix: prefix.toUpperCase(), categoryCode, description
+        });
+        logAdminAction(`แก้ไขข้อมูลประเภทเอกสารเป็น "${name}" (คำนำหน้า: ${prefix.toUpperCase()})`);
+      } else {
+        await createAdminDocumentType({
+          name, prefix: prefix.toUpperCase(), categoryCode, description
+        });
+        logAdminAction(`เพิ่มประเภทเอกสารใหม่ "${name}" (คำนำหน้า: ${prefix.toUpperCase()})`);
+      }
+      
+      await fetchCategoriesAndTypes();
+      
+      setIsFormOpen(false);
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    } catch (e: any) {
+      alert(e.message || "Error saving document type");
     }
-
-    setIsFormOpen(false);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
   };
 
   const filtered = types.filter(t => 

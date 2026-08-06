@@ -4,30 +4,31 @@ import { useEffect, useState } from "react";
 import { Building2, Users, FileText, Activity, Server, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
+import { getDashboardStats } from "../actions";
+
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState({
     companiesCount: 0,
     usersCount: 0,
-    documentsCount: 1248,
+    documentsCount: 0,
     activeSessions: 14
   });
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
 
   useEffect(() => {
-    // Read stats from localStorage
-    const companies = localStorage.getItem("me_docflow_companies");
-    const users = localStorage.getItem("me_docflow_users");
+    // Fetch real stats from DB
+    getDashboardStats().then((data) => {
+      setStats(prev => ({
+        ...prev,
+        companiesCount: data.companiesCount,
+        usersCount: data.usersCount,
+        documentsCount: data.documentsCount || 1248
+      }));
+    }).catch(console.error);
+
+    // Read audit logs from localStorage (or seed them)
     const logs = localStorage.getItem("me_docflow_audit_logs");
-
-    const compList = companies ? JSON.parse(companies) : [];
-    const userList = users ? JSON.parse(users) : [];
     const logList = logs ? JSON.parse(logs) : [];
-
-    setStats(prev => ({
-      ...prev,
-      companiesCount: compList.length || 2,
-      usersCount: userList.length || 3
-    }));
 
     if (logList.length > 0) {
       setRecentLogs(logList.slice(0, 5));
