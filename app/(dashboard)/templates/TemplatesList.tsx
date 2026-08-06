@@ -27,7 +27,7 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-lg">
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-lg">
               <LayoutTemplate className="w-6 h-6" />
             </div>
             Template ทั้งหมด
@@ -39,7 +39,7 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
 
         <Link
           href="/templates/create"
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow-sm hover:shadow transition-all"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium shadow-sm hover:shadow transition-all"
         >
           <Plus className="w-5 h-5" />
           สร้าง Template ใหม่
@@ -85,11 +85,11 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
             <input
               type="text"
               placeholder="ค้นหาชื่อเทมเพลต, คำอธิบาย..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 transition-all outline-none text-gray-900 dark:text-gray-100"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-emerald-500 transition-all outline-none text-gray-900 dark:text-gray-100"
             />
           </div>
           <div className="flex items-center gap-3">
-            <select className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500">
+            <select className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-emerald-500">
               <option value="">ทุกหมวดหมู่</option>
               <option value="ACTIVE">ใช้งานอยู่</option>
               <option value="INACTIVE">ปิดใช้งาน</option>
@@ -127,12 +127,17 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
               ) : (
                 templates.map((template) => (
                   <tr key={template.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
+<<<<<<< HEAD
                     <td className="px-6 py-4 font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
                       {activeTab === 'system' ? (
                         <span className="text-gray-800 dark:text-gray-200">{template.name}</span>
                       ) : (
                         <Link href={`/templates/${template.id}`} className="hover:underline">{template.name}</Link>
                       )}
+=======
+                    <td className="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                      <Link href={`/templates/${template.id}`} className="hover:underline">{template.name}</Link>
+>>>>>>> e4d214de1958685caa5bb44ac7b71f442f515377
                     </td>
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400 max-w-xs truncate">
                       {template.description || '-'}

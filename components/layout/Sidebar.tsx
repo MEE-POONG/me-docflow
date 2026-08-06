@@ -250,7 +250,7 @@ export default function Sidebar() {
         {/* Footer hint */}
         <div className={`p-4 border-t border-gray-100 dark:border-gray-800 flex items-start ${isOpen ? 'gap-2' : 'justify-center'} transition-colors`}>
           <div className="w-6 h-6 rounded-full bg-gray-800 dark:bg-gray-700 flex items-center justify-center text-white text-[10px] font-bold shrink-0">N</div>
-          {isOpen && <p className="text-[10px] text-gray-400 leading-tight">{t.sidebar.footerHint}</p>}
+          {isOpen && <p className="text-[10px] text-gray-400 leading-normal">{t.sidebar.footerHint}</p>}
         </div>
       </aside>
     </>

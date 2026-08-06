@@ -159,7 +159,7 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
         
         <button 
           onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 dark:bg-teal-700 dark:hover:bg-teal-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
         >
           <Plus className="w-4 h-4" /> {t.departments.addDepartment}
         </button>

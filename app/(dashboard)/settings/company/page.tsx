@@ -231,7 +231,7 @@ export default function CompanySettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">การตั้งค่าระบบ</p>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 font-serif">จัดการข้อมูลบริษัท</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 font-sans">จัดการข้อมูลบริษัท</h1>
           <p className="text-sm text-gray-500">เพิ่ม ลบ แก้ไขข้อมูลบริษัทสำหรับใช้ออกเอกสาร และสลับเปลี่ยนบริษัทที่ต้องการเปิดใช้งาน (จัดการได้เฉพาะบริษัทที่เป็นเจ้าของ)</p>
         </div>
         <div>

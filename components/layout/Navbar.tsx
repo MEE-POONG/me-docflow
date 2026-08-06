@@ -17,6 +17,9 @@ export default function Navbar() {
   const langMenuRef = useRef<HTMLDivElement>(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const [isCompanyMenuOpen, setIsCompanyMenuOpen] = useState(false);
+  const companyMenuRef = useRef<HTMLDivElement>(null);
+  const [companies, setCompanies] = useState<any[]>([]);
   const { toggle } = useSidebar();
   const router = useRouter();
 
@@ -27,6 +30,7 @@ export default function Navbar() {
     }
   };
 
+<<<<<<< HEAD
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDeleteAccount = async () => {
@@ -65,15 +69,37 @@ export default function Navbar() {
         setIsDeleting(false);
       }
     }
+=======
+  const handleSelectCompany = (companyId: string) => {
+    const updatedCompanies = companies.map(c => ({
+      ...c,
+      isActive: c.id === companyId
+    }));
+    localStorage.setItem("me_docflow_companies", JSON.stringify(updatedCompanies));
+    setIsCompanyMenuOpen(false);
+    window.dispatchEvent(new Event("activeCompanyChanged"));
+    window.location.reload();
+>>>>>>> e4d214de1958685caa5bb44ac7b71f442f515377
   };
 
   useEffect(() => {
     setMounted(true);
     const updateActiveCompany = () => {
       const saved = localStorage.getItem("me_docflow_companies");
+      const userStr = localStorage.getItem("me_docflow_current_user");
+      let currentEmail = "melisara@siamretail.co.th";
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          if (u.email) currentEmail = u.email;
+        } catch (e) {}
+      }
+
       if (saved) {
         try {
           const list = JSON.parse(saved);
+          const userCompanies = list.filter((c: any) => c.ownerEmail === currentEmail);
+          setCompanies(userCompanies);
           const active = list.find((c: any) => c.isActive);
           if (active) {
             setActiveCompanyName(active.companyName);
@@ -108,6 +134,9 @@ export default function Navbar() {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
       }
+      if (companyMenuRef.current && !companyMenuRef.current.contains(event.target as Node)) {
+        setIsCompanyMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
 
@@ -140,10 +169,35 @@ export default function Navbar() {
       <div className="flex items-center gap-3">
         
         {/* Company Dropdown */}
-        <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors">
-          <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[150px]" title={activeCompanyName}>{activeCompanyName}</span>
-          <ChevronDown className="w-4 h-4 text-gray-400" />
-        </button>
+        <div className="relative" ref={companyMenuRef}>
+          <button 
+            onClick={() => setIsCompanyMenuOpen(!isCompanyMenuOpen)}
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors"
+          >
+            <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[150px]" title={activeCompanyName}>{activeCompanyName}</span>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isCompanyMenuOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {isCompanyMenuOpen && companies.length > 0 && (
+            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden z-50">
+              <div className="max-h-60 overflow-y-auto p-1">
+                {companies.map((company) => (
+                  <button
+                    key={company.id}
+                    onClick={() => handleSelectCompany(company.id)}
+                    className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+                      company.isActive 
+                        ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 font-medium" 
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {company.companyName}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="h-4 w-px bg-gray-300 dark:bg-gray-700 mx-1"></div>
 
