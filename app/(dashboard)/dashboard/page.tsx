@@ -1,26 +1,55 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { BarChart, Bar, ResponsiveContainer, XAxis, Tooltip } from "recharts";
-
-const chartData = [
-  { name: 'Jan', value: 40 },
-  { name: 'Feb', value: 55 },
-  { name: 'Mar', value: 45 },
-  { name: 'Apr', value: 70 },
-  { name: 'May', value: 85 },
-  { name: 'Jun', value: 80 },
-  { name: 'Jul', value: 75 },
-];
-
-const categories = [
-  { name: 'บัญชีและการเงิน', percentage: 42 },
-  { name: 'ภาษี', percentage: 26 },
-  { name: 'บุคคล', percentage: 14 },
-  { name: 'การดำเนินงาน', percentage: 12 },
-  { name: 'จดทะเบียน', percentage: 6 },
-];
+import { Loader2 } from "lucide-react";
+import { getDashboardData } from "./actions";
 
 export default function DashboardPage() {
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      const userStr = localStorage.getItem("me_docflow_current_user");
+      let email = "melisara@siamretail.co.th";
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          if (u.email) email = u.email;
+        } catch (e) {}
+      }
+      try {
+        const res = await getDashboardData(email);
+        setData(res);
+      } catch (err) {
+        console.error("Failed to fetch dashboard data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const stats = [
+    { label: 'เอกสารทั้งหมด', value: data.summary.totalDocs.toLocaleString() },
+    { label: 'ฉบับร่าง', value: data.summary.drafts.toLocaleString() },
+    { label: 'รออนุมัติ', value: data.summary.pending.toLocaleString() },
+    { label: 'อนุมัติแล้ว', value: data.summary.approved.toLocaleString() },
+    { label: 'ลูกค้า', value: data.summary.customers.toLocaleString() },
+    { label: 'พนักงาน', value: data.summary.employees.toLocaleString() },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -32,14 +61,7 @@ export default function DashboardPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {[
-          { label: 'เอกสารทั้งหมด', value: '1,248' },
-          { label: 'ฉบับร่าง', value: '82' },
-          { label: 'รออนุมัติ', value: '36' },
-          { label: 'อนุมัติแล้ว', value: '904' },
-          { label: 'ลูกค้า', value: '186' },
-          { label: 'พนักงาน', value: '64' },
-        ].map((stat, i) => (
+        {stats.map((stat, i) => (
           <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center">
             <p className="text-[13px] text-gray-500 font-medium mb-1">{stat.label}</p>
             <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
@@ -55,7 +77,8 @@ export default function DashboardPage() {
           <h3 className="text-[15px] font-bold text-gray-800 mb-6">กราฟจำนวนเอกสารรายเดือน</h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+              <BarChart data={data.chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
                 <Tooltip cursor={{fill: '#f3f4f6'}} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                 <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -67,7 +90,9 @@ export default function DashboardPage() {
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
           <h3 className="text-[15px] font-bold text-gray-800 mb-6">กราฟแยกตามหมวดหมู่เอกสาร</h3>
           <div className="space-y-5 mt-2">
-            {categories.map((cat, i) => (
+            {data.categories.length === 0 ? (
+              <p className="text-sm text-gray-400">ยังไม่มีข้อมูลหมวดหมู่</p>
+            ) : data.categories.map((cat: any, i: number) => (
               <div key={i}>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium text-gray-700">{cat.name}</span>
@@ -103,30 +128,59 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {/* Empty State */}
-                <tr>
-                  <td colSpan={5} className="text-center py-16 text-gray-400">
-                    ไม่มีเอกสาร
-                  </td>
-                </tr>
+                {data.recentDocs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-16 text-gray-400">
+                      ไม่มีเอกสาร
+                    </td>
+                  </tr>
+                ) : (
+                  data.recentDocs.map((doc: any) => (
+                    <tr key={doc.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
+                      <td className="py-3 font-medium text-gray-900">{doc.documentNo}</td>
+                      <td className="py-3">{doc.title}</td>
+                      <td className="py-3">{doc.category?.name || '-'}</td>
+                      <td className="py-3">{doc.documentType?.name || '-'}</td>
+                      <td className="py-3">
+                        <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${
+                          doc.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
+                          doc.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                          doc.status === 'DRAFT' ? 'bg-gray-100 text-gray-600' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {doc.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
-          </div>
-          {/* Scrollbar placeholder area to match image */}
-          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-gray-400 px-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
-            <div className="h-1.5 w-64 bg-gray-200 rounded-full">
-              <div className="h-1.5 w-1/3 bg-gray-400 rounded-full"></div>
-            </div>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
           </div>
         </div>
 
         {/* Pending Approvals */}
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm min-h-[300px] flex flex-col">
-          <h3 className="text-[15px] font-bold text-gray-800 mb-4">งานที่รออนุมัติ (0)</h3>
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-sm text-gray-400">ไม่มีงานที่รออนุมัติ</p>
+          <h3 className="text-[15px] font-bold text-gray-800 mb-4">งานที่รออนุมัติ ({data.pendingDocs.length})</h3>
+          <div className="flex-1 flex flex-col">
+            {data.pendingDocs.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-sm text-gray-400">ไม่มีงานที่รออนุมัติ</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {data.pendingDocs.map((doc: any) => (
+                  <div key={doc.id} className="p-3 border border-gray-100 rounded-lg hover:border-amber-200 hover:bg-amber-50/50 cursor-pointer transition-colors">
+                    <p className="text-xs font-semibold text-gray-500 mb-1">{doc.documentNo}</p>
+                    <p className="text-sm font-medium text-gray-900">{doc.title}</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-xs text-gray-500">{new Date(doc.createdAt).toLocaleDateString('th-TH')}</span>
+                      <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">รอพิจารณา</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
