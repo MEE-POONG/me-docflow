@@ -640,6 +640,11 @@ model Employee {
   endDate   DateTime?
   status    UserStatus @default(ACTIVE)
 
+  // Employee Documents
+  profilePictureUrl      String?
+  idCardDocumentUrl      String?
+  bankAccountDocumentUrl String?
+
   documents Document[]
 
   createdAt DateTime @default(now())

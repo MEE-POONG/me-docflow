@@ -24,6 +24,9 @@ type Employee = {
   startDate: Date | null;
   endDate: Date | null;
   status: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'DELETED';
+  profilePictureUrl?: string | null;
+  idCardDocumentUrl?: string | null;
+  bankAccountDocumentUrl?: string | null;
 };
 
 export default function EmployeesClient({ 
@@ -130,8 +133,10 @@ export default function EmployeesClient({
     setEditingId(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const formEl = e.currentTarget;
+    const submitData = new FormData(formEl);
     startTransition(async () => {
       try {
         const { salaryBaht, ...restFormData } = formData;
@@ -153,9 +158,9 @@ export default function EmployeesClient({
         }
 
         if (editingId) {
-          await updateEmployee(editingId, currentEmail, { ...payload, employeeEmail: payload.email });
+          await updateEmployee(editingId, currentEmail, { ...payload, employeeEmail: payload.email }, submitData);
         } else {
-          await createEmployee(currentEmail, { ...payload, employeeEmail: payload.email });
+          await createEmployee(currentEmail, { ...payload, employeeEmail: payload.email }, submitData);
         }
         
         // Refetch employees after mutation to update the list locally
@@ -470,6 +475,40 @@ export default function EmployeesClient({
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 transition-colors text-sm text-gray-700 dark:text-gray-200"
+                  />
+                </div>
+
+                <div className="space-y-1.5 col-span-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <h3 className="text-sm font-semibold text-gray-800 dark:text-white">เอกสารประกอบ</h3>
+                </div>
+
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">ภาพถ่ายพนักงาน</label>
+                  <input
+                    type="file"
+                    name="profilePicture"
+                    accept="image/*"
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 transition-colors text-sm text-gray-700 dark:text-gray-200"
+                  />
+                </div>
+                
+                <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">สำเนาบัตรประจำตัวประชาชน</label>
+                  <input
+                    type="file"
+                    name="idCardDocument"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 transition-colors text-sm text-gray-700 dark:text-gray-200"
+                  />
+                </div>
+
+                <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">สำเนาหน้าสมุดบัญชี</label>
+                  <input
+                    type="file"
+                    name="bankAccountDocument"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 transition-colors text-sm text-gray-700 dark:text-gray-200"
                   />
                 </div>
 
