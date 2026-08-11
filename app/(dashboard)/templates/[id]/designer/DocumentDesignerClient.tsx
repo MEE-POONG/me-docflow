@@ -8,7 +8,7 @@ import {
   Table2, Minus, Square, PenLine, Calendar,
   Hash, CheckSquare, QrCode, Barcode,
   ChevronRight, MousePointer2, Trash2,
-  ScanLine, Eye, X
+  ScanLine, Eye, X, Printer
 } from 'lucide-react';
 import { saveDesignerLayout } from '../../actions';
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview';
@@ -382,12 +382,21 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
   const scaledW = paperW * (zoom / 100);
   const scaledH = paperH * (zoom / 100);
 
+  const handlePrint = () => {
+    const currentZoom = zoom;
+    setZoom(100);
+    setTimeout(() => {
+      window.print();
+      setZoom(currentZoom);
+    }, 300);
+  };
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#1a1b2e] text-white">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#1a1b2e] text-white print:h-auto print:overflow-visible print:bg-white print:text-black">
 
       {/* ── Top Nav Bar ───────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between px-4 py-2 bg-[#12131f] border-b border-white/10 shrink-0 z-10">
+      <header className="flex items-center justify-between px-4 py-2 bg-[#12131f] border-b border-white/10 shrink-0 z-10 print:hidden">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-xs text-gray-400">
           <Link href={onSave ? "/admin/templates" : "/templates"} className="hover:text-white transition-colors">Template</Link>
@@ -443,6 +452,15 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
 
           <div className="w-px h-5 bg-white/10 mx-1" />
 
+          {/* Print */}
+          <button
+            onClick={handlePrint}
+            title="Print"
+            className="p-1.5 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+          </button>
+
           {/* Download placeholder */}
           <button
             title="Export"
@@ -477,10 +495,10 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
       </header>
 
       {/* ── Body ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 print:block">
 
         {/* ── Left: Elements Palette ─────────────────────────────────── */}
-        <aside className="w-44 shrink-0 bg-[#12131f] border-r border-white/10 overflow-y-auto">
+        <aside className="w-44 shrink-0 bg-[#12131f] border-r border-white/10 overflow-y-auto print:hidden">
           <div className="px-3 py-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
             Elements
           </div>
@@ -500,12 +518,12 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
 
         {/* ── Center: Canvas ─────────────────────────────────────────── */}
         <main
-          className="flex-1 overflow-auto bg-[#252636] flex items-start justify-center py-8 px-6"
+          className="flex-1 overflow-auto bg-[#252636] flex items-start justify-center py-8 px-6 print:block print:overflow-visible print:bg-white print:p-0 print:m-0"
           onClick={() => setSelectedId(null)}
         >
           <div
             ref={canvasRef}
-            className="relative bg-white shadow-2xl shadow-black/60"
+            className="relative bg-white shadow-2xl shadow-black/60 print:shadow-none print:!bg-none print:mx-auto"
             style={{
               width: scaledW,
               height: scaledH,
@@ -588,7 +606,7 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
         </main>
 
         {/* ── Right: State + Properties ──────────────────────────────── */}
-        <aside className="w-52 shrink-0 bg-[#12131f] border-l border-white/10 overflow-y-auto">
+        <aside className="w-52 shrink-0 bg-[#12131f] border-l border-white/10 overflow-y-auto print:hidden">
 
           {/* State */}
           <div className="border-b border-white/10">
