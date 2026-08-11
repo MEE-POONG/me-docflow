@@ -292,3 +292,59 @@ export async function deleteAdminDocumentType(id: string) {
     throw new Error(error.message || "Failed to delete document type");
   }
 }
+
+// Business Types Management
+
+export async function getAdminBusinessTypes() {
+  try {
+    const types = await prisma.masterBusinessType.findMany({
+      orderBy: { createdAt: 'asc' }
+    });
+    return types;
+  } catch (error) {
+    console.error('Error fetching business types:', error);
+    return [];
+  }
+}
+
+export async function createAdminBusinessType(data: { label: string; value: string; isActive: boolean }) {
+  try {
+    const newType = await prisma.masterBusinessType.create({
+      data
+    });
+    revalidatePath('/admin/business-types');
+    return newType;
+  } catch (error: any) {
+    console.error("Create Business Type Error:", error);
+    throw new Error(error.message || "Failed to create business type");
+  }
+}
+
+export async function updateAdminBusinessType(id: string, data: { label: string; value: string; isActive: boolean }) {
+  try {
+    const updatedType = await prisma.masterBusinessType.update({
+      where: { id },
+      data
+    });
+    revalidatePath('/admin/business-types');
+    return updatedType;
+  } catch (error: any) {
+    console.error("Update Business Type Error:", error);
+    throw new Error(error.message || "Failed to update business type");
+  }
+}
+
+export async function deleteAdminBusinessType(id: string) {
+  try {
+    await prisma.masterBusinessType.delete({
+      where: { id }
+    });
+    revalidatePath('/admin/business-types');
+  } catch (error: any) {
+    console.error("Delete Business Type Error:", error);
+    if (error.code === 'P2025') {
+      throw new Error("ไม่พบประเภทธุรกิจนี้ในระบบ หรืออาจถูกลบไปแล้ว");
+    }
+    throw new Error(error.message || "Failed to delete business type");
+  }
+}

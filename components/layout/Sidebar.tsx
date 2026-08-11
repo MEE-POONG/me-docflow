@@ -175,6 +175,7 @@ export default function Sidebar() {
                   <Link href="/organizations" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.customersVendors}</Link>
                   <Link href="/employees" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.employees}</Link>
                   <Link href="/departments" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.departments}</Link>
+                  <Link href="/business-types" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">ประเภทธุรกิจ</Link>
                 </div>
               )}
             </div>

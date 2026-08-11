@@ -143,6 +143,17 @@ export default function AdminLayout({
               >
                 ผู้ใช้บริษัท
               </Link>
+              <Link 
+                href="/admin/business-types" 
+                onClick={handleLinkClick}
+                className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
+                  pathname === '/admin/business-types' 
+                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                    : 'text-slate-555 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
+                }`}
+              >
+                ประเภทธุรกิจ
+              </Link>
             </div>
           )}
         </div>

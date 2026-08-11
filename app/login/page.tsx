@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { 
-  Phone, 
-  Lock, 
-  ShieldCheck, 
-  ArrowRight, 
-  User, 
-  Briefcase, 
-  Building2, 
-  Users, 
-  GraduationCap, 
+import {
+  Phone,
+  Lock,
+  ShieldCheck,
+  ArrowRight,
+  User,
+  Briefcase,
+  Building2,
+  Users,
+  GraduationCap,
   Check,
   Mail,
   Eye,
@@ -55,30 +55,62 @@ const roles = [
 export default function LoginPage() {
   const router = useRouter();
   const pathname = usePathname();
-  
+
   // Decide which tab to display initially based on pathname
   const initialTab = pathname === "/register" ? "register" : "login";
   const [activeTab, setActiveTab] = useState<"login" | "register" | "forgot">(initialTab);
-  
+
   // Login State
   const [loginIdentifier, setLoginIdentifier] = useState(""); // Email or Phone
   const [loginPassword, setLoginPassword] = useState("");
-  
+
   // Register State
   const [regStep, setRegStep] = useState<1 | 2 | 3>(1);
   const [regEmail, setRegEmail] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regPassword, setRegPassword] = useState("");
   const [regConfirmPassword, setRegConfirmPassword] = useState("");
-  
+
   const [regOtp, setRegOtp] = useState("");
-  
+
   const [regFullName, setRegFullName] = useState("");
   const [regRole, setRegRole] = useState<string>("");
   const [regBusinessName, setRegBusinessName] = useState("");
   const [regBusinessPhone, setRegBusinessPhone] = useState("");
   const [regBusinessType, setRegBusinessType] = useState("service");
-  
+  const [businessTypes, setBusinessTypes] = useState<{value: string, label: string}[]>([]);
+
+  useEffect(() => {
+    fetch("/api/business-types")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setBusinessTypes(data.filter(t => t.isActive));
+        } else {
+          // Fallback if no data or db not seeded
+          setBusinessTypes([
+            { value: "service", label: "ธุรกิจบริการ" },
+            { value: "freelance", label: "อาชีพอิสระ / ฟรีแลนซ์" },
+            { value: "restaurant", label: "ร้านอาหาร / คาเฟ่" },
+            { value: "retail", label: "ค้าปลีก / ขายของออนไลน์" },
+            { value: "manufacturing", label: "โรงงานผลิต" },
+            { value: "other", label: "อื่นๆ" }
+          ]);
+        }
+      })
+      .catch(() => {
+        // Fallback on error
+        setBusinessTypes([
+          { value: "service", label: "ธุรกิจบริการ" },
+          { value: "freelance", label: "อาชีพอิสระ / ฟรีแลนซ์" },
+          { value: "restaurant", label: "ร้านอาหาร / คาเฟ่" },
+          { value: "retail", label: "ค้าปลีก / ขายของออนไลน์" },
+          { value: "manufacturing", label: "โรงงานผลิต" },
+          { value: "other", label: "อื่นๆ" }
+        ]);
+      });
+  }, []);
+
   const [isRegistering, setIsRegistering] = useState(false);
 
   // Forgot Password State
@@ -110,7 +142,7 @@ export default function LoginPage() {
       if (savedData) {
         try {
           allUsers = JSON.parse(savedData);
-        } catch (err) {}
+        } catch (err) { }
       } else {
         allUsers = [
           { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
@@ -162,7 +194,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการขอ OTP");
-      
+
       alert(`[จำลองระบบ] OTP ของคุณคือ: ${data.mockOtp}`);
       setRegStep(2);
     } catch (err: any) {
@@ -175,7 +207,7 @@ export default function LoginPage() {
   const handleRegisterStep2 = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!regOtp) return;
-    
+
     setIsRegistering(true);
     try {
       const res = await fetch("/api/auth/verify-otp", {
@@ -185,7 +217,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "OTP ไม่ถูกต้อง");
-      
+
       // Auto-fill business phone from step 1
       setRegBusinessPhone(regPhone);
       setRegStep(3);
@@ -246,7 +278,7 @@ export default function LoginPage() {
     if (savedData) {
       try {
         allUsers = JSON.parse(savedData);
-      } catch (err) {}
+      } catch (err) { }
     } else {
       allUsers = [
         { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
@@ -293,7 +325,7 @@ export default function LoginPage() {
     if (savedData) {
       try {
         allUsers = JSON.parse(savedData);
-      } catch (err) {}
+      } catch (err) { }
     } else {
       allUsers = [
         { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
@@ -311,7 +343,7 @@ export default function LoginPage() {
 
     localStorage.setItem("me_docflow_users", JSON.stringify(updatedUsers));
     alert("เปลี่ยนรหัสผ่านสำเร็จแล้ว! กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่");
-    
+
     // Reset states and go back to login tab
     setForgotIdentifier("");
     setForgotStep(1);
@@ -339,28 +371,26 @@ export default function LoginPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg">
         <div className="bg-white py-8 px-6 shadow-xl sm:rounded-3xl border border-gray-100 sm:px-10 relative overflow-hidden">
-          
+
           {/* Tabs Selector */}
           <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
             <button
               type="button"
               onClick={() => setActiveTab("login")}
-              className={`flex-1 text-center py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-                activeTab === "login"
+              className={`flex-1 text-center py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 cursor-pointer ${activeTab === "login"
                   ? "bg-white text-emerald-700 shadow-sm"
                   : "text-gray-500 hover:text-gray-700"
-              }`}
+                }`}
             >
               เข้าสู่ระบบ
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("register")}
-              className={`flex-1 text-center py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 cursor-pointer ${
-                activeTab === "register"
+              className={`flex-1 text-center py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 cursor-pointer ${activeTab === "register"
                   ? "bg-white text-emerald-700 shadow-sm"
                   : "text-gray-500 hover:text-gray-700"
-              }`}
+                }`}
             >
               สมัครใช้งาน
             </button>
@@ -591,7 +621,7 @@ export default function LoginPage() {
 
               {regStep === 3 && (
                 <form onSubmit={handleRegisterFinal} className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  
+
                   {/* ข้อมูลส่วนตัว */}
                   <div className="border-b border-gray-100 pb-5">
                     <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -609,7 +639,7 @@ export default function LoginPage() {
                           placeholder="สมชาย ใจดี"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">คุณเป็นใครในบริษัท?</label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
@@ -621,21 +651,18 @@ export default function LoginPage() {
                                 key={role.id}
                                 type="button"
                                 onClick={() => setRegRole(role.id)}
-                                className={`flex items-start text-left p-2.5 rounded-xl border transition-all duration-200 cursor-pointer relative ${
-                                  isSelected
+                                className={`flex items-start text-left p-2.5 rounded-xl border transition-all duration-200 cursor-pointer relative ${isSelected
                                     ? "border-emerald-500 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500"
                                     : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/50"
-                                }`}
+                                  }`}
                               >
-                                <div className={`p-1.5 rounded-lg mr-2 shrink-0 ${
-                                  isSelected ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-500"
-                                }`}>
+                                <div className={`p-1.5 rounded-lg mr-2 shrink-0 ${isSelected ? "bg-emerald-500 text-white" : "bg-gray-100 text-gray-500"
+                                  }`}>
                                   <Icon size={16} />
                                 </div>
                                 <div className="flex-1 min-w-0 pr-4">
-                                  <p className={`text-xs font-bold truncate ${
-                                    isSelected ? "text-emerald-950" : "text-gray-900"
-                                  }`}>
+                                  <p className={`text-xs font-bold truncate ${isSelected ? "text-emerald-950" : "text-gray-900"
+                                    }`}>
                                     {role.title}
                                   </p>
                                 </div>
@@ -669,7 +696,7 @@ export default function LoginPage() {
                           placeholder="บจก. สมชายใจดี"
                         />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-medium text-gray-700">เบอร์ติดต่อธุรกิจ</label>
                         <input
@@ -683,18 +710,17 @@ export default function LoginPage() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">ลักษณะการประกอบธุรกิจ</label>
+                        <label className="block text-sm font-medium text-gray-700">ประเภทธุรกิจ</label>
                         <select
                           value={regBusinessType}
                           onChange={(e) => setRegBusinessType(e.target.value)}
                           className="mt-1 appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all bg-white"
                         >
-                          <option value="service">ธุรกิจบริการ</option>
-                          <option value="freelance">อาชีพอิสระ / ฟรีแลนซ์</option>
-                          <option value="restaurant">ร้านอาหาร / คาเฟ่</option>
-                          <option value="retail">ค้าปลีก / ขายของออนไลน์</option>
-                          <option value="manufacturing">โรงงานผลิต</option>
-                          <option value="other">อื่นๆ</option>
+                          {businessTypes.map((type) => (
+                            <option key={type.value} value={type.value}>
+                              {type.label}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>

@@ -801,3 +801,20 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
 }
+
+/**
+ * =========================
+ * MASTER DATA
+ * ข้อมูลหลักของระบบ
+ * =========================
+ */
+
+model MasterBusinessType {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  value     String   @unique
+  label     String
+  isActive  Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
