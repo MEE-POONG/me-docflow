@@ -116,6 +116,8 @@ export default function DocumentsList({ initialDocuments }: { initialDocuments: 
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(doc.status)}
+                      {/*รอแก้ไข ถ้า ไม่อนุมิต ให้ โชว์ Rejected Reason ในหมายเหตุ */}
+                      {/* <p className="text-xs text-red-500 dark:text-red-400 mt-1">ห้ามใช้</p> */}
                     </td>
                     <td className="px-6 py-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       {doc.createdBy?.name}

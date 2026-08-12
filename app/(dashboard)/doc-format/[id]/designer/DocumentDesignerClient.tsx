@@ -11,7 +11,7 @@ import {
   ScanLine, Eye, X, Printer
 } from 'lucide-react';
 import { saveDesignerLayout } from '../../actions';
-import { DocumentPreview } from '@/components/doc-format/builder/DocumentPreview';
+import { DocumentPreview } from '@/components/templates/builder/DocumentPreview';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -101,8 +101,8 @@ function loadInitialElements(layoutJson: unknown): DesignerElement[] {
 
 function renderElement(el: DesignerElement, selected: boolean) {
   const base = `absolute select-none cursor-move border-2 transition-colors ${selected
-      ? 'border-blue-500 shadow-[0_0_0_2px_rgba(59,130,246,0.3)]'
-      : 'border-transparent hover:border-blue-300'
+    ? 'border-blue-500 shadow-[0_0_0_2px_rgba(59,130,246,0.3)]'
+    : 'border-transparent hover:border-blue-300'
     }`;
 
   if (el.type === 'line') {
@@ -482,8 +482,8 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
             onClick={handleSave}
             disabled={isSaving || !isDirty}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-all ${isDirty
-                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/50'
-                : 'bg-emerald-700 text-emerald-200 cursor-default'
+              ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/50'
+              : 'bg-emerald-700 text-emerald-200 cursor-default'
               } disabled:opacity-60`}
           >
             <Save className="w-3.5 h-3.5" />
@@ -541,8 +541,8 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
               >
                 <div
                   className={`w-full h-full select-none cursor-move border-2 transition-colors ${selectedId === el.id
-                      ? 'border-blue-500 ring-2 ring-blue-400/30'
-                      : 'border-transparent hover:border-blue-300/60'
+                    ? 'border-blue-500 ring-2 ring-blue-400/30'
+                    : 'border-transparent hover:border-blue-300/60'
                     }`}
                   style={{
                     fontSize: (el.fontSize ?? 14) * (zoom / 100),
@@ -681,8 +681,8 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
                           onClick={() => { updateProp('textAlign', a.val); commitProp(); }}
                           title={`Align ${a.val}`}
                           className={`flex-1 flex justify-center p-1.5 rounded transition-colors ${(selectedEl.textAlign || 'left') === a.val
-                              ? 'bg-blue-600 text-white shadow-sm'
-                              : 'text-gray-400 hover:text-gray-200 hover:bg-white/10'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/10'
                             }`}
                         >
                           <a.icon className="w-3.5 h-3.5" />
