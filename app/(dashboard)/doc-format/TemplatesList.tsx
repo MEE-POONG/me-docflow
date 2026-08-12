@@ -30,7 +30,7 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
             Company Workspace
           </div>
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
-            Template ทั้งหมด
+            แบบเอกสาร ทั้งหมด
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             จัดการและค้นหาแบบฟอร์มหรือเทมเพลตเอกสารทั้งหมดในระบบ
@@ -42,7 +42,7 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
           className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium shadow-sm hover:shadow transition-all"
         >
           <Plus className="w-5 h-5" />
-          สร้าง Template ใหม่
+          สร้าง แบบเอกสาร ใหม่
         </Link>
       </div>
 
