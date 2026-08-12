@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { LayoutTemplate, Plus, Edit2, Trash2, X, Save, CheckCircle2, Search, ToggleLeft, ToggleRight, PenTool, Eye } from "lucide-react";
 import Link from "next/link";
 import { getAdminTemplates, createAdminTemplate, updateAdminTemplate, deleteAdminTemplate } from "./actions";
-import { DocumentPreview } from "@/components/templates/builder/DocumentPreview";
+import { DocumentPreview } from "@/components/doc-format/builder/DocumentPreview";
 
 interface TemplateItem {
   id: string;
@@ -138,7 +138,7 @@ export default function AdminTemplatesPage() {
     }
   };
 
-  const filtered = templates.filter(t => 
+  const filtered = templates.filter(t =>
     t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.designer.toLowerCase().includes(searchTerm.toLowerCase())
@@ -303,8 +303,8 @@ export default function AdminTemplatesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Link 
-                    href={`/admin/templates/${temp.id}/designer`}
+                  <Link
+                    href={`/admin/doc-format/${temp.id}/designer`}
                     className="p-1.5 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg cursor-pointer transition-colors"
                     title="ออกแบบเลย์เอาต์ (Designer)"
                   >
@@ -317,13 +317,13 @@ export default function AdminTemplatesPage() {
                   >
                     <Eye className="w-3.5 h-3.5" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleOpenEdit(temp)}
                     className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleDelete(temp.id, temp.name)}
                     className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-655 dark:hover:text-red-400 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
                   >
@@ -337,14 +337,13 @@ export default function AdminTemplatesPage() {
 
             <div className="border-t border-gray-100 dark:border-slate-800 pt-3 flex justify-between items-center text-xs">
               <span className="text-slate-500 dark:text-slate-450">โดย: <strong className="text-slate-800 dark:text-slate-200">{temp.designer}</strong></span>
-              
-              <button 
+
+              <button
                 onClick={() => toggleTemplateStatus(temp.id, temp.name, temp.isActive)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                  temp.isActive 
-                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-100 dark:border-emerald-500/20' 
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${temp.isActive
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border border-emerald-100 dark:border-emerald-500/20'
                     : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 border border-gray-200 dark:border-slate-700'
-                }`}
+                  }`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${temp.isActive ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
                 {temp.isActive ? 'เปิดใช้งานอยู่' : 'ปิดการใช้งาน'}
@@ -368,14 +367,14 @@ export default function AdminTemplatesPage() {
                   <p className="text-xs text-slate-500 dark:text-slate-400">พรีวิวรูปแบบเอกสารที่จะนำไปใช้จริง</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setPreviewTemplate(null)}
                 className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-slate-900/50">
               <DocumentPreview layoutJsonString={previewTemplate.layoutJson || null} />
             </div>

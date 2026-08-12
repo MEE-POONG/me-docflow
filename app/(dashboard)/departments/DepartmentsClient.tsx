@@ -143,7 +143,7 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
       
       {/* Header */}
       <div className="mb-8">
-        <div className="text-xs font-bold text-teal-700 dark:text-teal-500 tracking-wider mb-1">
+        <div className="text-xs font-bold text-emerald-600 dark:text-emerald-500 tracking-wider mb-1 uppercase">
           {t.common.companyWorkspace}
         </div>
         <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">

@@ -4,15 +4,16 @@ import Link from 'next/link'
 import { ArrowLeft, Calendar, FileText, User, CheckCircle2, XCircle, Clock, FileCheck, Printer } from 'lucide-react'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
-import { PrintHelper, PrintButton } from './PrintHelper'
+import { PrintHelper, PrintActions } from './PrintHelper'
 
 const prisma = new PrismaClient()
 
-export default async function DocumentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ print?: string }> }) {
+export default async function DocumentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ print?: string, templateId?: string }> }) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const documentId = resolvedParams.id;
   const isPrint = resolvedSearchParams.print === 'true';
+  const selectedTemplateId = resolvedSearchParams.templateId;
 
   const document = await prisma.document.findUnique({
     where: { id: documentId },
@@ -27,6 +28,14 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
   if (!document) {
     notFound()
   }
+
+  const templates = await prisma.documentTemplate.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+
+  const activeTemplate = selectedTemplateId 
+    ? templates.find(t => t.id === selectedTemplateId)
+    : document.template;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -49,7 +58,7 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
           <ArrowLeft className="w-4 h-4" /> กลับหน้ารายการ
         </Link>
         
-        <PrintButton />
+        <PrintActions templates={templates} currentTemplateId={selectedTemplateId || document.templateId} documentId={document.id} />
       </div>
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
@@ -74,7 +83,7 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
                 <div className="p-1.5 bg-white dark:bg-gray-800 rounded-md shadow-sm">
                   <FileText className="w-4 h-4 text-indigo-500" />
                 </div>
-                <span className="font-medium">ประเภท:</span> {document.documentType?.name || '-'}
+                <span className="font-medium">ประเภท/เทมเพลต:</span> {activeTemplate?.name || document.documentType?.name || '-'}
               </div>
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-white dark:bg-gray-800 rounded-md shadow-sm">

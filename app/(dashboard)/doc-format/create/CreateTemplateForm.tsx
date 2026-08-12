@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, ArrowLeft, Loader2, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
-import { DocumentDesigner } from '@/components/templates/builder/DocumentDesigner'
+import { DocumentDesigner } from '@/components/doc-format/builder/DocumentDesigner'
 import Link from 'next/link'
 import { createTemplate, updateTemplate } from '../actions'
 
@@ -16,7 +16,7 @@ type CreateTemplateFormProps = {
 export default function CreateTemplateForm({ categories, documentTypes, initialData }: CreateTemplateFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  
+
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     description: initialData?.description || '',
@@ -69,7 +69,7 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
         } else {
           const newTemplate = await createTemplate(payload)
           if (newTemplate?.id) {
-            router.push(`/templates/${newTemplate.id}/designer`)
+            router.push(`/doc-format/${newTemplate.id}/designer`)
           } else {
             router.push('/templates')
           }
@@ -102,7 +102,7 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
           </div>
         </div>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="p-8 space-y-8">
         {/* Section 1: ข้อมูลทั่วไป */}
         <div>
@@ -119,7 +119,7 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
                 placeholder="เช่น เทมเพลตใบสั่งซื้อมาตรฐาน, แบบฟอร์มลางาน..."
               />
             </div>
-            
+
             <div className="col-span-full">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">คำอธิบาย</label>
               <input
@@ -145,9 +145,9 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
                 onChange={e => {
                   const newCat = e.target.value;
                   const typesForCat = documentTypes.filter(t => t.categoryId === newCat)
-                  setFormData({ 
-                    ...formData, 
-                    categoryId: newCat, 
+                  setFormData({
+                    ...formData,
+                    categoryId: newCat,
                     documentTypeId: typesForCat.length > 0 ? typesForCat[0].id : ''
                   })
                 }}

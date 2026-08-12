@@ -28,7 +28,7 @@ export default function TemplateActions({ id, name, isGlobal }: { id: string, na
       startTransition(async () => {
         try {
           const newId = await cloneSystemTemplate(id)
-          router.push(`/templates/${newId}`)
+          router.push(`/doc-format/${newId}`)
         } catch (error) {
           console.error(error)
           alert('เกิดข้อผิดพลาด ไม่สามารถคัดลอกเทมเพลตได้')
@@ -56,14 +56,14 @@ export default function TemplateActions({ id, name, isGlobal }: { id: string, na
   return (
     <div className="flex items-center gap-2 justify-end">
       <Link
-        href={`/templates/${id}`}
+        href={`/doc-format/${id}`}
         className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
         title="จัดการฟิลด์/ดูรายละเอียด"
       >
         <Settings className="w-4 h-4" />
       </Link>
       <Link
-        href={`/templates/${id}/edit`}
+        href={`/doc-format/${id}/edit`}
         className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
         title="แก้ไขข้อมูลเทมเพลต"
       >

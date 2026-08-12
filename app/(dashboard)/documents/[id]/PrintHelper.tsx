@@ -1,17 +1,42 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Printer } from 'lucide-react'
 
-export function PrintButton() {
+export function PrintActions({ templates, currentTemplateId, documentId }: { templates: any[], currentTemplateId: string | null, documentId: string }) {
+  const [selected, setSelected] = useState(currentTemplateId || '')
+
   return (
-    <button 
-      type="button" 
-      onClick={() => window.print()}
-      className="inline-flex items-center gap-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors px-4 py-2 rounded-xl shadow-sm"
-    >
-      <Printer className="w-4 h-4" /> พิมพ์เอกสาร
-    </button>
+    <div className="flex items-center gap-3">
+      {templates.length > 0 && (
+        <select 
+          value={selected} 
+          onChange={e => setSelected(e.target.value)}
+          className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+        >
+          <option value="">-- รูปแบบมาตรฐาน --</option>
+          {templates.map(t => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+      )}
+      <button 
+        type="button" 
+        onClick={() => {
+          const url = new URL(window.location.href);
+          if (selected) {
+            url.searchParams.set('templateId', selected);
+          } else {
+            url.searchParams.delete('templateId');
+          }
+          url.searchParams.set('print', 'true');
+          window.location.href = url.toString();
+        }}
+        className="inline-flex items-center gap-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors px-4 py-2 rounded-xl shadow-sm"
+      >
+        <Printer className="w-4 h-4" /> พิมพ์เอกสาร
+      </button>
+    </div>
   )
 }
 

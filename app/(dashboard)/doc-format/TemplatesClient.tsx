@@ -276,11 +276,10 @@ export default function TemplatesClient({ initialTemplates, categories, docTypes
           {filtered.map((tpl) => (
             <div
               key={tpl.id}
-              className={`bg-white dark:bg-gray-800 rounded-xl border transition-all hover:shadow-md ${
-                tpl.isActive
+              className={`bg-white dark:bg-gray-800 rounded-xl border transition-all hover:shadow-md ${tpl.isActive
                   ? 'border-gray-100 dark:border-gray-700'
                   : 'border-gray-200 dark:border-gray-600 opacity-60'
-              }`}
+                }`}
             >
               {/* Card Top */}
               <div className="p-5 border-b border-gray-50 dark:border-gray-700">
@@ -332,7 +331,7 @@ export default function TemplatesClient({ initialTemplates, categories, docTypes
               {/* Card Actions */}
               <div className="px-5 py-3 border-t border-gray-50 dark:border-gray-700 flex items-center justify-between gap-2">
                 <Link
-                  href={`/templates/${tpl.id}`}
+                  href={`/doc-format/${tpl.id}`}
                   className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
                 >
                   จัดการฟิลด์ <ArrowRight className="w-3.5 h-3.5" />
@@ -465,11 +464,10 @@ export default function TemplatesClient({ initialTemplates, categories, docTypes
                         key={mode}
                         type="button"
                         onClick={() => setFormData({ ...formData, templateMode: mode })}
-                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${
-                          selected
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center ${selected
                             ? `${cfg.bg} ${cfg.color} border-current shadow-sm`
                             : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500'
-                        }`}
+                          }`}
                       >
                         <Icon className="w-5 h-5" />
                         <span className="text-xs font-semibold">{cfg.label}</span>

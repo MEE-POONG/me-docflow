@@ -40,7 +40,7 @@ async function getGlobalCondition(companyId: string, idField: 'id' | 'categoryId
   });
   const settings = (company?.settings as any) || {};
   const enabledIds = settings.enabledGlobalCategoryIds;
-  
+
   if (Array.isArray(enabledIds)) {
     return { isGlobal: true, [idField]: { in: enabledIds } };
   }
@@ -246,7 +246,7 @@ export async function updateTemplate(
     },
   });
   revalidatePath('/templates');
-  revalidatePath(`/templates/${id}`);
+  revalidatePath(`/doc-format/${id}`);
 }
 
 export async function deleteTemplate(id: string) {
@@ -286,7 +286,7 @@ export async function createTemplateField(
       defaultValue: (data.defaultValue as object) ?? undefined,
     },
   });
-  revalidatePath(`/templates/${templateId}`);
+  revalidatePath(`/doc-format/${templateId}`);
 }
 
 export async function updateTemplateField(
@@ -316,12 +316,12 @@ export async function updateTemplateField(
       defaultValue: (data.defaultValue as object) ?? undefined,
     },
   });
-  revalidatePath(`/templates/${templateId}`);
+  revalidatePath(`/doc-format/${templateId}`);
 }
 
 export async function deleteTemplateField(fieldId: string, templateId: string) {
   await prisma.templateField.delete({ where: { id: fieldId } });
-  revalidatePath(`/templates/${templateId}`);
+  revalidatePath(`/doc-format/${templateId}`);
 }
 
 export async function reorderTemplateFields(
@@ -336,7 +336,7 @@ export async function reorderTemplateFields(
       })
     )
   );
-  revalidatePath(`/templates/${templateId}`);
+  revalidatePath(`/doc-format/${templateId}`);
 }
 
 // ─── Designer Layout ─────────────────────────────────────────────────────────
@@ -349,7 +349,7 @@ export async function saveDesignerLayout(
     where: { id: templateId },
     data: { layoutJson },
   });
-  revalidatePath(`/templates/${templateId}/designer`);
+  revalidatePath(`/doc-format/${templateId}/designer`);
 }
 
 // ─── Clone System Template ──────────────────────────────────────────────────

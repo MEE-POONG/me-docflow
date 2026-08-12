@@ -26,19 +26,19 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-lg">
-              <LayoutTemplate className="w-6 h-6" />
-            </div>
+          <div className="text-xs font-bold text-emerald-600 dark:text-emerald-500 tracking-wider mb-1 uppercase">
+            Company Workspace
+          </div>
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
             Template ทั้งหมด
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2 pl-12">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             จัดการและค้นหาแบบฟอร์มหรือเทมเพลตเอกสารทั้งหมดในระบบ
           </p>
         </div>
 
         <Link
-          href="/templates/create"
+          href="/doc-format/create"
           className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium shadow-sm hover:shadow transition-all"
         >
           <Plus className="w-5 h-5" />
@@ -51,8 +51,8 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
         <button
           onClick={() => setActiveTab('company')}
           className={`pb-4 text-sm font-semibold transition-colors relative outline-none ${activeTab === 'company'
-              ? 'text-indigo-600 dark:text-indigo-400'
-              : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+            ? 'text-indigo-600 dark:text-indigo-400'
+            : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
             }`}
         >
           เทมเพลตของบริษัท
@@ -63,8 +63,8 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
         <button
           onClick={() => setActiveTab('system')}
           className={`pb-4 text-sm font-semibold transition-colors relative outline-none ${activeTab === 'system'
-              ? 'text-indigo-600 dark:text-indigo-400'
-              : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+            ? 'text-indigo-600 dark:text-indigo-400'
+            : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
             }`}
         >
           เทมเพลตจากระบบส่วนกลาง
@@ -129,7 +129,7 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
                       {activeTab === 'system' ? (
                         <span className="text-gray-800 dark:text-gray-200">{template.name}</span>
                       ) : (
-                        <Link href={`/templates/${template.id}`} className="hover:underline">{template.name}</Link>
+                        <Link href={`/doc-format/${template.id}`} className="hover:underline">{template.name}</Link>
                       )}
                     </td>
                     <td className="px-6 py-4 text-gray-500 dark:text-gray-400 max-w-xs truncate">

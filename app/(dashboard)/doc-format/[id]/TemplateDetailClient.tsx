@@ -210,11 +210,10 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-wider">
                 Template
               </span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                template.isActive
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${template.isActive
                   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                   : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-              }`}>
+                }`}>
                 {template.isActive ? 'Active' : 'Inactive'}
               </span>
             </div>
@@ -225,7 +224,7 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
             {/* Document Designer button — only for DESIGNER mode */}
             {template.templateMode === 'DESIGNER' && (
               <Link
-                href={`/templates/${template.id}/designer`}
+                href={`/doc-format/${template.id}/designer`}
                 className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
               >
                 <Paintbrush2 className="w-4 h-4" />
@@ -409,11 +408,10 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
                                 key={ft.value}
                                 type="button"
                                 onClick={() => setFormData({ ...formData, type: ft.value })}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                                  selected
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${selected
                                     ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-400 dark:border-emerald-500 text-emerald-700 dark:text-emerald-400'
                                     : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
-                                }`}
+                                  }`}
                               >
                                 <Icon className="w-3.5 h-3.5" />
                                 {ft.label}

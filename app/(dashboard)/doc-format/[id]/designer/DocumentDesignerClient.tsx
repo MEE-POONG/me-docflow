@@ -11,7 +11,7 @@ import {
   ScanLine, Eye, X, Printer
 } from 'lucide-react';
 import { saveDesignerLayout } from '../../actions';
-import { DocumentPreview } from '@/components/templates/builder/DocumentPreview';
+import { DocumentPreview } from '@/components/doc-format/builder/DocumentPreview';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -48,39 +48,39 @@ type TemplateInfo = {
 // ─── Element palette config ──────────────────────────────────────────────────
 
 const ELEMENT_PALETTE: { type: ElementType; label: string; icon: React.ElementType }[] = [
-  { type: 'text',        label: 'Text',         icon: Type },
-  { type: 'heading',     label: 'Heading',       icon: Heading1 },
-  { type: 'paragraph',   label: 'Paragraph',     icon: AlignLeft },
-  { type: 'image',       label: 'Image',         icon: Image },
-  { type: 'logo',        label: 'Logo',          icon: Building2 },
-  { type: 'table',       label: 'Table',         icon: Table2 },
-  { type: 'line',        label: 'Line',          icon: Minus },
-  { type: 'box',         label: 'Box',           icon: Square },
-  { type: 'signature',   label: 'Signature',     icon: PenLine },
-  { type: 'date',        label: 'Date',          icon: Calendar },
-  { type: 'page_number', label: 'Page Number',   icon: Hash },
-  { type: 'checkbox',    label: 'Checkbox',      icon: CheckSquare },
-  { type: 'qr_code',     label: 'QR Code',       icon: QrCode },
-  { type: 'barcode',     label: 'Barcode',       icon: ScanLine },
+  { type: 'text', label: 'Text', icon: Type },
+  { type: 'heading', label: 'Heading', icon: Heading1 },
+  { type: 'paragraph', label: 'Paragraph', icon: AlignLeft },
+  { type: 'image', label: 'Image', icon: Image },
+  { type: 'logo', label: 'Logo', icon: Building2 },
+  { type: 'table', label: 'Table', icon: Table2 },
+  { type: 'line', label: 'Line', icon: Minus },
+  { type: 'box', label: 'Box', icon: Square },
+  { type: 'signature', label: 'Signature', icon: PenLine },
+  { type: 'date', label: 'Date', icon: Calendar },
+  { type: 'page_number', label: 'Page Number', icon: Hash },
+  { type: 'checkbox', label: 'Checkbox', icon: CheckSquare },
+  { type: 'qr_code', label: 'QR Code', icon: QrCode },
+  { type: 'barcode', label: 'Barcode', icon: ScanLine },
 ];
 
 // ─── Default element properties ──────────────────────────────────────────────
 
 const DEFAULT_PROPS: Record<ElementType, Partial<DesignerElement>> = {
-  text:        { width: 200, height: 30,  content: 'ข้อความ',         fontSize: 14 },
-  heading:     { width: 330, height: 58,  content: 'ใบเสนอราคา',      fontSize: 24, fontWeight: 'bold' },
-  paragraph:   { width: 250, height: 60,  content: 'ข้อความย่อหน้า',  fontSize: 12 },
-  image:       { width: 120, height: 120, content: '[Image]' },
-  logo:        { width: 80,  height: 80,  content: '[Logo]' },
-  table:       { width: 300, height: 100, content: '[Table]' },
-  line:        { width: 300, height: 2,   content: '' },
-  box:         { width: 200, height: 100, content: '' },
-  signature:   { width: 150, height: 60,  content: '[Signature]' },
-  date:        { width: 120, height: 30,  content: '{{date}}',         fontSize: 12 },
-  page_number: { width: 60,  height: 24,  content: '{{page}}',         fontSize: 11 },
-  checkbox:    { width: 16,  height: 16,  content: '' },
-  qr_code:     { width: 80,  height: 80,  content: '{{qr}}' },
-  barcode:     { width: 150, height: 50,  content: '{{barcode}}' },
+  text: { width: 200, height: 30, content: 'ข้อความ', fontSize: 14 },
+  heading: { width: 330, height: 58, content: 'ใบเสนอราคา', fontSize: 24, fontWeight: 'bold' },
+  paragraph: { width: 250, height: 60, content: 'ข้อความย่อหน้า', fontSize: 12 },
+  image: { width: 120, height: 120, content: '[Image]' },
+  logo: { width: 80, height: 80, content: '[Logo]' },
+  table: { width: 300, height: 100, content: '[Table]' },
+  line: { width: 300, height: 2, content: '' },
+  box: { width: 200, height: 100, content: '' },
+  signature: { width: 150, height: 60, content: '[Signature]' },
+  date: { width: 120, height: 30, content: '{{date}}', fontSize: 12 },
+  page_number: { width: 60, height: 24, content: '{{page}}', fontSize: 11 },
+  checkbox: { width: 16, height: 16, content: '' },
+  qr_code: { width: 80, height: 80, content: '{{qr}}' },
+  barcode: { width: 150, height: 50, content: '{{barcode}}' },
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -100,11 +100,10 @@ function loadInitialElements(layoutJson: unknown): DesignerElement[] {
 // ─── Element Renderer ────────────────────────────────────────────────────────
 
 function renderElement(el: DesignerElement, selected: boolean) {
-  const base = `absolute select-none cursor-move border-2 transition-colors ${
-    selected
+  const base = `absolute select-none cursor-move border-2 transition-colors ${selected
       ? 'border-blue-500 shadow-[0_0_0_2px_rgba(59,130,246,0.3)]'
       : 'border-transparent hover:border-blue-300'
-  }`;
+    }`;
 
   if (el.type === 'line') {
     return (
@@ -161,9 +160,9 @@ function renderElement(el: DesignerElement, selected: boolean) {
       >
         <table className="w-full h-full border-collapse text-[10px]">
           <tbody>
-            {[0,1,2].map(r => (
+            {[0, 1, 2].map(r => (
               <tr key={r}>
-                {[0,1,2,3].map(c => (
+                {[0, 1, 2, 3].map(c => (
                   <td key={c} className="border border-gray-300 px-1 py-0.5 text-gray-400" />
                 ))}
               </tr>
@@ -401,7 +400,7 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
         <div className="flex items-center gap-1.5 text-xs text-gray-400">
           <Link href={onSave ? "/admin/templates" : "/templates"} className="hover:text-white transition-colors">Template</Link>
           <ChevronRight className="w-3 h-3" />
-          <Link href={onSave ? "/admin/templates" : `/templates/${template.id}`} className="hover:text-white transition-colors truncate max-w-[140px]">
+          <Link href={onSave ? "/admin/templates" : `/doc-format/${template.id}`} className="hover:text-white transition-colors truncate max-w-[140px]">
             {template.name}
           </Link>
           <ChevronRight className="w-3 h-3" />
@@ -482,11 +481,10 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
           <button
             onClick={handleSave}
             disabled={isSaving || !isDirty}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-all ${
-              isDirty
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-all ${isDirty
                 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/50'
                 : 'bg-emerald-700 text-emerald-200 cursor-default'
-            } disabled:opacity-60`}
+              } disabled:opacity-60`}
           >
             <Save className="w-3.5 h-3.5" />
             {isSaving ? 'Saving…' : isDirty ? 'Save' : 'Saved'}
@@ -542,11 +540,10 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
                 style={{ position: 'absolute', left: el.x * (zoom / 100), top: el.y * (zoom / 100), width: el.width * (zoom / 100), height: Math.max(el.height, 2) * (zoom / 100) }}
               >
                 <div
-                  className={`w-full h-full select-none cursor-move border-2 transition-colors ${
-                    selectedId === el.id
+                  className={`w-full h-full select-none cursor-move border-2 transition-colors ${selectedId === el.id
                       ? 'border-blue-500 ring-2 ring-blue-400/30'
                       : 'border-transparent hover:border-blue-300/60'
-                  }`}
+                    }`}
                   style={{
                     fontSize: (el.fontSize ?? 14) * (zoom / 100),
                     fontWeight: el.fontWeight ?? 'normal',
@@ -573,9 +570,9 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
                   {el.type === 'table' && (
                     <table className="w-full h-full border-collapse" style={{ fontSize: 10 * (zoom / 100) }}>
                       <tbody>
-                        {[0,1,2].map(r => (
+                        {[0, 1, 2].map(r => (
                           <tr key={r}>
-                            {[0,1,2,3].map(c => (
+                            {[0, 1, 2, 3].map(c => (
                               <td key={c} className="border border-gray-300 text-gray-400 px-1" />
                             ))}
                           </tr>
@@ -588,7 +585,7 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
                       <span style={{ fontSize: 10 * (zoom / 100), color: '#9ca3af' }}>ลายเซ็น</span>
                     </div>
                   )}
-                  {!['line','image','logo','qr_code','barcode','checkbox','table','signature','box'].includes(el.type) && (
+                  {!['line', 'image', 'logo', 'qr_code', 'barcode', 'checkbox', 'table', 'signature', 'box'].includes(el.type) && (
                     el.content || <span style={{ color: '#d1d5db', fontStyle: 'italic', fontSize: 11 * (zoom / 100) }}>ว่าง</span>
                   )}
                 </div>
@@ -650,7 +647,7 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
             {selectedEl ? (
               <div className="px-3 pb-4 space-y-3">
                 {/* Content */}
-                {!['line','image','logo','qr_code','barcode','checkbox','table','signature','box'].includes(selectedEl.type) && (
+                {!['line', 'image', 'logo', 'qr_code', 'barcode', 'checkbox', 'table', 'signature', 'box'].includes(selectedEl.type) && (
                   <div>
                     <label className="block text-[10px] text-gray-500 mb-1">Content</label>
                     <textarea
@@ -669,7 +666,7 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
                 )}
 
                 {/* Text Align */}
-                {!['line','image','logo','qr_code','barcode','checkbox','table','signature','box'].includes(selectedEl.type) && (
+                {!['line', 'image', 'logo', 'qr_code', 'barcode', 'checkbox', 'table', 'signature', 'box'].includes(selectedEl.type) && (
                   <div>
                     <label className="block text-[10px] text-gray-500 mb-1">Text Align</label>
                     <div className="flex gap-1 bg-[#1e1f30] p-1 rounded border border-white/10">
@@ -683,11 +680,10 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
                           key={a.val}
                           onClick={() => { updateProp('textAlign', a.val); commitProp(); }}
                           title={`Align ${a.val}`}
-                          className={`flex-1 flex justify-center p-1.5 rounded transition-colors ${
-                            (selectedEl.textAlign || 'left') === a.val
+                          className={`flex-1 flex justify-center p-1.5 rounded transition-colors ${(selectedEl.textAlign || 'left') === a.val
                               ? 'bg-blue-600 text-white shadow-sm'
                               : 'text-gray-400 hover:text-gray-200 hover:bg-white/10'
-                          }`}
+                            }`}
                         >
                           <a.icon className="w-3.5 h-3.5" />
                         </button>
@@ -728,20 +724,20 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-sans text-left">พรีวิวรูปแบบเอกสารตามที่ได้ออกแบบไว้</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsPreviewOpen(false)}
                 className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-slate-900/50 text-gray-900 flex justify-center">
-              <DocumentPreview 
-                layoutJsonString={JSON.stringify({ 
+              <DocumentPreview
+                layoutJsonString={JSON.stringify({
                   pages: [{ id: 'page-1', width: paperW, height: paperH, background: '#ffffff' }],
-                  elements 
-                })} 
+                  elements
+                })}
               />
             </div>
           </div>

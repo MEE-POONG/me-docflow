@@ -11,17 +11,8 @@ export default function DocumentsList({ initialDocuments }: { initialDocuments: 
   const [documents, setDocuments] = useState<any[]>(initialDocuments)
 
   useEffect(() => {
-    const userStr = localStorage.getItem("me_docflow_current_user");
-    let currentEmail = "melisara@siamretail.co.th";
-    if (userStr) {
-      try {
-        const u = JSON.parse(userStr);
-        if (u.email) currentEmail = u.email;
-      } catch (e) {}
-    }
-
-    // Filter documents by user's email
-    setDocuments(initialDocuments.filter(doc => doc.createdBy?.email === currentEmail))
+    // Use all initial documents without hardcoded email filtering
+    setDocuments(initialDocuments)
   }, [initialDocuments])
 
   const getStatusBadge = (status: string) => {
@@ -42,20 +33,20 @@ export default function DocumentsList({ initialDocuments }: { initialDocuments: 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-lg">
-              <FileText className="w-6 h-6" />
-            </div>
+          <div className="text-xs font-bold text-emerald-600 dark:text-emerald-500 tracking-wider mb-1 uppercase">
+            Company Workspace
+          </div>
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
             เอกสารทั้งหมด
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2 pl-12">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             จัดการและค้นหาเอกสารทั้งหมดภายในองค์กร
           </p>
         </div>
 
         <Link
           href="/documents/create"
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow-sm hover:shadow transition-all"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
         >
           <Plus className="w-5 h-5" />
           สร้างเอกสารใหม่
@@ -63,25 +54,25 @@ export default function DocumentsList({ initialDocuments }: { initialDocuments: 
       </div>
 
       {/* Main Content */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
         {/* Filters Bar */}
-        <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="ค้นหาตามเลขที่เอกสาร, ชื่อเอกสาร..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 transition-all outline-none text-gray-900 dark:text-gray-100"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 focus:outline-none focus:border-emerald-400 dark:focus:border-emerald-500 transition-colors text-gray-900 dark:text-gray-100"
             />
           </div>
           <div className="flex items-center gap-3">
-            <select className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500">
+            <select className="px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:border-emerald-400 dark:focus:border-emerald-500 transition-colors">
               <option value="">ทุกสถานะ</option>
               <option value="PENDING">รออนุมัติ</option>
               <option value="APPROVED">อนุมัติแล้ว</option>
               <option value="REJECTED">ไม่อนุมัติ</option>
             </select>
-            <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors text-sm font-medium">
+            <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors text-sm font-medium">
               <Filter className="w-4 h-4" />
               คัดกรอง
             </button>
@@ -90,19 +81,19 @@ export default function DocumentsList({ initialDocuments }: { initialDocuments: 
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
+          <table className="w-full text-left text-sm whitespace-nowrap">
+            <thead className="text-gray-500 dark:text-gray-400 font-medium border-b border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30">
               <tr>
-                <th className="px-6 py-4 font-semibold whitespace-nowrap">เลขที่เอกสาร</th>
-                <th className="px-6 py-4 font-semibold">ชื่อเอกสาร</th>
-                <th className="px-6 py-4 font-semibold whitespace-nowrap">หมวดหมู่</th>
-                <th className="px-6 py-4 font-semibold whitespace-nowrap">สถานะ</th>
-                <th className="px-6 py-4 font-semibold whitespace-nowrap">ผู้สร้าง</th>
-                <th className="px-6 py-4 font-semibold whitespace-nowrap">วันที่สร้าง</th>
-                <th className="px-6 py-4 font-semibold whitespace-nowrap text-right">จัดการ</th>
+                <th className="px-6 py-4 font-normal">เลขที่เอกสาร</th>
+                <th className="px-6 py-4 font-normal">ชื่อเอกสาร</th>
+                <th className="px-6 py-4 font-normal">หมวดหมู่</th>
+                <th className="px-6 py-4 font-normal">สถานะ</th>
+                <th className="px-6 py-4 font-normal">ผู้สร้าง</th>
+                <th className="px-6 py-4 font-normal">วันที่สร้าง</th>
+                <th className="px-6 py-4 font-normal text-right">จัดการ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            <tbody className="divide-y divide-gray-50 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
               {documents.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
@@ -113,11 +104,11 @@ export default function DocumentsList({ initialDocuments }: { initialDocuments: 
                 </tr>
               ) : (
                 documents.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
-                    <td className="px-6 py-4 font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                  <tr key={doc.id} className="hover:bg-gray-50/70 dark:hover:bg-gray-700/50 transition-colors group">
+                    <td className="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                       <Link href={`/documents/${doc.id}`} className="hover:underline">{doc.documentNo}</Link>
                     </td>
-                    <td className="px-6 py-4 text-gray-900 dark:text-gray-100 font-medium">
+                    <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
                       <Link href={`/documents/${doc.id}`} className="hover:underline">{doc.title}</Link>
                     </td>
                     <td className="px-6 py-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">

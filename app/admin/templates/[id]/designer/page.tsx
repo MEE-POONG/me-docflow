@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getAdminTemplateById, saveAdminDesignerLayout } from '../../actions';
-import DocumentDesignerClient from '@/app/(dashboard)/templates/[id]/designer/DocumentDesignerClient';
+import DocumentDesignerClient from '@/app/(dashboard)/doc-format/[id]/designer/DocumentDesignerClient';
 
 type Props = {
   params: Promise<{ id: string }>;

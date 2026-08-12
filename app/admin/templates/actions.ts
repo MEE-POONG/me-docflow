@@ -63,7 +63,7 @@ export async function getAdminTemplates() {
 
 export async function createAdminTemplate(data: { name: string; type: string; description: string; isActive: boolean; designer: string }) {
   const { categoryId, documentTypeId } = await getOrCreateGlobalCategoryAndType(data.type);
-  
+
   // Find an admin user to associate, or just leave null
   const admin = await prisma.systemAdmin.findFirst();
 
@@ -113,7 +113,7 @@ export async function saveAdminDesignerLayout(id: string, layoutJson: any) {
     where: { id },
     data: { layoutJson },
   });
-  revalidatePath(`/admin/templates/${id}/designer`);
+  revalidatePath(`/admin/doc-format/${id}/designer`);
 }
 
 export async function getAdminTemplateById(id: string) {

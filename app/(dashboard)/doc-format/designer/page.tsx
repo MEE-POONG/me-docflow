@@ -1,6 +1,6 @@
 'use client'
 
-import { DocumentDesigner } from '@/components/templates/builder/DocumentDesigner'
+import { DocumentDesigner } from '@/components/doc-format/builder/DocumentDesigner'
 
 export default function DesignerPage() {
   return (

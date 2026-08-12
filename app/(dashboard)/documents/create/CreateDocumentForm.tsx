@@ -28,7 +28,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
   })
 
   // Parse initial dataJson if available
-  const parsedData = initialData?.dataJson ? JSON.parse(initialData.dataJson) : {}
+  const parsedData = initialData?.dataJson ? (typeof initialData.dataJson === 'string' ? JSON.parse(initialData.dataJson) : initialData.dataJson) : {}
   const initialItems = parsedData.items?.length > 0 ? parsedData.items : [{ id: 1, name: '', qty: 1, unit: 'ชิ้น', unitPrice: 0 }]
 
   const [customData, setCustomData] = useState<Record<string, any>>(parsedData || {})
@@ -121,6 +121,15 @@ export default function CreateDocumentForm({ folders, tags, categories, document
     startTransition(async () => {
       let result
       
+      let currentUserEmail = undefined
+      const userStr = localStorage.getItem("me_docflow_current_user");
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          if (u.email) currentUserEmail = u.email;
+        } catch (e) {}
+      }
+
       const payload = {
         title: formType === 'STANDARD' && formData.partnerName ? `${docInfo.title} - ${formData.partnerName}` : docInfo.title,
         categoryId: docInfo.categoryId,
@@ -129,7 +138,8 @@ export default function CreateDocumentForm({ folders, tags, categories, document
         dataJson,
         subtotalSatang: formType === 'STANDARD' ? Math.round(subtotal * 100) : 0,
         vatSatang: formType === 'STANDARD' ? Math.round(vatAmount * 100) : 0,
-        totalSatang: formType === 'STANDARD' ? Math.round(grandTotal * 100) : 0
+        totalSatang: formType === 'STANDARD' ? Math.round(grandTotal * 100) : 0,
+        userEmail: currentUserEmail
       }
 
       if (initialData?.id) {
