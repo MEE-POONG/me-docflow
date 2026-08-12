@@ -13,6 +13,12 @@ type DocumentPreviewProps = {
   dataOverride?: Record<string, any>
 }
 
+const tableCellStyle: CSSProperties = {
+  border: '1px solid #000',
+  padding: '4px 6px',
+  textAlign: 'left',
+}
+
 export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPreviewProps) {
   if (!layoutJsonString) {
     return (
@@ -97,12 +103,37 @@ function ElementView({ element, dataOverride }: { element: DesignerElement, data
       return <div style={{ ...baseStyle, border: '1px solid #000' }} />
     case 'line':
       return <div style={{ ...baseStyle, backgroundColor: '#000' }} />
-    case 'table':
+    case 'table': {
+      const items = Array.isArray(dataToUse.items) ? dataToUse.items : []
+      if (items.length === 0) {
+        return (
+          <div style={{ ...baseStyle, border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {content}
+          </div>
+        )
+      }
+      // Only the data rows are rendered here — the template's own design already
+      // draws the column headers as separate static elements, so injecting another
+      // header row would duplicate/overlap it.
       return (
-        <div style={{ ...baseStyle, border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {content}
-        </div>
+        <table
+          style={{ ...baseStyle, height: 'auto', minHeight: `${element.height}px`, borderCollapse: 'collapse', fontSize: '12px' }}
+        >
+          <tbody>
+            {items.map((item: any, idx: number) => (
+              <tr key={idx}>
+                <td style={tableCellStyle}>{idx + 1}</td>
+                <td style={tableCellStyle}>{item.name || '-'}</td>
+                <td style={{ ...tableCellStyle, textAlign: 'right' }}>{item.qty ?? '-'}</td>
+                <td style={tableCellStyle}>{item.unit || '-'}</td>
+                <td style={{ ...tableCellStyle, textAlign: 'right' }}>{Number(item.unitPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td style={{ ...tableCellStyle, textAlign: 'right' }}>{(Number(item.qty || 0) * Number(item.unitPrice || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )
+    }
     default:
       return <div style={baseStyle}>{content}</div>
   }

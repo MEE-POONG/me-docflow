@@ -74,6 +74,13 @@ export function PrintHelper() {
           border: none !important;
           background: white !important;
         }
+        .print-section > div {
+          background: transparent !important;
+          padding: 0 !important;
+          border: none !important;
+          border-radius: 0 !important;
+          gap: 0 !important;
+        }
         .no-print {
           display: none !important;
         }

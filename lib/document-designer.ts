@@ -85,6 +85,10 @@ export const sampleDocumentData = {
     name: "คุณวราภรณ์",
     position: "Senior Accountant",
   },
+  items: [
+    { name: "สินค้าตัวอย่าง A", qty: 2, unit: "ชิ้น", unitPrice: 500 },
+    { name: "สินค้าตัวอย่าง B", qty: 1, unit: "ชุด", unitPrice: 1500 },
+  ] as { name: string; qty: number; unit: string; unitPrice: number }[],
 };
 
 function getByPath(data: unknown, path: string): string {

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { saveDesignerLayout } from '../../actions';
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview';
+import { mapDocumentToTemplateData } from '@/lib/template-data-mapping';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,15 @@ type TemplateInfo = {
   layoutJson: unknown;
   category: { name: string };
   documentType: { name: string };
+};
+
+type PreviewDocument = {
+  id: string;
+  documentNo: string;
+  title: string;
+  dataJson: unknown;
+  company?: { name?: string | null; taxId?: string | null; address?: string | null; phone?: string | null } | null;
+  createdBy?: { name?: string | null; role?: string | null } | null;
 };
 
 // ─── Element palette config ──────────────────────────────────────────────────
@@ -232,12 +242,13 @@ function renderElement(el: DesignerElement, selected: boolean) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function DocumentDesignerClient({ template, onSave }: { template: TemplateInfo; onSave?: (id: string, layoutJson: unknown) => Promise<void> }) {
+export default function DocumentDesignerClient({ template, documents, onSave }: { template: TemplateInfo; documents?: PreviewDocument[]; onSave?: (id: string, layoutJson: unknown) => Promise<void> }) {
   // ── State ────────────────────────────────────────────────────────────────
   const [elements, setElements] = useState<DesignerElement[]>(() =>
     loadInitialElements(template.layoutJson)
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [previewDocumentId, setPreviewDocumentId] = useState('');
   const [zoom, setZoom] = useState(72); // percentage
   const [history, setHistory] = useState<DesignerElement[][]>([loadInitialElements(template.layoutJson)]);
   const [historyIdx, setHistoryIdx] = useState(0);
@@ -732,12 +743,32 @@ export default function DocumentDesignerClient({ template, onSave }: { template:
               </button>
             </div>
 
+            {documents && documents.length > 0 && (
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex items-center gap-3">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">ดูตัวอย่างจากเอกสารจริง</label>
+                <select
+                  value={previewDocumentId}
+                  onChange={e => setPreviewDocumentId(e.target.value)}
+                  className="flex-1 max-w-xs text-sm px-3 py-1.5 border border-gray-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">ตัวอย่าง (ข้อมูลตัวอย่าง)</option>
+                  {documents.map(doc => (
+                    <option key={doc.id} value={doc.id}>{doc.documentNo} — {doc.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-slate-900/50 text-gray-900 flex justify-center">
               <DocumentPreview
                 layoutJsonString={JSON.stringify({
                   pages: [{ id: 'page-1', width: paperW, height: paperH, background: '#ffffff' }],
                   elements
                 })}
+                dataOverride={(() => {
+                  const doc = documents?.find(d => d.id === previewDocumentId)
+                  return doc ? mapDocumentToTemplateData(doc, doc.company, doc.createdBy) : undefined
+                })()}
               />
             </div>
           </div>

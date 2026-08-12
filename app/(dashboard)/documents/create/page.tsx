@@ -27,6 +27,8 @@ export default async function CreateDocumentPage() {
     orderBy: { createdAt: 'desc' }
   })
 
+  const company = await prisma.company.findFirst()
+
   return (
     <div className="p-6">
       <CreateDocumentForm
@@ -35,6 +37,7 @@ export default async function CreateDocumentPage() {
         categories={categories}
         documentTypes={types}
         templates={templates}
+        company={company}
       />
     </div>
   )

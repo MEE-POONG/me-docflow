@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Loader2, Link as LinkIcon, ArrowLeft, Search, Plus, Trash2, Printer, Download, MoreHorizontal, Share2, FileText } from 'lucide-react'
+import { Save, Loader2, Link as LinkIcon, ArrowLeft, ArrowRight, Search, Plus, Trash2, Printer, Download, MoreHorizontal, Share2, FileText, CheckCircle2 } from 'lucide-react'
 import { createDocument, updateDocument } from '@/app/actions/documents'
+import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
+import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 import Link from 'next/link'
 
 type CreateDocumentFormProps = {
@@ -12,12 +14,31 @@ type CreateDocumentFormProps = {
   categories: any[]
   documentTypes: any[]
   templates: any[]
+  company?: any
   initialData?: any
 }
 
-export default function CreateDocumentForm({ folders, tags, categories, documentTypes, templates, initialData }: CreateDocumentFormProps) {
+function hasLayoutElements(layoutJson: unknown) {
+  const layout = layoutJson as { pages?: unknown[]; elements?: unknown[] } | null | undefined
+  return Boolean(layout && ((layout.pages?.length ?? 0) > 0 || (layout.elements?.length ?? 0) > 0))
+}
+
+function getCurrentUser(): { name?: string; email?: string } {
+  if (typeof window === 'undefined') return {}
+  const userStr = localStorage.getItem('me_docflow_current_user')
+  if (!userStr) return {}
+  try {
+    return JSON.parse(userStr)
+  } catch {
+    return {}
+  }
+}
+
+export default function CreateDocumentForm({ folders, tags, categories, documentTypes, templates, company, initialData }: CreateDocumentFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [step, setStep] = useState<1 | 2 | 3>(initialData ? 2 : 1)
+  const [savedDocument, setSavedDocument] = useState<any>(initialData || null)
 
   // Base Document Info (Title, Category, etc.)
   const [docInfo, setDocInfo] = useState({
@@ -120,15 +141,8 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
     startTransition(async () => {
       let result
-      
-      let currentUserEmail = undefined
-      const userStr = localStorage.getItem("me_docflow_current_user");
-      if (userStr) {
-        try {
-          const u = JSON.parse(userStr);
-          if (u.email) currentUserEmail = u.email;
-        } catch (e) {}
-      }
+
+      const currentUserEmail = getCurrentUser().email
 
       const payload = {
         title: formType === 'STANDARD' && formData.partnerName ? `${docInfo.title} - ${formData.partnerName}` : docInfo.title,
@@ -142,14 +156,16 @@ export default function CreateDocumentForm({ folders, tags, categories, document
         userEmail: currentUserEmail
       }
 
-      if (initialData?.id) {
-        result = await updateDocument(initialData.id, payload)
+      const savedId = savedDocument?.id || initialData?.id
+      if (savedId) {
+        result = await updateDocument(savedId, payload)
       } else {
         result = await createDocument(payload)
       }
-      
+
       if (result.success) {
-        router.push('/documents')
+        setSavedDocument(result.document)
+        setStep(3)
         router.refresh()
       } else {
         alert('เกิดข้อผิดพลาดในการบันทึกเอกสาร: ' + result.error)
@@ -169,68 +185,145 @@ export default function CreateDocumentForm({ folders, tags, categories, document
             <FileText className="w-7 h-7 text-[#38A1C5]" />
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               {initialData ? 'แก้ไขเอกสาร' : 'สร้างเอกสารใหม่'}
-              <span className="text-[#38A1C5] ml-3">{initialData?.documentNo || 'Auto Generated'}</span>
+              <span className="text-[#38A1C5] ml-3">{initialData?.documentNo || savedDocument?.documentNo || 'Auto Generated'}</span>
             </h1>
+            <span className="ml-2 text-xs font-bold px-2.5 py-1 rounded-full bg-[#38A1C5]/10 text-[#38A1C5]">
+              ขั้นตอนที่ {step}/3
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/documents" className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors bg-white dark:bg-gray-900 shadow-sm text-sm font-medium">
             ปิดหน้าต่าง
           </Link>
-          <button 
-            type="submit" 
-            disabled={isPending}
-            className="flex items-center gap-2 px-6 py-2 bg-[#6DB235] hover:bg-[#5a962a] text-white rounded-lg font-medium transition-all shadow-sm disabled:opacity-50 text-sm"
-          >
-            {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            บันทึกเอกสาร
-          </button>
+          {step === 1 && (
+            <button
+              type="button"
+              disabled={!docInfo.categoryId || !docInfo.documentTypeId}
+              onClick={() => setStep(2)}
+              className="flex items-center gap-2 px-6 py-2 bg-[#6DB235] hover:bg-[#5a962a] text-white rounded-lg font-medium transition-all shadow-sm disabled:opacity-50 text-sm"
+            >
+              ถัดไป: กรอกข้อมูล <ArrowRight className="w-5 h-5" />
+            </button>
+          )}
+          {step === 2 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
+              >
+                <ArrowLeft className="w-4 h-4" /> ย้อนกลับ
+              </button>
+              <button
+                type="submit"
+                disabled={isPending}
+                className="flex items-center gap-2 px-6 py-2 bg-[#6DB235] hover:bg-[#5a962a] text-white rounded-lg font-medium transition-all shadow-sm disabled:opacity-50 text-sm"
+              >
+                {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                บันทึกเอกสาร
+              </button>
+            </>
+          )}
+          {step === 3 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
+              >
+                <ArrowLeft className="w-4 h-4" /> ย้อนกลับไปแก้ไข
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/documents')}
+                className="flex items-center gap-2 px-6 py-2 bg-[#6DB235] hover:bg-[#5a962a] text-white rounded-lg font-medium transition-all shadow-sm text-sm"
+              >
+                <CheckCircle2 className="w-5 h-5" /> เสร็จสิ้น
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-        
-        {/* Document Setting Bar */}
-        <div className="bg-gray-50 dark:bg-gray-800/50 p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap gap-4 items-center">
-           <div className="flex-1 min-w-[200px]">
-             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">หมวดหมู่</label>
-             <select 
-               value={docInfo.categoryId} 
-               onChange={e => setDocInfo({...docInfo, categoryId: e.target.value})}
-               className="w-full text-sm p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-blue-500"
-             >
-               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-             </select>
-           </div>
-           <div className="flex-1 min-w-[200px]">
-             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">ประเภทเอกสาร</label>
-             <select 
-               value={docInfo.documentTypeId} 
-               onChange={e => setDocInfo({...docInfo, documentTypeId: e.target.value})}
-               className="w-full text-sm p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-blue-500"
-             >
-               {documentTypes.filter(t => t.categoryId === docInfo.categoryId).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-             </select>
-           </div>
-           <div className="flex-1 min-w-[200px]">
-             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">เทมเพลต (ถ้ามี)</label>
-             <select 
-               value={docInfo.templateId} 
-               onChange={e => setDocInfo({...docInfo, templateId: e.target.value})}
-               className="w-full text-sm p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-blue-500"
-             >
-               <option value="">-- ไม่ใช้เทมเพลต --</option>
-               {templates.filter(t => t.documentTypeId === docInfo.documentTypeId).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-             </select>
-           </div>
+
+        {step === 1 && (
+        <div className="p-8 md:p-12 max-w-2xl mx-auto">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">ขั้นตอนที่ 1: เลือกหมวดหมู่และประเภทเอกสาร</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">เลือกหมวดหมู่ ประเภทเอกสาร และเทมเพลต (ถ้ามี) ก่อนเริ่มกรอกข้อมูล</p>
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมวดหมู่ <span className="text-red-500">*</span></label>
+              <select
+                value={docInfo.categoryId}
+                onChange={e => {
+                  const newCat = e.target.value
+                  const typesForCat = documentTypes.filter(t => t.categoryId === newCat)
+                  setDocInfo({ ...docInfo, categoryId: newCat, documentTypeId: typesForCat[0]?.id || '', templateId: '' })
+                }}
+                className="w-full text-sm p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="" disabled>เลือกหมวดหมู่</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ประเภทเอกสาร <span className="text-red-500">*</span></label>
+              <select
+                value={docInfo.documentTypeId}
+                onChange={e => setDocInfo({ ...docInfo, documentTypeId: e.target.value, templateId: '' })}
+                disabled={!docInfo.categoryId}
+                className="w-full text-sm p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+              >
+                <option value="" disabled>เลือกประเภทเอกสาร</option>
+                {documentTypes.filter(t => t.categoryId === docInfo.categoryId).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เทมเพลต (ถ้ามี)</label>
+              <select
+                value={docInfo.templateId}
+                onChange={e => setDocInfo({ ...docInfo, templateId: e.target.value })}
+                className="w-full text-sm p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">-- ไม่ใช้เทมเพลต --</option>
+                {templates.filter(t => t.documentTypeId === docInfo.documentTypeId).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+        )}
+
+        {step === 2 && (
+        <>
+        {/* Document Setting Summary */}
+        <div className="bg-gray-50 dark:bg-gray-800/50 p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+            <span className="px-2.5 py-1 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 font-medium">
+              {categories.find(c => c.id === docInfo.categoryId)?.name || '-'}
+            </span>
+            <span className="px-2.5 py-1 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 font-medium">
+              {documentTypes.find(t => t.id === docInfo.documentTypeId)?.name || '-'}
+            </span>
+            {docInfo.templateId && (
+              <span className="px-2.5 py-1 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 font-medium">
+                {templates.find(t => t.id === docInfo.templateId)?.name}
+              </span>
+            )}
+          </div>
+          <button type="button" onClick={() => setStep(1)} className="text-xs font-medium text-[#38A1C5] hover:underline">
+            เปลี่ยนหมวดหมู่/ประเภทเอกสาร
+          </button>
         </div>
 
         {/* Action icons bar */}
         <div className="flex justify-end px-6 pt-4 pb-2 gap-6 text-[#38A1C5]">
            <button type="button" className="flex flex-col items-center gap-1 hover:text-blue-700 transition-colors"><Share2 className="w-5 h-5"/> <span className="text-xs">แชร์</span></button>
            <button type="button" onClick={() => {
-             if (initialData?.id) {
-               window.open(`/documents/${initialData.id}?print=true`, '_blank');
+             const savedId = savedDocument?.id || initialData?.id
+             if (savedId) {
+               window.open(`/documents/${savedId}?print=true`, '_blank');
              } else {
                alert('กรุณาบันทึกเอกสารก่อนทำการพิมพ์');
              }
@@ -556,6 +649,42 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 ))
               )}
             </div>
+          </div>
+        )}
+        </>
+        )}
+
+        {step === 3 && (
+          <div className="p-6 lg:p-10">
+            <div className="mb-6">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">ขั้นตอนที่ 3: ตัวอย่างเอกสาร</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                ตรวจสอบข้อมูลที่กรอกก่อนพิมพ์หรือส่งอนุมัติ — สามารถย้อนกลับไปแก้ไขข้อมูลได้
+              </p>
+            </div>
+            {(() => {
+              const previewTemplate = templates.find(t => t.id === docInfo.templateId)
+              if (!savedDocument) {
+                return (
+                  <div className="p-10 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                    ไม่พบข้อมูลเอกสารที่บันทึกไว้
+                  </div>
+                )
+              }
+              if (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson)) {
+                return (
+                  <div className="p-10 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                    เอกสารนี้ไม่ได้ใช้เทมเพลตที่มีรูปแบบการออกแบบ — บันทึกข้อมูลเรียบร้อยแล้ว
+                  </div>
+                )
+              }
+              return (
+                <DocumentPreview
+                  layoutJsonString={JSON.stringify(previewTemplate.layoutJson)}
+                  dataOverride={mapDocumentToTemplateData(savedDocument, company, { name: getCurrentUser().name })}
+                />
+              )
+            })()}
           </div>
         )}
       </div>

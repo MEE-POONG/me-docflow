@@ -13,11 +13,17 @@ export default async function PendingApprovalsPage() {
       }
     },
     include: {
-      createdBy: true
+      createdBy: true,
+      company: true,
+      template: true,
     },
     orderBy: {
       createdAt: 'desc'
     }
+  })
+
+  const templates = await prisma.documentTemplate.findMany({
+    orderBy: { createdAt: 'desc' }
   })
 
   return (
@@ -32,7 +38,7 @@ export default async function PendingApprovalsPage() {
         </p>
       </div>
 
-      <PendingApprovalList documents={pendingDocuments as any} />
+      <PendingApprovalList documents={pendingDocuments as any} templates={templates as any} />
     </div>
   )
 }

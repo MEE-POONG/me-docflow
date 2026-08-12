@@ -29,20 +29,22 @@ export default async function EditDocumentPage({ params }: { params: Promise<{ i
     { id: '2', name: 'รออนุมัติ' }
   ]
 
-  const [categories, types, templates] = await Promise.all([
+  const [categories, types, templates, company] = await Promise.all([
     prisma.documentCategory.findMany({ orderBy: { showOrder: 'asc' } }),
     prisma.documentType.findMany({ orderBy: { showOrder: 'asc' } }),
-    prisma.documentTemplate.findMany({ orderBy: { createdAt: 'desc' } })
+    prisma.documentTemplate.findMany({ orderBy: { createdAt: 'desc' } }),
+    prisma.company.findFirst()
   ])
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
-      <CreateDocumentForm 
+      <CreateDocumentForm
         folders={folders}
         tags={tags}
         categories={categories}
         documentTypes={types}
         templates={templates}
+        company={company}
         initialData={document}
       />
     </div>

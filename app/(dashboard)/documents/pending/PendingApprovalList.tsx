@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { CheckCircle2, XCircle, Eye, Search, Filter, Loader2, AlertCircle, Printer } from 'lucide-react'
+import { CheckCircle2, XCircle, Eye, Search, Filter, Loader2, AlertCircle, Printer, X } from 'lucide-react'
 import { approveDocument, rejectDocument } from '@/app/actions/approval'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import Link from 'next/link'
+import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
+import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 
 type Document = {
   id: string
@@ -14,23 +16,46 @@ type Document = {
   status: string
   createdAt: Date
   rejectedReason?: string | null
+  dataJson?: unknown
+  templateId?: string | null
+  company?: {
+    name?: string | null
+    taxId?: string | null
+    address?: string | null
+    phone?: string | null
+  } | null
   createdBy: {
     name: string
     email?: string
+    role?: string | null
   }
+}
+
+type Template = {
+  id: string
+  name: string
+  layoutJson?: unknown
 }
 
 type Props = {
   documents: Document[]
+  templates: Template[]
 }
 
-export default function PendingApprovalList({ documents }: Props) {
+function hasLayoutElements(layoutJson: unknown) {
+  const layout = layoutJson as { pages?: unknown[]; elements?: unknown[] } | null | undefined
+  return Boolean(layout && ((layout.pages?.length ?? 0) > 0 || (layout.elements?.length ?? 0) > 0))
+}
+
+export default function PendingApprovalList({ documents, templates }: Props) {
   const [searchTerm, setSearchTerm] = useState('')
   const [isPending, startTransition] = useTransition()
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null)
-  
+  const [printPreviewDoc, setPrintPreviewDoc] = useState<Document | null>(null)
+  const [printTemplateId, setPrintTemplateId] = useState('')
+
   const [myDocuments, setMyDocuments] = useState<Document[]>(documents)
 
   useEffect(() => {
@@ -65,6 +90,20 @@ export default function PendingApprovalList({ documents }: Props) {
       await approveDocument(id)
       setProcessingId(null)
     })
+  }
+
+  const openPrintPreview = (doc: Document) => {
+    setPrintPreviewDoc(doc)
+    setPrintTemplateId(doc.templateId || '')
+  }
+
+  const handleConfirmPrint = () => {
+    if (!printPreviewDoc) return
+    const url = new URL(`/documents/${printPreviewDoc.id}`, window.location.origin)
+    if (printTemplateId) url.searchParams.set('templateId', printTemplateId)
+    url.searchParams.set('print', 'true')
+    window.open(url.toString(), '_blank')
+    setPrintPreviewDoc(null)
   }
 
   const handleReject = (id: string) => {
@@ -161,14 +200,14 @@ export default function PendingApprovalList({ documents }: Props) {
                       <Eye className="w-5 h-5" />
                     </Link>
                     {doc.status === 'APPROVED' && (
-                      <Link 
-                        href={`/documents/${doc.id}?print=true`} 
-                        target="_blank"
-                        className="inline-flex items-center justify-center p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors" 
+                      <button
+                        type="button"
+                        onClick={() => openPrintPreview(doc)}
+                        className="inline-flex items-center justify-center p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
                         title="พิมพ์รายงาน"
                       >
                         <Printer className="w-5 h-5" />
-                      </Link>
+                      </button>
                     )}
                     {doc.status === 'PENDING' && (
                       <>
@@ -233,6 +272,75 @@ export default function PendingApprovalList({ documents }: Props) {
               >
                 {isPending && processingId === showRejectModal ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
                 ยืนยันไม่อนุมัติ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print Preview Modal */}
+      {printPreviewDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Printer className="w-5 h-5 text-indigo-500" />
+                เลือกเทมเพลตก่อนพิมพ์ — {printPreviewDoc.documentNo}
+              </h3>
+              <button
+                onClick={() => setPrintPreviewDoc(null)}
+                className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เทมเพลตเอกสาร</label>
+              <select
+                value={printTemplateId}
+                onChange={e => setPrintTemplateId(e.target.value)}
+                className="w-full sm:w-80 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="">-- รูปแบบมาตรฐาน --</option>
+                {templates.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="p-6 overflow-auto flex-1 bg-gray-50 dark:bg-gray-900/40">
+              {(() => {
+                const selectedTemplate = templates.find(t => t.id === printTemplateId)
+                if (!selectedTemplate || !hasLayoutElements(selectedTemplate.layoutJson)) {
+                  return (
+                    <div className="p-10 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                      ไม่มีตัวอย่างสำหรับรูปแบบมาตรฐาน — เอกสารจะพิมพ์ด้วยรูปแบบทั่วไป
+                    </div>
+                  )
+                }
+                return (
+                  <DocumentPreview
+                    layoutJsonString={JSON.stringify(selectedTemplate.layoutJson)}
+                    dataOverride={mapDocumentToTemplateData(printPreviewDoc, printPreviewDoc.company, printPreviewDoc.createdBy)}
+                  />
+                )
+              })()}
+            </div>
+
+            <div className="p-6 bg-gray-50 dark:bg-gray-800/50 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800">
+              <button
+                onClick={() => setPrintPreviewDoc(null)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleConfirmPrint}
+                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-2"
+              >
+                <Printer className="w-4 h-4" />
+                ยืนยันพิมพ์
               </button>
             </div>
           </div>

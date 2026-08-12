@@ -5,6 +5,8 @@ import { ArrowLeft, Calendar, FileText, User, CheckCircle2, XCircle, Clock, File
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { PrintHelper, PrintActions } from './PrintHelper'
+import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
+import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 
 const prisma = new PrismaClient()
 
@@ -22,6 +24,7 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
       category: true,
       documentType: true,
       template: true,
+      company: true,
     }
   })
 
@@ -33,9 +36,24 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
     orderBy: { createdAt: 'desc' }
   });
 
-  const activeTemplate = selectedTemplateId 
+  const activeTemplate = selectedTemplateId
     ? templates.find(t => t.id === selectedTemplateId)
     : document.template;
+
+  const layoutData = activeTemplate?.layoutJson as { pages?: unknown[], elements?: unknown[] } | null | undefined
+  const hasLayout = Boolean(layoutData && ((layoutData.pages?.length ?? 0) > 0 || (layoutData.elements?.length ?? 0) > 0))
+
+  if (isPrint && hasLayout && activeTemplate) {
+    return (
+      <div className="print-section">
+        <PrintHelper />
+        <DocumentPreview
+          layoutJsonString={JSON.stringify(activeTemplate.layoutJson)}
+          dataOverride={mapDocumentToTemplateData(document, document.company, document.createdBy)}
+        />
+      </div>
+    )
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
