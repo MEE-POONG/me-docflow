@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { LayoutTemplate, Plus, Edit2, Trash2, X, Save, CheckCircle2, Search, ToggleLeft, ToggleRight, PenTool, Eye } from "lucide-react";
 import Link from "next/link";
 import { getAdminTemplates, createAdminTemplate, updateAdminTemplate, deleteAdminTemplate } from "./actions";
-import { DocumentPreview } from "@/components/doc-format/builder/DocumentPreview";
+import { DocumentPreview } from "@/components/templates/builder/DocumentPreview";
 
 interface TemplateItem {
   id: string;
@@ -304,7 +304,7 @@ export default function AdminTemplatesPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <Link
-                    href={`/admin/doc-format/${temp.id}/designer`}
+                    href={`/admin/templates/${temp.id}/designer`}
                     className="p-1.5 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg cursor-pointer transition-colors"
                     title="ออกแบบเลย์เอาต์ (Designer)"
                   >

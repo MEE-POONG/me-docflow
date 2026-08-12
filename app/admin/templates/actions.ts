@@ -113,7 +113,7 @@ export async function saveAdminDesignerLayout(id: string, layoutJson: any) {
     where: { id },
     data: { layoutJson },
   });
-  revalidatePath(`/admin/doc-format/${id}/designer`);
+  revalidatePath(`/admin/templates/${id}/designer`);
 }
 
 export async function getAdminTemplateById(id: string) {
