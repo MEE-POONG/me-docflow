@@ -75,7 +75,7 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
         <Link href="/documents" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors bg-white dark:bg-gray-900 px-4 py-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
           <ArrowLeft className="w-4 h-4" /> กลับหน้ารายการ
         </Link>
-        
+
         <PrintActions templates={templates} currentTemplateId={selectedTemplateId || document.templateId} documentId={document.id} />
       </div>
 

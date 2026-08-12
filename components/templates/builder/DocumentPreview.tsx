@@ -13,6 +13,18 @@ type DocumentPreviewProps = {
   dataOverride?: Record<string, any>
 }
 
+/**
+ * Templates persist per-element text styling (fontSize, fontWeight, color, textAlign)
+ * as sibling fields on the element, not nested under `element.style` — the shared
+ * DesignerElement type only declares `style`, which is always undefined in real data.
+ */
+type StyledDesignerElement = DesignerElement & {
+  fontSize?: number | string
+  fontWeight?: string | number
+  color?: string
+  textAlign?: CSSProperties['textAlign']
+}
+
 const tableCellStyle: CSSProperties = {
   border: '1px solid #000',
   padding: '4px 6px',
@@ -28,7 +40,7 @@ export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPrev
     )
   }
 
-  let layoutData: { pages: DesignerPage[], elements: DesignerElement[] } | null = null
+  let layoutData: { pages: DesignerPage[], elements: StyledDesignerElement[] } | null = null
   try {
     layoutData = JSON.parse(layoutJsonString)
   } catch (e) {
@@ -73,13 +85,17 @@ export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPrev
   )
 }
 
-function ElementView({ element, dataOverride }: { element: DesignerElement, dataOverride?: Record<string, any> }) {
+function ElementView({ element, dataOverride }: { element: StyledDesignerElement, dataOverride?: Record<string, any> }) {
   const baseStyle: CSSProperties = {
     position: 'absolute',
     left: `${element.x}px`,
     top: `${element.y}px`,
     width: `${element.width}px`,
     height: `${element.height}px`,
+    ...(element.fontSize !== undefined && { fontSize: typeof element.fontSize === 'number' ? `${element.fontSize}px` : element.fontSize }),
+    ...(element.fontWeight !== undefined && { fontWeight: element.fontWeight }),
+    ...(element.color !== undefined && { color: element.color }),
+    ...(element.textAlign !== undefined && { textAlign: element.textAlign }),
     ...element.style
   }
 
@@ -117,7 +133,7 @@ function ElementView({ element, dataOverride }: { element: DesignerElement, data
       // header row would duplicate/overlap it.
       return (
         <table
-          style={{ ...baseStyle, height: 'auto', minHeight: `${element.height}px`, borderCollapse: 'collapse', fontSize: '12px' }}
+          style={{ fontSize: '12px', ...baseStyle, height: 'auto', minHeight: `${element.height}px`, borderCollapse: 'collapse' }}
         >
           <tbody>
             {items.map((item: any, idx: number) => (
