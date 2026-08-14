@@ -23,6 +23,11 @@ type StyledDesignerElement = DesignerElement & {
   fontWeight?: string | number
   color?: string
   textAlign?: CSSProperties['textAlign']
+  tableColumns?: { label: string; field: string; width?: number; align?: 'left' | 'center' | 'right' }[]
+  tableHeaderBold?: boolean
+  tableHeaderBg?: string
+  tableShowTotalRow?: boolean
+  tableTotalLabel?: string
 }
 
 const tableCellStyle: CSSProperties = {
@@ -30,6 +35,21 @@ const tableCellStyle: CSSProperties = {
   padding: '4px 6px',
   textAlign: 'left',
 }
+
+function tableCellValue(field: string, item: any, idx: number) {
+  switch (field) {
+    case 'index':
+      return idx + 1
+    case 'total':
+      return (Number(item.qty || 0) * Number(item.unitPrice || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    case 'unitPrice':
+      return Number(item.unitPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    default:
+      return item[field] ?? '-'
+  }
+}
+
+const RIGHT_ALIGNED_FIELDS = new Set(['qty', 'unitPrice', 'total'])
 
 export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPreviewProps) {
   if (!layoutJsonString) {
@@ -128,13 +148,80 @@ function ElementView({ element, dataOverride }: { element: StyledDesignerElement
           </div>
         )
       }
-      // Only the data rows are rendered here — the template's own design already
-      // draws the column headers as separate static elements, so injecting another
-      // header row would duplicate/overlap it.
+      const columns = element.tableColumns
+      const tableStyle: CSSProperties = { fontSize: '12px', ...baseStyle, height: 'auto', minHeight: `${element.height}px`, borderCollapse: 'collapse' }
+
+      if (columns && columns.length > 0) {
+        // Table designed with explicit columns/headers — render exactly as configured,
+        // including each column's own width/alignment and the header's bold/background style.
+        const hasWidths = columns.some(c => c.width)
+        return (
+          <table style={{ ...tableStyle, tableLayout: hasWidths ? 'fixed' : 'auto' }}>
+            <thead>
+              <tr>
+                {columns.map((col, i) => (
+                  <th
+                    key={i}
+                    style={{
+                      ...tableCellStyle,
+                      width: col.width ? `${col.width}px` : undefined,
+                      textAlign: col.align ?? 'left',
+                      fontWeight: (element.tableHeaderBold ?? true) ? 'bold' : 'normal',
+                      background: element.tableHeaderBg ?? '#f3f4f6',
+                    }}
+                  >
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item: any, idx: number) => (
+                <tr key={idx}>
+                  {columns.map((col, i) => (
+                    <td
+                      key={i}
+                      style={{
+                        ...tableCellStyle,
+                        width: col.width ? `${col.width}px` : undefined,
+                        textAlign: col.align ?? (RIGHT_ALIGNED_FIELDS.has(col.field) ? 'right' : 'left'),
+                      }}
+                    >
+                      {tableCellValue(col.field, item, idx)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {(element.tableShowTotalRow ?? false) && (
+                <tr>
+                  <td
+                    colSpan={Math.max(1, columns.length - 1)}
+                    style={{ ...tableCellStyle, fontWeight: 'bold', textAlign: 'right' }}
+                  >
+                    {element.tableTotalLabel || 'ยอดสุทธิ'}
+                  </td>
+                  <td
+                    style={{
+                      ...tableCellStyle,
+                      fontWeight: 'bold',
+                      width: columns[columns.length - 1]?.width ? `${columns[columns.length - 1].width}px` : undefined,
+                      textAlign: columns[columns.length - 1]?.align ?? 'right',
+                    }}
+                  >
+                    {dataToUse.total_amount ?? '-'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )
+      }
+
+      // Legacy tables (saved before column config existed) have no header info of
+      // their own — the template's design already draws the header as a separate
+      // static element, so only the data rows are rendered here to avoid duplicating it.
       return (
-        <table
-          style={{ fontSize: '12px', ...baseStyle, height: 'auto', minHeight: `${element.height}px`, borderCollapse: 'collapse' }}
-        >
+        <table style={tableStyle}>
           <tbody>
             {items.map((item: any, idx: number) => (
               <tr key={idx}>

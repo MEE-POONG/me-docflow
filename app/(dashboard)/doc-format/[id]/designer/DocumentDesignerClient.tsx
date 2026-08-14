@@ -21,6 +21,13 @@ type ElementType =
   | 'table' | 'line' | 'box' | 'signature' | 'date'
   | 'page_number' | 'checkbox' | 'qr_code' | 'barcode';
 
+interface TableColumn {
+  label: string;
+  field: string;
+  width?: number;
+  align?: 'left' | 'center' | 'right';
+}
+
 interface DesignerElement {
   id: string;
   type: ElementType;
@@ -33,6 +40,12 @@ interface DesignerElement {
   fontWeight?: string;
   color?: string;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
+  tableColumns?: TableColumn[];
+  tableRows?: number;
+  tableHeaderBold?: boolean;
+  tableHeaderBg?: string;
+  tableShowTotalRow?: boolean;
+  tableTotalLabel?: string;
 }
 
 type TemplateInfo = {
@@ -54,6 +67,75 @@ type PreviewDocument = {
   company?: { name?: string | null; taxId?: string | null; address?: string | null; phone?: string | null } | null;
   createdBy?: { name?: string | null; role?: string | null } | null;
 };
+
+// ─── Data field picker config ─────────────────────────────────────────────────
+// Matches the flat keys mapDocumentToTemplateData() (lib/template-data-mapping.ts)
+// actually fills in — inserting one of these tokens here is what makes the field
+// show real document data instead of staying blank.
+
+const DATA_FIELD_GROUPS: { group: string; fields: { key: string; label: string }[] }[] = [
+  {
+    group: 'บริษัท',
+    fields: [
+      { key: 'company_name', label: 'ชื่อบริษัท' },
+      { key: 'company_address', label: 'ที่อยู่บริษัท' },
+      { key: 'company_phone', label: 'เบอร์โทรบริษัท' },
+      { key: 'company_taxid', label: 'เลขผู้เสียภาษีบริษัท' },
+    ],
+  },
+  {
+    group: 'ลูกค้า',
+    fields: [
+      { key: 'customer_name', label: 'ชื่อลูกค้า' },
+      { key: 'customer_address', label: 'ที่อยู่ลูกค้า' },
+      { key: 'customer_taxid', label: 'เลขผู้เสียภาษีลูกค้า' },
+    ],
+  },
+  {
+    group: 'เอกสาร',
+    fields: [
+      { key: 'doc_no', label: 'เลขที่เอกสาร' },
+      { key: 'doc_date', label: 'วันที่' },
+      { key: 'expire_date', label: 'วันครบกำหนด' },
+      { key: 'credit_term', label: 'เครดิต (วัน)' },
+    ],
+  },
+  {
+    group: 'ยอดเงิน',
+    fields: [
+      { key: 'subtotal', label: 'รวมเงิน' },
+      { key: 'discount', label: 'ส่วนลด' },
+      { key: 'vat', label: 'ภาษีมูลค่าเพิ่ม' },
+      { key: 'total_amount', label: 'ยอดสุทธิ' },
+    ],
+  },
+  {
+    group: 'อื่นๆ',
+    fields: [{ key: 'remarks', label: 'หมายเหตุ' }],
+  },
+];
+
+// ─── Table column config ───────────────────────────────────────────────────────
+// `field` maps to a key on each line item ({name, qty, unit, unitPrice}); 'index'
+// and 'total' are computed (row number, qty*unitPrice) rather than read directly.
+
+const TABLE_FIELD_OPTIONS: { value: string; label: string }[] = [
+  { value: 'index', label: 'ลำดับ' },
+  { value: 'name', label: 'ชื่อสินค้า / รายละเอียด' },
+  { value: 'qty', label: 'จำนวน' },
+  { value: 'unit', label: 'หน่วย' },
+  { value: 'unitPrice', label: 'ราคาต่อหน่วย' },
+  { value: 'total', label: 'ราคารวม' },
+];
+
+const DEFAULT_TABLE_COLUMNS: TableColumn[] = [
+  { label: 'ลำดับ', field: 'index' },
+  { label: 'ชื่อสินค้า / รายละเอียด', field: 'name' },
+  { label: 'จำนวน', field: 'qty' },
+  { label: 'หน่วย', field: 'unit' },
+  { label: 'ราคาต่อหน่วย', field: 'unitPrice' },
+  { label: 'ราคารวม', field: 'total' },
+];
 
 // ─── Element palette config ──────────────────────────────────────────────────
 
@@ -107,139 +189,6 @@ function loadInitialElements(layoutJson: unknown): DesignerElement[] {
   return [];
 }
 
-// ─── Element Renderer ────────────────────────────────────────────────────────
-
-function renderElement(el: DesignerElement, selected: boolean) {
-  const base = `absolute select-none cursor-move border-2 transition-colors ${selected
-    ? 'border-blue-500 shadow-[0_0_0_2px_rgba(59,130,246,0.3)]'
-    : 'border-transparent hover:border-blue-300'
-    }`;
-
-  if (el.type === 'line') {
-    return (
-      <div
-        key={el.id}
-        className={`${base} flex items-center`}
-        style={{ left: el.x, top: el.y, width: el.width, height: Math.max(el.height, 8) }}
-      >
-        <div className="w-full h-px bg-gray-700" />
-      </div>
-    );
-  }
-
-  if (el.type === 'box') {
-    return (
-      <div
-        key={el.id}
-        className={`${base} bg-transparent border-dashed border-gray-400`}
-        style={{ left: el.x, top: el.y, width: el.width, height: el.height }}
-      />
-    );
-  }
-
-  if (el.type === 'image' || el.type === 'logo') {
-    return (
-      <div
-        key={el.id}
-        className={`${base} bg-gray-100 flex items-center justify-center text-gray-400 text-xs rounded`}
-        style={{ left: el.x, top: el.y, width: el.width, height: el.height }}
-      >
-        <span>{el.type === 'logo' ? '🏢 Logo' : '🖼 Image'}</span>
-      </div>
-    );
-  }
-
-  if (el.type === 'signature') {
-    return (
-      <div
-        key={el.id}
-        className={`${base} border border-dashed border-gray-400 flex items-end justify-center pb-1`}
-        style={{ left: el.x, top: el.y, width: el.width, height: el.height }}
-      >
-        <span className="text-[10px] text-gray-400">ลายเซ็น</span>
-      </div>
-    );
-  }
-
-  if (el.type === 'table') {
-    return (
-      <div
-        key={el.id}
-        className={`${base} overflow-hidden`}
-        style={{ left: el.x, top: el.y, width: el.width, height: el.height }}
-      >
-        <table className="w-full h-full border-collapse text-[10px]">
-          <tbody>
-            {[0, 1, 2].map(r => (
-              <tr key={r}>
-                {[0, 1, 2, 3].map(c => (
-                  <td key={c} className="border border-gray-300 px-1 py-0.5 text-gray-400" />
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  if (el.type === 'checkbox') {
-    return (
-      <div
-        key={el.id}
-        className={`${base} flex items-center justify-center`}
-        style={{ left: el.x, top: el.y, width: el.width, height: el.height }}
-      >
-        <div className="w-3 h-3 border border-gray-500 rounded-sm" />
-      </div>
-    );
-  }
-
-  if (el.type === 'qr_code') {
-    return (
-      <div
-        key={el.id}
-        className={`${base} bg-white flex items-center justify-center`}
-        style={{ left: el.x, top: el.y, width: el.width, height: el.height }}
-      >
-        <QrCode className="w-8 h-8 text-gray-500" />
-      </div>
-    );
-  }
-
-  if (el.type === 'barcode') {
-    return (
-      <div
-        key={el.id}
-        className={`${base} bg-white flex items-center justify-center`}
-        style={{ left: el.x, top: el.y, width: el.width, height: el.height }}
-      >
-        <ScanLine className="w-10 h-6 text-gray-700" />
-      </div>
-    );
-  }
-
-  // text / heading / paragraph / date / page_number
-  return (
-    <div
-      key={el.id}
-      className={`${base} flex items-start`}
-      style={{
-        left: el.x, top: el.y, width: el.width, height: el.height,
-        fontSize: el.fontSize ?? 14,
-        fontWeight: el.fontWeight ?? 'normal',
-        color: el.color ?? '#111827',
-        lineHeight: 1.4,
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        padding: '2px 4px',
-      }}
-    >
-      {el.content || <span className="text-gray-300 italic text-xs">ว่าง</span>}
-    </div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function DocumentDesignerClient({ template, documents, onSave }: { template: TemplateInfo; documents?: PreviewDocument[]; onSave?: (id: string, layoutJson: unknown) => Promise<void> }) {
@@ -255,9 +204,32 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, startSaving] = useTransition();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [rightPanelWidth, setRightPanelWidth] = useState(208);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ id: string; startX: number; startY: number; elX: number; elY: number } | null>(null);
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const panelResizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  // ── Right panel resize ───────────────────────────────────────────────────
+  const handlePanelResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    panelResizeRef.current = { startX: e.clientX, startWidth: rightPanelWidth };
+    const onMove = (ev: MouseEvent) => {
+      if (!panelResizeRef.current) return;
+      const delta = panelResizeRef.current.startX - ev.clientX;
+      const next = Math.min(480, Math.max(180, panelResizeRef.current.startWidth + delta));
+      setRightPanelWidth(next);
+    };
+    const onUp = () => {
+      panelResizeRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 
   // ── Selected element ─────────────────────────────────────────────────────
   const selectedEl = elements.find(e => e.id === selectedId) ?? null;
@@ -301,6 +273,8 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
       content: defaults.content ?? '',
       fontSize: defaults.fontSize,
       fontWeight: defaults.fontWeight,
+      tableColumns: type === 'table' ? DEFAULT_TABLE_COLUMNS.map(c => ({ ...c })) : undefined,
+      tableRows: type === 'table' ? 2 : undefined,
     };
     const newEls = [...elements, newEl];
     setElements(newEls);
@@ -354,7 +328,7 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
   };
 
   // ── Update property ───────────────────────────────────────────────────────
-  const updateProp = (key: keyof DesignerElement, value: string | number) => {
+  const updateProp = <K extends keyof DesignerElement>(key: K, value: DesignerElement[K]) => {
     if (!selectedId) return;
     const newEls = elements.map(el =>
       el.id === selectedId ? { ...el, [key]: value } : el
@@ -365,6 +339,22 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
 
   const commitProp = () => {
     pushHistory(elements);
+  };
+
+  const insertField = (fieldKey: string) => {
+    if (!selectedEl) return;
+    const token = `{{${fieldKey}}}`;
+    const ta = contentTextareaRef.current;
+    const start = ta?.selectionStart ?? selectedEl.content.length;
+    const end = ta?.selectionEnd ?? selectedEl.content.length;
+    const newContent = selectedEl.content.slice(0, start) + token + selectedEl.content.slice(end);
+    updateProp('content', newContent);
+    commitProp();
+    requestAnimationFrame(() => {
+      ta?.focus();
+      const pos = start + token.length;
+      ta?.setSelectionRange(pos, pos);
+    });
   };
 
   // ── Save ──────────────────────────────────────────────────────────────────
@@ -579,16 +569,70 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                   {el.type === 'barcode' && <ScanLine className="text-gray-700" style={{ width: el.width * (zoom / 100) * 0.7, height: el.height * (zoom / 100) * 0.6 }} />}
                   {el.type === 'checkbox' && <div style={{ width: 12 * (zoom / 100), height: 12 * (zoom / 100), border: `1px solid #6b7280`, borderRadius: 2 }} />}
                   {el.type === 'table' && (
-                    <table className="w-full h-full border-collapse" style={{ fontSize: 10 * (zoom / 100) }}>
-                      <tbody>
-                        {[0, 1, 2].map(r => (
-                          <tr key={r}>
-                            {[0, 1, 2, 3].map(c => (
-                              <td key={c} className="border border-gray-300 text-gray-400 px-1" />
+                    <table className="w-full h-full border-collapse" style={{ fontSize: 10 * (zoom / 100), tableLayout: el.tableColumns?.some(c => c.width) ? 'fixed' : 'auto' }}>
+                      {el.tableColumns && el.tableColumns.length > 0 ? (
+                        <>
+                          <thead>
+                            <tr>
+                              {el.tableColumns.map((col, i) => (
+                                <th
+                                  key={i}
+                                  className="border border-gray-300 px-1 truncate"
+                                  style={{
+                                    width: col.width ? col.width * (zoom / 100) : undefined,
+                                    textAlign: col.align ?? 'left',
+                                    fontWeight: (el.tableHeaderBold ?? true) ? 'bold' : 'normal',
+                                    background: el.tableHeaderBg ?? '#f3f4f6',
+                                    color: '#4b5563',
+                                  }}
+                                >
+                                  {col.label || '—'}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Array.from({ length: Math.max(1, el.tableRows ?? 2) }).map((_, r) => (
+                              <tr key={r}>
+                                {el.tableColumns!.map((col, c) => (
+                                  <td
+                                    key={c}
+                                    className="border border-gray-300 text-gray-400 px-1"
+                                    style={{ width: col.width ? col.width * (zoom / 100) : undefined, textAlign: col.align ?? 'left' }}
+                                  />
+                                ))}
+                              </tr>
                             ))}
-                          </tr>
-                        ))}
-                      </tbody>
+                            {(el.tableShowTotalRow ?? false) && (
+                              <tr>
+                                <td
+                                  colSpan={Math.max(1, el.tableColumns!.length - 1)}
+                                  className="border border-gray-300 px-1 font-bold text-gray-700"
+                                  style={{ textAlign: 'right' }}
+                                >
+                                  {el.tableTotalLabel || 'ยอดสุทธิ'}
+                                </td>
+                                <td
+                                  className="border border-gray-300 px-1 font-bold text-gray-700"
+                                  style={{ textAlign: el.tableColumns![el.tableColumns!.length - 1]?.align ?? 'right' }}
+                                >
+                                  {'{{total_amount}}'}
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </>
+                      ) : (
+                        <tbody>
+                          {[0, 1, 2].map(r => (
+                            <tr key={r}>
+                              {[0, 1, 2, 3].map(c => (
+                                <td key={c} className="border border-gray-300 text-gray-400 px-1" />
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      )}
                     </table>
                   )}
                   {el.type === 'signature' && (
@@ -614,7 +658,34 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
         </main>
 
         {/* ── Right: State + Properties ──────────────────────────────── */}
-        <aside className="w-52 shrink-0 bg-[#12131f] border-l border-white/10 overflow-y-auto print:hidden">
+        {rightPanelCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setRightPanelCollapsed(false)}
+            title="ขยายแผงคุณสมบัติ"
+            className="shrink-0 w-6 bg-[#12131f] border-l border-white/10 flex items-center justify-center text-gray-500 hover:text-gray-200 hover:bg-white/5 transition-colors print:hidden"
+          >
+            <ChevronRight className="w-4 h-4 rotate-180" />
+          </button>
+        ) : (
+          <>
+            <div
+              onMouseDown={handlePanelResizeStart}
+              title="ลากเพื่อปรับขนาด"
+              className="shrink-0 w-1.5 cursor-ew-resize bg-transparent hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors print:hidden"
+            />
+            <aside style={{ width: rightPanelWidth }} className="shrink-0 bg-[#12131f] border-l border-white/10 overflow-y-auto print:hidden">
+
+              <div className="sticky top-0 z-10 flex items-center justify-end bg-[#12131f] border-b border-white/10 px-1.5 py-1">
+                <button
+                  type="button"
+                  onClick={() => setRightPanelCollapsed(true)}
+                  title="ย่อแผงคุณสมบัติ"
+                  className="p-1 rounded text-gray-500 hover:text-gray-200 hover:bg-white/10 transition-colors"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
 
           {/* State */}
           <div className="border-b border-white/10">
@@ -662,12 +733,189 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                   <div>
                     <label className="block text-[10px] text-gray-500 mb-1">Content</label>
                     <textarea
+                      ref={contentTextareaRef}
                       value={selectedEl.content}
                       onChange={e => updateProp('content', e.target.value)}
                       onBlur={commitProp}
                       rows={3}
                       className="w-full bg-[#1e1f30] border border-white/10 rounded text-xs text-gray-200 p-2 focus:outline-none focus:border-blue-500 resize-none"
                     />
+
+                    <label className="block text-[10px] text-gray-500 mt-3 mb-1">ดึงฟิลด์ข้อมูล (แทรกที่ตำแหน่งเคอร์เซอร์)</label>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {DATA_FIELD_GROUPS.map(g => (
+                        <div key={g.group}>
+                          <p className="text-[9px] text-gray-600 uppercase tracking-wide mb-1">{g.group}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {g.fields.map(f => (
+                              <button
+                                key={f.key}
+                                type="button"
+                                onClick={() => insertField(f.key)}
+                                title={`{{${f.key}}}`}
+                                className="px-2 py-1 rounded text-[10px] bg-[#1e1f30] border border-white/10 text-gray-300 hover:bg-blue-600 hover:text-white hover:border-blue-500 transition-colors"
+                              >
+                                {f.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Table Columns */}
+                {selectedEl.type === 'table' && (
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-1">
+                      คอลัมน์ตาราง ({(selectedEl.tableColumns ?? []).length})
+                    </label>
+                    <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                      {(selectedEl.tableColumns ?? []).map((col, idx) => {
+                        const patchCol = (patch: Partial<TableColumn>) => {
+                          const cols = [...(selectedEl.tableColumns ?? [])];
+                          cols[idx] = { ...cols[idx], ...patch };
+                          updateProp('tableColumns', cols);
+                        };
+                        return (
+                          <div key={idx} className="bg-[#1e1f30] border border-white/10 rounded p-1.5 space-y-1">
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={col.label}
+                                placeholder="หัวตาราง"
+                                onChange={e => patchCol({ label: e.target.value })}
+                                onBlur={commitProp}
+                                className="flex-1 min-w-0 bg-transparent text-xs text-gray-200 focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cols = (selectedEl.tableColumns ?? []).filter((_, i) => i !== idx);
+                                  updateProp('tableColumns', cols);
+                                  commitProp();
+                                }}
+                                title="ลบคอลัมน์"
+                                className="p-1 rounded text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <select
+                                value={col.field}
+                                onChange={e => { patchCol({ field: e.target.value }); commitProp(); }}
+                                className="flex-1 min-w-0 bg-[#12131e] border border-white/10 rounded text-[10px] text-gray-300 px-1 py-0.5 focus:outline-none"
+                              >
+                                {TABLE_FIELD_OPTIONS.map(o => (
+                                  <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                              </select>
+                              <input
+                                type="number"
+                                value={col.width ?? ''}
+                                placeholder="กว้าง"
+                                title="ความกว้างคอลัมน์ (px) — เว้นว่างให้แบ่งเท่ากัน"
+                                onChange={e => patchCol({ width: e.target.value === '' ? undefined : Number(e.target.value) })}
+                                onBlur={commitProp}
+                                className="w-14 bg-[#12131e] border border-white/10 rounded text-[10px] text-gray-300 px-1 py-0.5 focus:outline-none tabular-nums"
+                              />
+                              <div className="flex bg-[#12131e] border border-white/10 rounded overflow-hidden">
+                                {([
+                                  { val: 'left', icon: AlignLeft },
+                                  { val: 'center', icon: AlignCenter },
+                                  { val: 'right', icon: AlignRight },
+                                ] as const).map(a => (
+                                  <button
+                                    key={a.val}
+                                    type="button"
+                                    onClick={() => { patchCol({ align: a.val }); commitProp(); }}
+                                    title={`Align ${a.val}`}
+                                    className={`p-1 transition-colors ${(col.align ?? 'left') === a.val ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-200'}`}
+                                  >
+                                    <a.icon className="w-3 h-3" />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cols = [...(selectedEl.tableColumns ?? []), { label: '', field: 'name' }];
+                        updateProp('tableColumns', cols);
+                        commitProp();
+                      }}
+                      className="mt-2 w-full text-[10px] text-center py-1.5 rounded border border-dashed border-white/20 text-gray-400 hover:text-white hover:border-blue-500 transition-colors"
+                    >
+                      + เพิ่มคอลัมน์
+                    </button>
+
+                    <div className="mt-3">
+                      <PropNumber
+                        label="จำนวนแถวตัวอย่าง (สำหรับดูตัวอย่างบน canvas)"
+                        value={selectedEl.tableRows ?? 2}
+                        onChange={v => { updateProp('tableRows', Math.max(1, Math.round(v))); commitProp(); }}
+                      />
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between">
+                      <label className="text-[10px] text-gray-500">หัวตารางตัวหนา</label>
+                      <button
+                        type="button"
+                        onClick={() => { updateProp('tableHeaderBold', !(selectedEl.tableHeaderBold ?? true)); commitProp(); }}
+                        className={`px-2 py-1 rounded text-[10px] transition-colors ${(selectedEl.tableHeaderBold ?? true) ? 'bg-blue-600 text-white' : 'bg-[#1e1f30] text-gray-400 border border-white/10'}`}
+                      >
+                        {(selectedEl.tableHeaderBold ?? true) ? 'เปิด' : 'ปิด'}
+                      </button>
+                    </div>
+
+                    <div className="mt-2">
+                      <label className="block text-[10px] text-gray-500 mb-1">สีพื้นหลังหัวตาราง</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={selectedEl.tableHeaderBg ?? '#f3f4f6'}
+                          onChange={e => { updateProp('tableHeaderBg', e.target.value); commitProp(); }}
+                          className="w-8 h-7 bg-transparent border border-white/10 rounded cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={selectedEl.tableHeaderBg ?? '#f3f4f6'}
+                          onChange={e => updateProp('tableHeaderBg', e.target.value)}
+                          onBlur={commitProp}
+                          className="flex-1 min-w-0 bg-[#1e1f30] border border-white/10 rounded text-[10px] text-gray-300 px-2 py-1 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between">
+                      <label className="text-[10px] text-gray-500">แถวยอดสุทธิ (ในตาราง)</label>
+                      <button
+                        type="button"
+                        onClick={() => { updateProp('tableShowTotalRow', !(selectedEl.tableShowTotalRow ?? false)); commitProp(); }}
+                        className={`px-2 py-1 rounded text-[10px] transition-colors ${(selectedEl.tableShowTotalRow ?? false) ? 'bg-blue-600 text-white' : 'bg-[#1e1f30] text-gray-400 border border-white/10'}`}
+                      >
+                        {(selectedEl.tableShowTotalRow ?? false) ? 'เปิด' : 'ปิด'}
+                      </button>
+                    </div>
+                    {(selectedEl.tableShowTotalRow ?? false) && (
+                      <div className="mt-2">
+                        <label className="block text-[10px] text-gray-500 mb-1">ป้ายกำกับแถวยอดสุทธิ</label>
+                        <input
+                          type="text"
+                          value={selectedEl.tableTotalLabel ?? 'ยอดสุทธิ'}
+                          onChange={e => updateProp('tableTotalLabel', e.target.value)}
+                          onBlur={commitProp}
+                          className="w-full bg-[#1e1f30] border border-white/10 rounded text-xs text-gray-200 px-2 py-1.5 focus:outline-none focus:border-blue-500"
+                        />
+                        <p className="text-[9px] text-gray-600 mt-1">ยอดเงินจะดึงจาก {'{{total_amount}}'} อัตโนมัติ แสดงในคอลัมน์ขวาสุด</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -689,7 +937,7 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                       ].map(a => (
                         <button
                           key={a.val}
-                          onClick={() => { updateProp('textAlign', a.val); commitProp(); }}
+                          onClick={() => { updateProp('textAlign', a.val as DesignerElement['textAlign']); commitProp(); }}
                           title={`Align ${a.val}`}
                           className={`flex-1 flex justify-center p-1.5 rounded transition-colors ${(selectedEl.textAlign || 'left') === a.val
                             ? 'bg-blue-600 text-white shadow-sm'
@@ -718,7 +966,9 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
               </div>
             )}
           </div>
-        </aside>
+            </aside>
+          </>
+        )}
       </div>
 
       {/* ── Preview Modal ──────────────────────────────────────────────── */}

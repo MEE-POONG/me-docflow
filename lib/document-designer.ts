@@ -89,6 +89,7 @@ export const sampleDocumentData = {
     { name: "สินค้าตัวอย่าง A", qty: 2, unit: "ชิ้น", unitPrice: 500 },
     { name: "สินค้าตัวอย่าง B", qty: 1, unit: "ชุด", unitPrice: 1500 },
   ] as { name: string; qty: number; unit: string; unitPrice: number }[],
+  total_amount: "2,500.00",
 };
 
 function getByPath(data: unknown, path: string): string {

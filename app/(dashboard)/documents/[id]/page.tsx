@@ -4,17 +4,18 @@ import Link from 'next/link'
 import { ArrowLeft, Calendar, FileText, User, CheckCircle2, XCircle, Clock, FileCheck, Printer } from 'lucide-react'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
-import { PrintHelper, PrintActions } from './PrintHelper'
+import { PreviewActions, PrintHelper, PrintActions } from './PrintHelper'
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
 import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 
 const prisma = new PrismaClient()
 
-export default async function DocumentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ print?: string, templateId?: string }> }) {
+export default async function DocumentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ print?: string, preview?: string, templateId?: string }> }) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const documentId = resolvedParams.id;
   const isPrint = resolvedSearchParams.print === 'true';
+  const isPreview = resolvedSearchParams.preview === 'true';
   const selectedTemplateId = resolvedSearchParams.templateId;
 
   const document = await prisma.document.findUnique({
@@ -43,14 +44,16 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
   const layoutData = activeTemplate?.layoutJson as { pages?: unknown[], elements?: unknown[] } | null | undefined
   const hasLayout = Boolean(layoutData && ((layoutData.pages?.length ?? 0) > 0 || (layoutData.elements?.length ?? 0) > 0))
 
-  if (isPrint && hasLayout && activeTemplate) {
+  if ((isPrint || isPreview) && hasLayout && activeTemplate) {
     return (
-      <div className="print-section">
-        <PrintHelper />
-        <DocumentPreview
-          layoutJsonString={JSON.stringify(activeTemplate.layoutJson)}
-          dataOverride={mapDocumentToTemplateData(document, document.company, document.createdBy)}
-        />
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
+        {isPrint ? <PrintHelper /> : <PreviewActions />}
+        <div className="print-section mx-auto py-6 print:py-0">
+          <DocumentPreview
+            layoutJsonString={JSON.stringify(activeTemplate.layoutJson)}
+            dataOverride={mapDocumentToTemplateData(document, document.company, document.createdBy)}
+          />
+        </div>
       </div>
     )
   }

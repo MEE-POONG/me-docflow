@@ -11,3 +11,6 @@ This version has breaking changes — APIs, conventions, and file structure may 
 # 3.http://localhost:3000/doc-format ดึงข้อมูลจากหน้ากรอกแบบฟอรืมเอกสารมาแสดงบนเทมเพลต
 # 4.http://localhost:3000/documents/create ให้มีปุ่ม preview สำหรับตรวจทานความถูกต้องของการดึงข้อมูลจากฟอร์มที่กรอก มาแสดงบนเทมเพลต
 
+
+# งานแก้ไข02
+# 1. http://localhost:3000/documents ปรับปรุงลำดับการทำงาน

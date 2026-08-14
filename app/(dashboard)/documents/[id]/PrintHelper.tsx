@@ -1,9 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Printer } from 'lucide-react'
+import { ArrowLeft, Eye, Printer } from 'lucide-react'
 
-export function PrintActions({ templates, currentTemplateId, documentId }: { templates: any[], currentTemplateId: string | null, documentId: string }) {
+type PrintTemplate = {
+  id: string
+  name: string
+}
+
+export function PrintActions({ templates, currentTemplateId, documentId }: { templates: PrintTemplate[], currentTemplateId: string | null, documentId: string }) {
   const [selected, setSelected] = useState(currentTemplateId || '')
 
   return (
@@ -20,6 +25,18 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
           ))}
         </select>
       )}
+      <button
+        type="button"
+        onClick={() => {
+          const url = new URL(`/documents/${documentId}`, window.location.origin)
+          if (selected) url.searchParams.set('templateId', selected)
+          url.searchParams.set('preview', 'true')
+          window.open(url.toString(), '_blank', 'noopener,noreferrer')
+        }}
+        className="inline-flex items-center gap-2 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors px-4 py-2 rounded-xl shadow-sm dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800 dark:hover:bg-indigo-900/50"
+      >
+        <Eye className="w-4 h-4" /> พรีวิวเอกสาร
+      </button>
       <button 
         type="button" 
         onClick={() => {
@@ -35,6 +52,31 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
         className="inline-flex items-center gap-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors px-4 py-2 rounded-xl shadow-sm"
       >
         <Printer className="w-4 h-4" /> พิมพ์เอกสาร
+      </button>
+    </div>
+  )
+}
+
+export function PreviewActions() {
+  return (
+    <div className="no-print sticky top-0 z-50 flex items-center justify-between gap-4 border-b border-gray-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur dark:border-gray-800 dark:bg-gray-950/95">
+      <button
+        type="button"
+        onClick={() => window.close()}
+        className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+      >
+        <ArrowLeft className="h-4 w-4" /> กลับไปหน้าเอกสาร
+      </button>
+      <div className="hidden text-center sm:block">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white">พรีวิวเอกสารก่อนพิมพ์</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">ตรวจสอบข้อมูลและรูปแบบเอกสารให้เรียบร้อย</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => window.print()}
+        className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+      >
+        <Printer className="h-4 w-4" /> พิมพ์เอกสาร
       </button>
     </div>
   )
