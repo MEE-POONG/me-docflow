@@ -30,7 +30,7 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
             Company Workspace
           </div>
           <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
-            แบบเอกสาร ทั้งหมด
+            แบบเอกสารทั้งหมด
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             จัดการและค้นหาแบบฟอร์มหรือเทมเพลตเอกสารทั้งหมดในระบบ
@@ -51,25 +51,25 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
         <button
           onClick={() => setActiveTab('company')}
           className={`pb-4 text-sm font-semibold transition-colors relative outline-none ${activeTab === 'company'
-            ? 'text-indigo-600 dark:text-indigo-400'
+            ? 'text-emerald-600 dark:text-emerald-400'
             : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
             }`}
         >
           เทมเพลตของบริษัท
           {activeTab === 'company' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-t-full" />
           )}
         </button>
         <button
           onClick={() => setActiveTab('system')}
           className={`pb-4 text-sm font-semibold transition-colors relative outline-none ${activeTab === 'system'
-            ? 'text-indigo-600 dark:text-indigo-400'
+            ? 'text-emerald-600 dark:text-emerald-400'
             : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
             }`}
         >
           เทมเพลตจากระบบส่วนกลาง
           {activeTab === 'system' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-t-full" />
           )}
         </button>
       </div>
@@ -125,7 +125,7 @@ export default function TemplatesList({ initialTemplates }: { initialTemplates: 
               ) : (
                 templates.map((template) => (
                   <tr key={template.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
-                    <td className="px-6 py-4 font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                    <td className="px-6 py-4 font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                       {activeTab === 'system' ? (
                         <span className="text-gray-800 dark:text-gray-200">{template.name}</span>
                       ) : (

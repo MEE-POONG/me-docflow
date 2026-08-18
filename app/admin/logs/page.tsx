@@ -122,7 +122,7 @@ export default function AdminLogsPage() {
                 <th className="py-3.5 px-6">กิจกรรม / คำสั่งประมวลผล</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150 dark:divide-slate-800 font-mono">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-mono">
               {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="text-center py-12 text-slate-450 dark:text-slate-500 font-sans">

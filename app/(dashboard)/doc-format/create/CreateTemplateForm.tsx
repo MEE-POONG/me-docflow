@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, ArrowLeft, Loader2, LayoutTemplate, Plus, Trash2 } from 'lucide-react'
-import { DocumentDesigner } from '@/components/doc-format/builder/DocumentDesigner'
 import Link from 'next/link'
 import { createTemplate, updateTemplate } from '../actions'
 
@@ -65,13 +64,13 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
 
         if (initialData?.id) {
           await updateTemplate(initialData.id, payload)
-          router.push('/templates')
+          router.push('/doc-format')
         } else {
           const newTemplate = await createTemplate(payload)
           if (newTemplate?.id) {
             router.push(`/doc-format/${newTemplate.id}/designer`)
           } else {
-            router.push('/templates')
+            router.push('/doc-format')
           }
         }
         router.refresh()
@@ -84,49 +83,49 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
 
   return (
     <div className="w-full max-w-[1600px] mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden pb-20">
-      <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center gap-4">
-        <Link href="/templates" className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
-          <ArrowLeft className="w-5 h-5" />
+      <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <Link href="/doc-format" className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
+          <ArrowLeft className="w-4 h-4" />
         </Link>
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-lg">
-            <LayoutTemplate className="w-5 h-5" />
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-lg">
+            <LayoutTemplate className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
               {initialData ? 'แก้ไขข้อมูลเทมเพลต' : 'แบบฟอร์มสร้างเทมเพลต'}
             </h2>
-            <p className="text-sm text-gray-500">
+            <p className="text-xs text-gray-500">
               {initialData ? 'ปรับปรุงรายละเอียดของเทมเพลต' : 'สร้างแบบฟอร์มหรือเทมเพลตเอกสารใหม่สำหรับใช้งานในองค์กร'}
             </p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-8 space-y-8">
+      <form onSubmit={handleSubmit} className="p-6 space-y-6">
         {/* Section 1: ข้อมูลทั่วไป */}
         <div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white border-b pb-2 mb-4">1. ข้อมูลทั่วไป (General Information)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">1. ข้อมูลทั่วไป (General Information)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="col-span-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ชื่อเทมเพลต <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">ชื่อเทมเพลต <span className="text-red-500">*</span></label>
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-lg transition-all outline-none"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 transition-all outline-none"
                 placeholder="เช่น เทมเพลตใบสั่งซื้อมาตรฐาน, แบบฟอร์มลางาน..."
               />
             </div>
 
             <div className="col-span-full">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">คำอธิบาย</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">คำอธิบาย</label>
               <input
                 type="text"
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none"
                 placeholder="อธิบายการใช้งานเทมเพลตสั้นๆ"
               />
             </div>
@@ -135,10 +134,10 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
 
         {/* Section 2: การจัดหมวดหมู่ */}
         <div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white border-b pb-2 mb-4">2. การจัดหมวดหมู่ (Classification)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">2. การจัดหมวดหมู่ (Classification)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">หมวดหมู่เอกสาร <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">หมวดหมู่เอกสาร <span className="text-red-500">*</span></label>
               <select
                 required
                 value={formData.categoryId}
@@ -151,7 +150,7 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
                     documentTypeId: typesForCat.length > 0 ? typesForCat[0].id : ''
                   })
                 }}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none"
               >
                 <option value="" disabled>เลือกหมวดหมู่</option>
                 {categories.map(c => (
@@ -161,12 +160,12 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ประเภทเอกสาร <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">ประเภทเอกสาร <span className="text-red-500">*</span></label>
               <select
                 required
                 value={formData.documentTypeId}
                 onChange={e => setFormData({ ...formData, documentTypeId: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 transition-all disabled:opacity-50 outline-none"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all disabled:opacity-50 outline-none"
                 disabled={!formData.categoryId}
               >
                 <option value="" disabled>เลือกประเภทเอกสาร</option>
@@ -178,21 +177,19 @@ export default function CreateTemplateForm({ categories, documentTypes, initialD
           </div>
         </div>
 
-
-
-        <div className="flex justify-end gap-4 pt-6 border-t border-gray-100 dark:border-gray-700">
+        <div className="flex justify-end gap-3 pt-5 border-t border-gray-100 dark:border-gray-700">
           <Link
-            href="/templates"
-            className="px-6 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl font-medium transition-colors"
+            href="/doc-format"
+            className="px-4 py-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl font-medium transition-colors"
           >
             ยกเลิก
           </Link>
           <button
             type="submit"
             disabled={isPending || !formData.categoryId || !formData.documentTypeId}
-            className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-5 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {initialData ? 'บันทึกการแก้ไข' : 'ถัดไป: ออกแบบเอกสาร'}
           </button>
         </div>

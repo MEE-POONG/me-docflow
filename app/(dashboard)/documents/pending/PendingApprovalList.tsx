@@ -282,25 +282,25 @@ export default function PendingApprovalList({ documents, templates }: Props) {
       {printPreviewDoc && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Printer className="w-5 h-5 text-indigo-500" />
+            <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Printer className="w-4.5 h-4.5 text-emerald-500" />
                 เลือกเทมเพลตก่อนพิมพ์ — {printPreviewDoc.documentNo}
               </h3>
               <button
                 onClick={() => setPrintPreviewDoc(null)}
                 className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4.5 h-4.5" />
               </button>
             </div>
 
-            <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">เทมเพลตเอกสาร</label>
+            <div className="p-5 border-b border-gray-100 dark:border-gray-800">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">เทมเพลตเอกสาร</label>
               <select
                 value={printTemplateId}
                 onChange={e => setPrintTemplateId(e.target.value)}
-                className="w-full sm:w-80 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                className="w-full sm:w-80 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
               >
                 <option value="">-- รูปแบบมาตรฐาน --</option>
                 {templates.map(t => (
@@ -309,12 +309,12 @@ export default function PendingApprovalList({ documents, templates }: Props) {
               </select>
             </div>
 
-            <div className="p-6 overflow-auto flex-1 bg-gray-50 dark:bg-gray-900/40">
+            <div className="p-5 overflow-auto flex-1 bg-gray-50 dark:bg-gray-900/40">
               {(() => {
                 const selectedTemplate = templates.find(t => t.id === printTemplateId)
                 if (!selectedTemplate || !hasLayoutElements(selectedTemplate.layoutJson)) {
                   return (
-                    <div className="p-10 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                    <div className="p-10 text-center text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
                       ไม่มีตัวอย่างสำหรับรูปแบบมาตรฐาน — เอกสารจะพิมพ์ด้วยรูปแบบทั่วไป
                     </div>
                   )
@@ -323,21 +323,22 @@ export default function PendingApprovalList({ documents, templates }: Props) {
                   <DocumentPreview
                     layoutJsonString={JSON.stringify(selectedTemplate.layoutJson)}
                     dataOverride={mapDocumentToTemplateData(printPreviewDoc, printPreviewDoc.company, printPreviewDoc.createdBy)}
+                    scale={0.6}
                   />
                 )
               })()}
             </div>
 
-            <div className="p-6 bg-gray-50 dark:bg-gray-800/50 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800">
+            <div className="p-5 bg-gray-50 dark:bg-gray-800/50 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800">
               <button
                 onClick={() => setPrintPreviewDoc(null)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={handleConfirmPrint}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-2"
+                className="px-5 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg shadow-sm hover:shadow transition-all flex items-center gap-2"
               >
                 <Printer className="w-4 h-4" />
                 ยืนยันพิมพ์

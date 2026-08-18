@@ -325,7 +325,7 @@ export default function AdminCompaniesPage() {
                 <th className="py-3.5 px-6 text-right">การจัดการ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150 dark:divide-slate-800">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
               {filteredCompanies.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-12 text-slate-400 dark:text-slate-500">

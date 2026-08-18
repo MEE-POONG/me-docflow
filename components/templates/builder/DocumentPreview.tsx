@@ -11,6 +11,11 @@ import {
 type DocumentPreviewProps = {
   layoutJsonString: string | null
   dataOverride?: Record<string, any>
+  /** Shrinks the rendered page(s) to this fraction of native size — useful when embedding
+   *  in a compact space (e.g. a modal) where the template's own font sizes would otherwise
+   *  look oversized relative to the rest of the UI. Defaults to 1 (native size, used for
+   *  actual print output and the full-page preview route). */
+  scale?: number
 }
 
 /**
@@ -51,7 +56,7 @@ function tableCellValue(field: string, item: any, idx: number) {
 
 const RIGHT_ALIGNED_FIELDS = new Set(['qty', 'unitPrice', 'total'])
 
-export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPreviewProps) {
+export function DocumentPreview({ layoutJsonString, dataOverride, scale = 1 }: DocumentPreviewProps) {
   if (!layoutJsonString) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 flex items-center justify-center min-h-[400px]">
@@ -85,20 +90,26 @@ export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPrev
     : [{ id: 'default-page', width: 595, height: 842, background: '#ffffff' } as DesignerPage];
 
   return (
-    <div className="flex flex-col items-center gap-8 py-8 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-auto p-4 border border-gray-200 dark:border-gray-800">
+    <div className={`flex flex-col items-center py-4 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-auto p-4 border border-gray-200 dark:border-gray-800 ${scale < 1 ? 'gap-4' : 'gap-8'}`}>
       {pages.map(page => (
-        <div 
+        <div
           key={page.id}
-          className="relative bg-white shadow-md overflow-hidden"
-          style={{
-            width: `${page.width}px`,
-            height: `${page.height}px`,
-            background: page.background || '#ffffff'
-          }}
+          style={{ width: page.width * scale, height: page.height * scale }}
         >
-          {(layoutData?.elements || []).filter(el => !el.pageId || el.pageId === page.id).map(element => (
-            <ElementView key={element.id} element={element} dataOverride={dataOverride} />
-          ))}
+          <div
+            className="relative bg-white shadow-md overflow-hidden"
+            style={{
+              width: `${page.width}px`,
+              height: `${page.height}px`,
+              background: page.background || '#ffffff',
+              transform: scale !== 1 ? `scale(${scale})` : undefined,
+              transformOrigin: 'top left',
+            }}
+          >
+            {(layoutData?.elements || []).filter(el => !el.pageId || el.pageId === page.id).map(element => (
+              <ElementView key={element.id} element={element} dataOverride={dataOverride} />
+            ))}
+          </div>
         </div>
       ))}
     </div>
