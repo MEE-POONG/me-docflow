@@ -36,12 +36,14 @@ interface DesignerElement {
   width: number;
   height: number;
   content: string;
+  fontFamily?: string;
   fontSize?: number;
   fontWeight?: string;
   color?: string;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
   tableColumns?: TableColumn[];
   tableRows?: number;
+  tableData?: string[][];
   tableHeaderBold?: boolean;
   tableHeaderBg?: string;
   tableShowTotalRow?: boolean;
@@ -159,17 +161,17 @@ const ELEMENT_PALETTE: { type: ElementType; label: string; icon: React.ElementTy
 // ─── Default element properties ──────────────────────────────────────────────
 
 const DEFAULT_PROPS: Record<ElementType, Partial<DesignerElement>> = {
-  text: { width: 200, height: 30, content: 'ข้อความ', fontSize: 14 },
-  heading: { width: 330, height: 58, content: 'ใบเสนอราคา', fontSize: 24, fontWeight: 'bold' },
-  paragraph: { width: 250, height: 60, content: 'ข้อความย่อหน้า', fontSize: 12 },
+  text: { width: 200, height: 30, content: 'ข้อความ', fontFamily: 'TH SarabunPSK', fontSize: 14 },
+  heading: { width: 330, height: 58, content: 'ใบเสนอราคา', fontFamily: 'TH SarabunPSK', fontSize: 24, fontWeight: 'bold' },
+  paragraph: { width: 250, height: 60, content: 'ข้อความย่อหน้า', fontFamily: 'TH SarabunPSK', fontSize: 12 },
   image: { width: 120, height: 120, content: '[Image]' },
   logo: { width: 80, height: 80, content: '[Logo]' },
-  table: { width: 300, height: 100, content: '[Table]' },
+  table: { width: 300, height: 100, content: '[Table]', fontFamily: 'TH SarabunPSK' },
   line: { width: 300, height: 2, content: '' },
   box: { width: 200, height: 100, content: '' },
   signature: { width: 150, height: 60, content: '[Signature]' },
-  date: { width: 120, height: 30, content: '{{date}}', fontSize: 12 },
-  page_number: { width: 60, height: 24, content: '{{page}}', fontSize: 11 },
+  date: { width: 120, height: 30, content: '{{date}}', fontFamily: 'TH SarabunPSK', fontSize: 12 },
+  page_number: { width: 60, height: 24, content: '{{page}}', fontFamily: 'TH SarabunPSK', fontSize: 11 },
   checkbox: { width: 16, height: 16, content: '' },
   qr_code: { width: 80, height: 80, content: '{{qr}}' },
   barcode: { width: 150, height: 50, content: '{{barcode}}' },
@@ -271,6 +273,7 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
       width: defaults.width ?? 120,
       height: defaults.height ?? 30,
       content: defaults.content ?? '',
+      fontFamily: defaults.fontFamily,
       fontSize: defaults.fontSize,
       fontWeight: defaults.fontWeight,
       tableColumns: type === 'table' ? DEFAULT_TABLE_COLUMNS.map(c => ({ ...c })) : undefined,
@@ -546,6 +549,7 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                     : 'border-transparent hover:border-blue-300/60'
                     }`}
                   style={{
+                    fontFamily: `"${el.fontFamily ?? 'TH SarabunPSK'}", "Sarabun", sans-serif`,
                     fontSize: (el.fontSize ?? 14) * (zoom / 100),
                     fontWeight: el.fontWeight ?? 'normal',
                     color: el.color ?? '#111827',
@@ -556,14 +560,22 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                     wordBreak: 'break-word',
                     overflow: 'hidden',
                     background: el.type === 'box' ? 'transparent' : (el.type === 'image' || el.type === 'logo') ? '#f3f4f6' : 'transparent',
+                    backgroundImage: el.type === 'image' && el.content.startsWith('data:image/') ? `url(${el.content})` : undefined,
+                    backgroundSize: 'contain',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
                     border: el.type === 'box' ? `1px dashed #9ca3af` : undefined,
                     display: ['text', 'heading', 'paragraph', 'date', 'page_number'].includes(el.type) ? 'block' : 'flex',
                     alignItems: el.type === 'line' ? 'center' : 'flex-start',
                     justifyContent: (el.type === 'image' || el.type === 'logo' || el.type === 'qr_code' || el.type === 'barcode' || el.type === 'checkbox') ? 'center' : 'flex-start',
                   }}
                 >
-                  {el.type === 'line' && <div className="w-full border-t border-gray-400" />}
-                  {el.type === 'image' && <span className="text-gray-400 text-xs">🖼 Image</span>}
+                  {el.type === 'line' && (
+                    el.height > el.width
+                      ? <div className="h-full border-l border-gray-400" />
+                      : <div className="w-full border-t border-gray-400" />
+                  )}
+                  {el.type === 'image' && !el.content.startsWith('data:image/') && <span className="text-gray-400 text-xs">🖼 Image</span>}
                   {el.type === 'logo' && <span className="text-gray-400 text-xs">🏢 Logo</span>}
                   {el.type === 'qr_code' && <QrCode className="text-gray-500" style={{ width: el.width * (zoom / 100) * 0.6, height: el.width * (zoom / 100) * 0.6 }} />}
                   {el.type === 'barcode' && <ScanLine className="text-gray-700" style={{ width: el.width * (zoom / 100) * 0.7, height: el.height * (zoom / 100) * 0.6 }} />}
@@ -599,7 +611,9 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                                     key={c}
                                     className="border border-gray-300 text-gray-400 px-1"
                                     style={{ width: col.width ? col.width * (zoom / 100) : undefined, textAlign: col.align ?? 'left' }}
-                                  />
+                                  >
+                                    {el.tableData?.[r]?.[c] ?? ''}
+                                  </td>
                                 ))}
                               </tr>
                             ))}
@@ -916,6 +930,30 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                         <p className="text-[9px] text-gray-600 mt-1">ยอดเงินจะดึงจาก {'{{total_amount}}'} อัตโนมัติ แสดงในคอลัมน์ขวาสุด</p>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Font Family */}
+                {!['line', 'image', 'logo', 'qr_code', 'barcode', 'checkbox', 'signature', 'box'].includes(selectedEl.type) && (
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-1">Font Family</label>
+                    <select
+                      value={selectedEl.fontFamily ?? 'TH SarabunPSK'}
+                      onChange={e => { updateProp('fontFamily', e.target.value); commitProp(); }}
+                      className="w-full bg-[#1e1f30] border border-white/10 rounded text-xs text-gray-200 px-2 py-1.5 focus:outline-none focus:border-blue-500"
+                      style={{ fontFamily: `"${selectedEl.fontFamily ?? 'TH SarabunPSK'}", "Sarabun", sans-serif` }}
+                    >
+                      {[
+                        { label: 'TH Sarabun PSK', family: 'TH SarabunPSK' },
+                        { label: 'Cordia New', family: 'Cordia New' },
+                        { label: 'Angsana New', family: 'Angsana New' },
+                        { label: 'Browallia New', family: 'Browallia New' },
+                      ].map(font => (
+                        <option key={font.family} value={font.family} style={{ fontFamily: `"${font.family}", "Sarabun", sans-serif` }}>
+                          {font.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
 

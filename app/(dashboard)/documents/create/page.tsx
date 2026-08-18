@@ -24,6 +24,12 @@ export default async function CreateDocumentPage() {
   })
 
   const templates = await prisma.documentTemplate.findMany({
+    where: { isActive: true },
+    include: {
+      category: { select: { id: true, name: true } },
+      documentType: { select: { id: true, name: true } },
+      fields: { orderBy: { showOrder: 'asc' } }
+    },
     orderBy: { createdAt: 'desc' }
   })
 

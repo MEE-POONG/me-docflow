@@ -1,18 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Building2, 
-  Search, 
-  Edit2, 
-  Trash2, 
-  X, 
-  Save, 
-  CheckCircle2, 
-  Phone, 
-  Mail, 
-  ShieldCheck, 
-  AlertCircle 
+import {
+  Building2,
+  Search,
+  Edit2,
+  Trash2,
+  X,
+  Save,
+  CheckCircle2,
+  Phone,
+  Mail,
+  ShieldCheck,
+  AlertCircle
 } from "lucide-react";
 import { getAdminCompanies, updateAdminCompany, deleteAdminCompany } from "../actions";
 
@@ -102,8 +102,8 @@ export default function AdminCompaniesPage() {
 
   const handleToggleVerify = async (company: CompanyItem) => {
     const nextVerifyState = !company.isVerified;
-    const actionMsg = nextVerifyState 
-      ? `กดยืนยันตัวตนบริษัท (Verify) "${company.companyName}" สำเร็จ` 
+    const actionMsg = nextVerifyState
+      ? `กดยืนยันตัวตนบริษัท (Verify) "${company.companyName}" สำเร็จ`
       : `ยกเลิกการยืนยันตัวตนบริษัท "${company.companyName}"`;
     try {
       await updateAdminCompany(company.id, { ...company, isVerified: nextVerifyState });
@@ -124,8 +124,8 @@ export default function AdminCompaniesPage() {
 
     if (editingCompany) {
       try {
-        await updateAdminCompany(editingCompany.id, { 
-          companyName, taxId, address, phone, email, website, ownerEmail, isVerified 
+        await updateAdminCompany(editingCompany.id, {
+          companyName, taxId, address, phone, email, website, ownerEmail, isVerified
         });
         await fetchCompanies();
         logAdminAction(`แก้ไขข้อมูลบริษัท "${companyName}" (เจ้าของ: ${ownerEmail})`);
@@ -142,7 +142,7 @@ export default function AdminCompaniesPage() {
   };
 
   // Filtered companies based on search
-  const filteredCompanies = companies.filter(c => 
+  const filteredCompanies = companies.filter(c =>
     c.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.taxId.includes(searchTerm) ||
     c.ownerEmail.toLowerCase().includes(searchTerm.toLowerCase())
@@ -152,7 +152,7 @@ export default function AdminCompaniesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">Company Administration</p>
+        <p className="text-[11px] font-bold text-[#5C98A1] dark:text-[#7AB5BD] uppercase tracking-wider mb-1">Company Administration</p>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-serif">จัดการบริษัทลูกค้า</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">ตรวจสอบ แก้ไขข้อมูล หรืออนุมัติการยืนยันความถูกต้องให้กับบริษัทลูกค้าทั้งหมดในระบบ</p>
       </div>
@@ -174,7 +174,7 @@ export default function AdminCompaniesPage() {
             placeholder="ค้นหาชื่อบริษัท เลขผู้เสียภาษี หรืออีเมลเจ้าของ..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200"
+            className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#7AB5BD] transition-colors duration-200"
           />
         </div>
         <div className="text-xs text-slate-550 dark:text-slate-400 font-medium">
@@ -187,7 +187,7 @@ export default function AdminCompaniesPage() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 transition-colors duration-200">
           <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
             <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
-              <Building2 className="w-5 h-5 text-amber-500" />
+              <Building2 className="w-5 h-5 text-[#7AB5BD]" />
               แก้ไขข้อมูลบริษัทหลักระบบ (สิทธิ์ระดับแอดมิน)
             </h3>
             <button
@@ -207,7 +207,7 @@ export default function AdminCompaniesPage() {
                   required
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                 />
               </div>
 
@@ -218,7 +218,7 @@ export default function AdminCompaniesPage() {
                   required
                   value={taxId}
                   onChange={(e) => setTaxId(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] font-mono transition-colors duration-200"
                 />
               </div>
 
@@ -229,7 +229,7 @@ export default function AdminCompaniesPage() {
                   required
                   value={ownerEmail}
                   onChange={(e) => setOwnerEmail(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-955 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-955 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                 />
               </div>
 
@@ -240,7 +240,7 @@ export default function AdminCompaniesPage() {
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                 />
               </div>
 
@@ -250,7 +250,7 @@ export default function AdminCompaniesPage() {
                   type="text"
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                 />
               </div>
 
@@ -261,7 +261,7 @@ export default function AdminCompaniesPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                 />
               </div>
 
@@ -273,7 +273,7 @@ export default function AdminCompaniesPage() {
                       type="checkbox"
                       checked={isVerified}
                       onChange={(e) => setIsVerified(e.target.checked)}
-                      className="h-4 w-4 text-amber-500 focus:ring-amber-500 border-gray-300 dark:border-slate-800 bg-white dark:bg-slate-950 rounded mr-2"
+                      className="h-4 w-4 text-[#7AB5BD] focus:ring-[#7AB5BD] border-gray-300 dark:border-slate-800 bg-white dark:bg-slate-950 rounded mr-2"
                     />
                     เปิดสถานะการอนุมัติ (Verified Company)
                   </label>
@@ -287,7 +287,7 @@ export default function AdminCompaniesPage() {
                   rows={2}
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl p-3 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none font-sans transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl p-3 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] resize-none font-sans transition-colors duration-200"
                 />
               </div>
             </div>
@@ -302,7 +302,7 @@ export default function AdminCompaniesPage() {
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-1.5 px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-955 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer font-sans"
+                className="flex items-center gap-1.5 px-5 py-2 bg-[#7AB5BD] hover:bg-[#8FC1C8] text-slate-955 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer font-sans"
               >
                 <Save className="w-4 h-4" />
                 บันทึกการแก้ไขของแอดมิน
@@ -338,7 +338,7 @@ export default function AdminCompaniesPage() {
                     <td className="py-4 px-6">
                       <div className="flex items-start gap-3">
                         <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                          company.isVerified ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-100 dark:border-amber-500/20" : "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 border border-gray-200 dark:border-slate-700"
+                          company.isVerified ? "bg-[#F3F8F9] dark:bg-[#7AB5BD]/10 text-[#5C98A1] dark:text-[#7AB5BD] border border-[#E4F0F2] dark:border-[#7AB5BD]/20" : "bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 border border-gray-200 dark:border-slate-700"
                         }`}>
                           <Building2 className="w-4 h-4" />
                         </div>
@@ -370,7 +370,7 @@ export default function AdminCompaniesPage() {
                       {company.isVerified ? (
                         <button
                           onClick={() => handleToggleVerify(company)}
-                          className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-550 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 px-2.5 py-1 rounded-full cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-all font-sans"
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-[#5C98A1] dark:text-[#6AA7B0] bg-[#F3F8F9] dark:bg-[#7AB5BD]/10 border border-[#E4F0F2] dark:border-[#7AB5BD]/20 px-2.5 py-1 rounded-full cursor-pointer hover:bg-[#E4F0F2] dark:hover:bg-[#7AB5BD]/20 transition-all font-sans"
                           title="คลิกเพื่อยกเลิกการยืนยัน"
                         >
                           <ShieldCheck className="w-3.5 h-3.5" />
@@ -379,7 +379,7 @@ export default function AdminCompaniesPage() {
                       ) : (
                         <button
                           onClick={() => handleToggleVerify(company)}
-                          className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 px-2.5 py-1 rounded-full cursor-pointer hover:border-amber-300 dark:hover:border-amber-500/30 hover:text-amber-600 dark:hover:text-amber-500 hover:bg-amber-50/30 dark:hover:bg-amber-500/5 transition-all font-sans"
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 px-2.5 py-1 rounded-full cursor-pointer hover:border-[#ADD1D6] dark:hover:border-[#7AB5BD]/30 hover:text-[#5C98A1] dark:hover:text-[#7AB5BD] hover:bg-[#F3F8F9]/30 dark:hover:bg-[#7AB5BD]/5 transition-all font-sans"
                           title="คลิกเพื่ออนุมัติการยืนยันตัวตน"
                         >
                           <AlertCircle className="w-3.5 h-3.5" />
@@ -391,7 +391,7 @@ export default function AdminCompaniesPage() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleOpenEditForm(company)}
-                          className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                          className="p-2 text-slate-400 dark:text-slate-500 hover:text-[#5C98A1] dark:hover:text-[#7AB5BD] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                           title="แก้ไขข้อมูล (แอดมิน)"
                         >
                           <Edit2 className="w-3.5 h-3.5" />

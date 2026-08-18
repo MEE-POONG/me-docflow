@@ -12,12 +12,12 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
   const [selected, setSelected] = useState(currentTemplateId || '')
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {templates.length > 0 && (
         <select 
           value={selected} 
           onChange={e => setSelected(e.target.value)}
-          className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+          className="h-10 min-w-52 px-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
         >
           <option value="">-- รูปแบบมาตรฐาน --</option>
           {templates.map(t => (
@@ -33,7 +33,7 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
           url.searchParams.set('preview', 'true')
           window.open(url.toString(), '_blank', 'noopener,noreferrer')
         }}
-        className="inline-flex items-center gap-2 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors px-4 py-2 rounded-xl shadow-sm dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800 dark:hover:bg-indigo-900/50"
+        className="inline-flex h-10 items-center gap-2 px-4 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors shadow-sm dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-900/50"
       >
         <Eye className="w-4 h-4" /> พรีวิวเอกสาร
       </button>
@@ -49,7 +49,7 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
           url.searchParams.set('print', 'true');
           window.location.href = url.toString();
         }}
-        className="inline-flex items-center gap-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors px-4 py-2 rounded-xl shadow-sm"
+        className="inline-flex h-10 items-center gap-2 px-4 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 rounded-lg transition-colors shadow-sm"
       >
         <Printer className="w-4 h-4" /> พิมพ์เอกสาร
       </button>
@@ -74,7 +74,7 @@ export function PreviewActions() {
       <button
         type="button"
         onClick={() => window.print()}
-        className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600"
       >
         <Printer className="h-4 w-4" /> พิมพ์เอกสาร
       </button>

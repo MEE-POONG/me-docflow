@@ -4,14 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { 
-  ShieldAlert, 
-  LayoutDashboard, 
-  Building2, 
-  Users, 
-  List, 
-  Settings, 
-  LogOut, 
+import {
+  ShieldAlert,
+  LayoutDashboard,
+  Building2,
+  Users,
+  List,
+  Settings,
+  LogOut,
   ExternalLink,
   Menu,
   X,
@@ -32,11 +32,11 @@ export default function AdminLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  
+
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  
+
   // Sidebar collapsible dropdowns
   const [expanded, setExpanded] = useState({
     company: true,
@@ -74,13 +74,13 @@ export default function AdminLayout({
 
   // If on login page, just render the child component without the admin layout wrapper
   if (pathname === "/admin/login") {
-    return <>{children}</>;
+    return <div className="admin-sarabun min-h-screen">{children}</div>;
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center font-sans text-slate-800 dark:text-slate-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500 mb-4"></div>
+      <div className="admin-sarabun min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center text-slate-800 dark:text-slate-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#7AB5BD] mb-4"></div>
         <p className="text-sm text-slate-550 dark:text-slate-405">กำลังเข้าสู่ระบบควบคุมหลังบ้าน...</p>
       </div>
     );
@@ -99,7 +99,7 @@ export default function AdminLayout({
           onClick={handleLinkClick}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
             pathname === "/admin/dashboard"
-              ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-550 font-bold border-l-4 border-amber-500 shadow-sm"
+              ? "bg-[#F3F8F9] dark:bg-[#7AB5BD]/10 text-[#487D86] dark:text-[#6AA7B0] font-bold border-l-4 border-[#7AB5BD] shadow-sm"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
           }`}
         >
@@ -109,7 +109,7 @@ export default function AdminLayout({
 
         {/* บริษัท (Company) Group */}
         <div className="pt-1">
-          <button 
+          <button
             onClick={() => toggleMenu('company')}
             className="w-full flex items-center justify-between px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all text-left cursor-pointer"
           >
@@ -121,34 +121,34 @@ export default function AdminLayout({
           </button>
           {expanded.company && (
             <div className="pl-9 pr-3 py-1 space-y-1 border-l border-gray-200 dark:border-slate-800 ml-5 mt-1 animate-in slide-in-from-top-1 duration-150">
-              <Link 
-                href="/admin/companies" 
+              <Link
+                href="/admin/companies"
                 onClick={handleLinkClick}
                 className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
-                  pathname === '/admin/companies' 
-                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                  pathname === '/admin/companies'
+                    ? 'text-[#487D86] dark:text-[#7AB5BD] font-bold bg-[#F3F8F9]/60 dark:bg-slate-800/50'
                     : 'text-slate-550 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
                 }`}
               >
                 รายการบริษัท
               </Link>
-              <Link 
-                href="/admin/users" 
+              <Link
+                href="/admin/users"
                 onClick={handleLinkClick}
                 className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
-                  pathname === '/admin/users' 
-                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                  pathname === '/admin/users'
+                    ? 'text-[#487D86] dark:text-[#7AB5BD] font-bold bg-[#F3F8F9]/60 dark:bg-slate-800/50'
                     : 'text-slate-555 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
                 }`}
               >
                 ผู้ใช้บริษัท
               </Link>
-              <Link 
-                href="/admin/business-types" 
+              <Link
+                href="/admin/business-types"
                 onClick={handleLinkClick}
                 className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
-                  pathname === '/admin/business-types' 
-                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                  pathname === '/admin/business-types'
+                    ? 'text-[#487D86] dark:text-[#7AB5BD] font-bold bg-[#F3F8F9]/60 dark:bg-slate-800/50'
                     : 'text-slate-555 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
                 }`}
               >
@@ -164,7 +164,7 @@ export default function AdminLayout({
           onClick={handleLinkClick}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
             pathname === "/admin/packages"
-              ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-550 font-bold border-l-4 border-amber-500 shadow-sm"
+              ? "bg-[#F3F8F9] dark:bg-[#7AB5BD]/10 text-[#487D86] dark:text-[#6AA7B0] font-bold border-l-4 border-[#7AB5BD] shadow-sm"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
           }`}
         >
@@ -174,7 +174,7 @@ export default function AdminLayout({
 
         {/* เอกสาร (Documents) Group */}
         <div className="pt-1">
-          <button 
+          <button
             onClick={() => toggleMenu('documents')}
             className="w-full flex items-center justify-between px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl transition-all text-left cursor-pointer"
           >
@@ -186,34 +186,34 @@ export default function AdminLayout({
           </button>
           {expanded.documents && (
             <div className="pl-9 pr-3 py-1 space-y-1 border-l border-gray-200 dark:border-slate-800 ml-5 mt-1 animate-in slide-in-from-top-1 duration-150">
-              <Link 
-                href="/admin/categories" 
+              <Link
+                href="/admin/categories"
                 onClick={handleLinkClick}
                 className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
-                  pathname === '/admin/categories' 
-                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                  pathname === '/admin/categories'
+                    ? 'text-[#487D86] dark:text-[#7AB5BD] font-bold bg-[#F3F8F9]/60 dark:bg-slate-800/50'
                     : 'text-slate-550 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
                 }`}
               >
                 หมวดหมู่เอกสาร
               </Link>
-              <Link 
-                href="/admin/types" 
+              <Link
+                href="/admin/types"
                 onClick={handleLinkClick}
                 className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
-                  pathname === '/admin/types' 
-                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                  pathname === '/admin/types'
+                    ? 'text-[#487D86] dark:text-[#7AB5BD] font-bold bg-[#F3F8F9]/60 dark:bg-slate-800/50'
                     : 'text-slate-550 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
                 }`}
               >
                 ประเภทเอกสาร
               </Link>
-              <Link 
-                href="/admin/templates" 
+              <Link
+                href="/admin/templates"
                 onClick={handleLinkClick}
                 className={`block px-3 py-2 text-[11px] rounded-lg transition-colors ${
-                  pathname === '/admin/templates' 
-                    ? 'text-amber-700 dark:text-amber-500 font-bold bg-amber-50/60 dark:bg-slate-800/50' 
+                  pathname === '/admin/templates'
+                    ? 'text-[#487D86] dark:text-[#7AB5BD] font-bold bg-[#F3F8F9]/60 dark:bg-slate-800/50'
                     : 'text-slate-550 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-slate-850/50'
                 }`}
               >
@@ -229,7 +229,7 @@ export default function AdminLayout({
           onClick={handleLinkClick}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
             pathname === "/admin/logs"
-              ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-550 font-bold border-l-4 border-amber-500 shadow-sm"
+              ? "bg-[#F3F8F9] dark:bg-[#7AB5BD]/10 text-[#487D86] dark:text-[#6AA7B0] font-bold border-l-4 border-[#7AB5BD] shadow-sm"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
           }`}
         >
@@ -243,7 +243,7 @@ export default function AdminLayout({
           onClick={handleLinkClick}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
             pathname === "/admin/ui-components"
-              ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-550 font-bold border-l-4 border-amber-500 shadow-sm"
+              ? "bg-[#F3F8F9] dark:bg-[#7AB5BD]/10 text-[#487D86] dark:text-[#6AA7B0] font-bold border-l-4 border-[#7AB5BD] shadow-sm"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
           }`}
         >
@@ -257,7 +257,7 @@ export default function AdminLayout({
           onClick={handleLinkClick}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
             pathname === "/admin/settings"
-              ? "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-550 font-bold border-l-4 border-amber-500 shadow-sm"
+              ? "bg-[#F3F8F9] dark:bg-[#7AB5BD]/10 text-[#487D86] dark:text-[#6AA7B0] font-bold border-l-4 border-[#7AB5BD] shadow-sm"
               : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
           }`}
         >
@@ -269,18 +269,18 @@ export default function AdminLayout({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans text-slate-800 dark:text-slate-100 font-light transition-colors duration-200">
-      
+    <div className="admin-sarabun min-h-screen bg-slate-50 dark:bg-slate-950 flex text-slate-800 dark:text-slate-100 font-light transition-colors duration-200">
+
       {/* ================= DESKTOP SIDEBAR ================= */}
-      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 shrink-0 transition-colors duration-200">
+      <aside className="admin-sidebar hidden md:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 shrink-0 transition-colors duration-200">
         {/* Logo */}
         <div className="p-5 border-b border-gray-200 dark:border-slate-800 flex items-center gap-3">
-          <div className="bg-amber-500 p-2 rounded-xl text-slate-955 shadow-md">
+          <div className="bg-[#7AB5BD] p-2 rounded-xl text-slate-955 shadow-md">
             <ShieldAlert size={20} />
           </div>
           <div>
             <h2 className="text-sm font-black text-slate-855 dark:text-white tracking-wider leading-tight">ADMIN PORTAL</h2>
-            <p className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold tracking-widest uppercase">Backend Control</p>
+            <p className="text-[10px] text-[#5C98A1] dark:text-[#7AB5BD] font-semibold tracking-widest uppercase">Backend Control</p>
           </div>
         </div>
 
@@ -313,13 +313,13 @@ export default function AdminLayout({
       {/* ================= MOBILE SIDEBAR MOBILE OVERLAY ================= */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 md:hidden" onClick={() => setSidebarOpen(false)}>
-          <aside 
-            className="w-64 bg-white dark:bg-slate-900 h-full border-r border-gray-200 dark:border-slate-800 flex flex-col animate-in slide-in-from-left duration-200"
+          <aside
+            className="admin-sidebar w-64 bg-white dark:bg-slate-900 h-full border-r border-gray-200 dark:border-slate-800 flex flex-col animate-in slide-in-from-left duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-5 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="bg-amber-500 p-2 rounded-xl text-slate-950">
+                <div className="bg-[#7AB5BD] p-2 rounded-xl text-slate-950">
                   <ShieldAlert size={18} />
                 </div>
                 <div>
@@ -356,11 +356,11 @@ export default function AdminLayout({
 
       {/* ================= MAIN CONTENT WRAPPER ================= */}
       <div className="flex-1 flex flex-col min-w-0">
-        
+
         {/* Navbar */}
-        <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 h-16 flex items-center justify-between px-6 transition-colors duration-200">
+        <header className="admin-navbar bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 h-16 flex items-center justify-between px-6 transition-colors duration-200">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setSidebarOpen(true)}
               className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg md:hidden transition-colors"
             >
@@ -384,9 +384,9 @@ export default function AdminLayout({
             )}
 
             <div className="h-4 w-px bg-gray-200 dark:bg-slate-800 hidden sm:block"></div>
-            
-            <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-amber-50/85 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
-              <div className="w-7 h-7 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center font-bold text-xs shadow-sm">
+
+            <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-[#F3F8F9]/85 dark:bg-[#7AB5BD]/10 border border-[#E4F0F2] dark:border-[#7AB5BD]/20">
+              <div className="w-7 h-7 rounded-full bg-[#7AB5BD] text-slate-950 flex items-center justify-center font-bold text-xs shadow-sm">
                 SA
               </div>
               <div className="hidden sm:block text-left">

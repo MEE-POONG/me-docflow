@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { GlobalLanguageBridge } from "./GlobalLanguageBridge";
 import th from "./locales/th";
 import en from "./locales/en";
 
@@ -32,6 +33,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("me_docflow_lang", lang);
   };
 
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
   const t = language === "en" ? en : th;
 
   // We still provide context even before mount so that it doesn't break,
@@ -39,6 +44,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
       <div className={!mounted ? "invisible" : ""}>
+        <GlobalLanguageBridge language={language} />
         {children}
       </div>
     </LanguageContext.Provider>

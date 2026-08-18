@@ -23,22 +23,40 @@ import { useSidebar } from "./SidebarContext";
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [activeCompanyName, setActiveCompanyName] = useState("บริษัท สยาม รีเทล จำกัด (มหาชน)");
+  const [activeCompanyName, setActiveCompanyName] = useState("บริษัท ของคุณ จำกัด");
   const { t } = useLanguage();
   const { isOpen, close, toggle } = useSidebar();
 
   useEffect(() => {
     const updateActiveCompany = () => {
       const saved = localStorage.getItem("me_docflow_companies");
+      const userStr = localStorage.getItem("me_docflow_current_user");
+      let currentCompanyId = "";
+      let registeredCompanyName = "";
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          currentCompanyId = user.companyId || "";
+          registeredCompanyName = user.companyName || "";
+        } catch (e) { }
+      }
       if (saved) {
         try {
           const list = JSON.parse(saved);
-          const active = list.find((c: any) => c.isActive);
+          const active = list.find((c: any) =>
+            c.isActive && (!currentCompanyId || c.id === currentCompanyId)
+          );
           if (active) {
-            setActiveCompanyName(active.companyName);
+            setActiveCompanyName(
+              currentCompanyId && active.id === currentCompanyId && registeredCompanyName
+                ? registeredCompanyName
+                : active.companyName
+            );
+            return;
           }
         } catch (e) { }
       }
+      if (registeredCompanyName) setActiveCompanyName(registeredCompanyName);
     };
 
     updateActiveCompany();

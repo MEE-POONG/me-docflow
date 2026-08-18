@@ -204,7 +204,7 @@ export async function createTemplate(data: {
       orientation: data.orientation,
       isActive: data.isActive,
       isGlobal: false,
-      layoutJson: data.layoutJson ? (data.layoutJson as object) : {},
+      layoutJson: data.layoutJson ? (JSON.parse(JSON.stringify(data.layoutJson)) as object) : {},
       createdByUserId: userId,
     },
   });

@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  Palette, 
-  ShieldAlert, 
-  CheckCircle2, 
-  AlertCircle, 
-  Info, 
-  Save, 
-  Trash2, 
-  Edit2, 
-  Search, 
+import {
+  Palette,
+  ShieldAlert,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  Save,
+  Trash2,
+  Edit2,
+  Search,
   ChevronRight,
   Loader2,
   Lock,
@@ -26,37 +26,37 @@ export default function AdminUiComponentsPage() {
   return (
     <div className="space-y-8 font-light">
       <div>
-        <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">System Style Guide</p>
+        <p className="text-[11px] font-bold text-[#5C98A1] dark:text-[#7AB5BD] uppercase tracking-wider mb-1">System Style Guide</p>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-serif">UI Components Playground</h1>
         <p className="text-sm text-slate-550 dark:text-slate-400">คลังพรีวิวชิ้นส่วนหน้าจอแอดมินสำหรับนักพัฒนาและผู้ตรวจสอบความเรียบร้อยของหน้าจอคู่มือแบรนด์</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Buttons Section */}
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm transition-colors duration-200">
-          <h2 className="font-bold text-sm text-slate-900 dark:text-white border-b border-gray-150 dark:border-slate-800 pb-2 flex items-center gap-2">
-            <Palette className="w-4 h-4 text-amber-500" />
+        <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm transition-colors duration-200">
+          <h2 className="font-bold text-sm text-slate-900 dark:text-white border-b border-gray-100 dark:border-slate-800 pb-2 flex items-center gap-2">
+            <Palette className="w-4 h-4 text-[#7AB5BD]" />
             1. Buttons (ปุ่มสั่งงาน)
           </h2>
           <div className="flex flex-wrap gap-3">
-            <button className="bg-amber-500 hover:bg-amber-400 text-slate-955 px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-md shadow-amber-500/10">
-              Primary Amber
+            <button className="bg-[#7AB5BD] hover:bg-[#8FC1C8] text-slate-955 px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-md shadow-[#7AB5BD]/10">
+              Primary Teal
             </button>
             <button className="bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 text-white px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer">
               Secondary Slate
             </button>
-            <button className="bg-emerald-650 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer">
+            <button className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white px-4 py-2 text-xs font-semibold rounded-xl shadow-sm transition-all cursor-pointer">
               Success Green
             </button>
             <button className="bg-red-50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-650 dark:text-red-400 border border-red-200 dark:border-red-900/40 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer">
               Danger Light Red
             </button>
-            <button className="border border-gray-300 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-350 px-4 py-2 text-xs font-medium rounded-xl transition-all cursor-pointer">
+            <button className="border border-gray-200 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-350 px-4 py-2 text-xs font-medium rounded-xl transition-all cursor-pointer">
               Outline Border
             </button>
           </div>
           <div className="flex flex-wrap gap-3 pt-2">
-            <button className="flex items-center gap-1.5 bg-amber-500 text-slate-955 px-4 py-2 text-xs font-bold rounded-xl cursor-pointer">
+            <button className="flex items-center gap-1.5 bg-[#7AB5BD] text-slate-955 px-4 py-2 text-xs font-bold rounded-xl cursor-pointer">
               <Save className="w-3.5 h-3.5" />
               บันทึกข้อมูล
             </button>
@@ -64,7 +64,7 @@ export default function AdminUiComponentsPage() {
               <Trash2 className="w-3.5 h-3.5" />
               ลบรายการ
             </button>
-            <button className="flex items-center gap-1.5 border border-gray-300 dark:border-slate-800 hover:border-gray-100 dark:hover:border-slate-750 px-3 py-2 text-xs font-bold rounded-xl cursor-pointer text-slate-655 dark:text-slate-350">
+            <button className="flex items-center gap-1.5 border border-gray-200 dark:border-slate-800 hover:border-gray-300 dark:hover:border-slate-700 px-3 py-2 text-xs font-bold rounded-xl cursor-pointer text-slate-655 dark:text-slate-350">
               <Edit2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
               แก้ไข
             </button>
@@ -76,9 +76,9 @@ export default function AdminUiComponentsPage() {
         </div>
 
         {/* Badges Section */}
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm transition-colors duration-200">
-          <h2 className="font-bold text-sm text-slate-900 dark:text-white border-b border-gray-150 dark:border-slate-800 pb-2 flex items-center gap-2">
-            <Palette className="w-4 h-4 text-amber-500" />
+        <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm transition-colors duration-200">
+          <h2 className="font-bold text-sm text-slate-900 dark:text-white border-b border-gray-100 dark:border-slate-800 pb-2 flex items-center gap-2">
+            <Palette className="w-4 h-4 text-[#7AB5BD]" />
             2. Badges & Labels (ป้ายสถานะ)
           </h2>
           <div className="flex flex-wrap gap-3">
@@ -88,34 +88,34 @@ export default function AdminUiComponentsPage() {
             <span className="bg-red-50 dark:bg-red-500/10 text-red-655 dark:text-red-500 border border-red-100 dark:border-red-500/20 px-3 py-1 rounded-full text-[10px] font-bold">
               ● Blocked (ระงับการเข้าใช้)
             </span>
-            <span className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-100 dark:border-amber-500/20 px-3 py-1 rounded-full text-[10px] font-bold">
+            <span className="bg-[#F3F8F9] dark:bg-[#7AB5BD]/10 text-[#5C98A1] dark:text-[#7AB5BD] border border-[#E4F0F2] dark:border-[#7AB5BD]/20 px-3 py-1 rounded-full text-[10px] font-bold">
               ● Pending (รออนุมัติ)
             </span>
-            <span className="bg-gray-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-gray-200 dark:border-slate-700 px-3 py-1 rounded-full text-[10px] font-medium animate-pulse">
+            <span className="bg-gray-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-gray-100 dark:border-slate-700 px-3 py-1 rounded-full text-[10px] font-medium animate-pulse">
               ● Inactive (ปิดใช้)
             </span>
           </div>
           <div className="flex flex-wrap gap-3 pt-2">
-            <span className="bg-gray-100 dark:bg-slate-800 text-amber-705 dark:text-amber-500 border border-gray-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
+            <span className="bg-gray-100 dark:bg-slate-800 text-[#487D86] dark:text-[#7AB5BD] border border-gray-100 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
               QT FORMAT
             </span>
-            <span className="bg-gray-100 dark:bg-slate-800 text-slate-655 dark:text-slate-350 border border-gray-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
+            <span className="bg-gray-100 dark:bg-slate-800 text-slate-655 dark:text-slate-350 border border-gray-100 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
               ACC MODULE
             </span>
-            <span className="bg-amber-500 text-slate-950 px-2 py-0.5 rounded text-[10px] font-sans font-bold">
+            <span className="bg-[#7AB5BD] text-slate-950 px-2 py-0.5 rounded text-[10px] font-sans font-bold">
               NEW FEATURE
             </span>
           </div>
         </div>
 
         {/* Alerts Section */}
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 col-span-1 md:col-span-2 shadow-sm transition-colors duration-200">
-          <h2 className="font-bold text-sm text-slate-900 dark:text-white border-b border-gray-150 dark:border-slate-800 pb-2 flex items-center gap-2">
-            <Palette className="w-4 h-4 text-amber-500" />
+        <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-6 space-y-4 col-span-1 md:col-span-2 shadow-sm transition-colors duration-200">
+          <h2 className="font-bold text-sm text-slate-900 dark:text-white border-b border-gray-100 dark:border-slate-800 pb-2 flex items-center gap-2">
+            <Palette className="w-4 h-4 text-[#7AB5BD]" />
             3. Alert Notifications (แถบข้อความแจ้งเตือน)
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-250 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-200 px-4 py-3.5 rounded-xl flex items-start gap-3 transition-colors duration-200">
+            <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-200 px-4 py-3.5 rounded-xl flex items-start gap-3 transition-colors duration-200">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-bold text-slate-900 dark:text-white">บันทึกข้อมูลเรียบร้อยแล้ว!</p>
@@ -131,15 +131,15 @@ export default function AdminUiComponentsPage() {
               </div>
             </div>
 
-            <div className="bg-amber-50 dark:bg-amber-955/30 border border-amber-205 dark:border-amber-900/80 text-amber-800 dark:text-amber-200 px-4 py-3.5 rounded-xl flex items-start gap-3 transition-colors duration-200">
-              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+            <div className="bg-[#F3F8F9] dark:bg-[#183338]/30 border border-[#C9E1E5] dark:border-[#274A50]/80 text-[#37636B] dark:text-[#C9E1E5] px-4 py-3.5 rounded-xl flex items-start gap-3 transition-colors duration-200">
+              <AlertCircle className="w-5 h-5 text-[#5C98A1] dark:text-[#7AB5BD] shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-bold text-slate-900 dark:text-white">คำเตือนสิทธิ์การใช้งาน</p>
-                <p className="text-[11px] text-amber-605 dark:text-amber-500 mt-0.5 font-light font-sans">บริษัทนี้ยังไม่ได้ผ่านการ Verify ตรวจสอบโปรไฟล์ ยื่นหลักฐานนิติบุคคล</p>
+                <p className="text-[11px] text-[#5C98A1] dark:text-[#7AB5BD] mt-0.5 font-light font-sans">บริษัทนี้ยังไม่ได้ผ่านการ Verify ตรวจสอบโปรไฟล์ ยื่นหลักฐานนิติบุคคล</p>
               </div>
             </div>
 
-            <div className="bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-805 text-slate-700 dark:text-slate-300 px-4 py-3.5 rounded-xl flex items-start gap-3 transition-colors duration-200">
+            <div className="bg-slate-50 dark:bg-slate-950 border border-gray-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-4 py-3.5 rounded-xl flex items-start gap-3 transition-colors duration-200">
               <Info className="w-5 h-5 text-slate-500 dark:text-slate-400 shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-bold text-slate-900 dark:text-white">ระบบตรวจสอบประวัติความปลอดภัย</p>
@@ -150,9 +150,9 @@ export default function AdminUiComponentsPage() {
         </div>
 
         {/* Form Inputs & Controls */}
-        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 col-span-1 md:col-span-2 shadow-sm transition-colors duration-200">
-          <h2 className="font-bold text-sm text-slate-900 dark:text-white border-b border-gray-150 dark:border-slate-800 pb-2 flex items-center gap-2">
-            <Palette className="w-4 h-4 text-amber-500" />
+        <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-6 space-y-4 col-span-1 md:col-span-2 shadow-sm transition-colors duration-200">
+          <h2 className="font-bold text-sm text-slate-900 dark:text-white border-b border-gray-100 dark:border-slate-800 pb-2 flex items-center gap-2">
+            <Palette className="w-4 h-4 text-[#7AB5BD]" />
             4. Inputs & Switches (ส่วนควบคุมฟอร์มข้อมูล)
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -165,7 +165,7 @@ export default function AdminUiComponentsPage() {
                   placeholder="ค้นหารายการ..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl pl-10 pr-4 py-3 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 font-sans transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-955 border border-gray-200 dark:border-slate-800 rounded-xl pl-10 pr-4 py-3 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#7AB5BD] font-sans transition-colors duration-200"
                 />
               </div>
             </div>
@@ -175,7 +175,7 @@ export default function AdminUiComponentsPage() {
               <select
                 value={selectedOpt}
                 onChange={(e) => setSelectedOpt(e.target.value)}
-                className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-3 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer font-sans transition-colors duration-200"
+                className="w-full bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl px-3 py-3 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#7AB5BD] cursor-pointer font-sans transition-colors duration-200"
               >
                 <option value="Standard">Standard SME</option>
                 <option value="Custom">Custom Enterprise</option>
@@ -191,7 +191,7 @@ export default function AdminUiComponentsPage() {
                   onClick={() => setToggleVal(!toggleVal)}
                   className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer"
                 >
-                  {toggleVal ? <ToggleRight className="w-9 h-9 text-amber-550" /> : <ToggleLeft className="w-9 h-9 text-slate-400" />}
+                  {toggleVal ? <ToggleRight className="w-9 h-9 text-[#6AA7B0]" /> : <ToggleLeft className="w-9 h-9 text-slate-400" />}
                 </button>
                 <span className="text-xs text-slate-500 dark:text-slate-400 font-medium font-sans">
                   {toggleVal ? "สถานะ: เปิดใช้งานจริง" : "สถานะ: ปิดการทำงาน"}

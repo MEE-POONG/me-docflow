@@ -1,19 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Users, 
-  Search, 
-  Edit2, 
-  Trash2, 
-  X, 
-  Save, 
-  CheckCircle2, 
-  UserX, 
-  UserCheck, 
-  KeyRound, 
-  Eye, 
-  EyeOff 
+import {
+  Users,
+  Search,
+  Edit2,
+  Trash2,
+  X,
+  Save,
+  CheckCircle2,
+  UserX,
+  UserCheck,
+  KeyRound,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { getAdminUsers, updateAdminUser, deleteAdminUser } from "../actions";
 
@@ -94,10 +94,10 @@ export default function AdminUsersPage() {
 
   const handleToggleStatus = async (user: UserItem) => {
     const nextStatus: "active" | "inactive" = user.status === "active" ? "inactive" : "active";
-    const actionMsg = nextStatus === "active" 
-      ? `ปลดบล็อกบัญชีผู้ใช้ (Activate) "${user.fullName}"` 
+    const actionMsg = nextStatus === "active"
+      ? `ปลดบล็อกบัญชีผู้ใช้ (Activate) "${user.fullName}"`
       : `ระงับบัญชีผู้ใช้ (Block) "${user.fullName}" ห้ามเข้าใช้ระบบชั่วคราว`;
-    
+
     try {
       await updateAdminUser(user.id, { ...user, status: nextStatus });
       await fetchUsers();
@@ -117,8 +117,8 @@ export default function AdminUsersPage() {
 
     if (editingUser) {
       try {
-        await updateAdminUser(editingUser.id, { 
-          fullName, email, role, status, password 
+        await updateAdminUser(editingUser.id, {
+          fullName, email, role, status, password
         });
         await fetchUsers();
         logAdminAction(`แก้ไขข้อมูลผู้ใช้ "${fullName}" (อีเมล: ${email}, ตำแหน่ง: ${role})`);
@@ -135,7 +135,7 @@ export default function AdminUsersPage() {
   };
 
   // Filtered users based on search
-  const filteredUsers = users.filter(u => 
+  const filteredUsers = users.filter(u =>
     u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -144,7 +144,7 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">User Administration</p>
+        <p className="text-[11px] font-bold text-[#5C98A1] dark:text-[#7AB5BD] uppercase tracking-wider mb-1">User Administration</p>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-serif">จัดการผู้ใช้งานทั้งหมด</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">ระงับบัญชีผู้ใช้ ปรับข้อมูลบทบาทหน้าที่ หรือรีเซ็ตรหัสผ่านของพนักงานทุกคนในเครือข่ายแอปพลิเคชัน</p>
       </div>
@@ -166,7 +166,7 @@ export default function AdminUsersPage() {
             placeholder="ค้นหาตามชื่อพนักงาน หรือ อีเมล..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200"
+            className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#7AB5BD] transition-colors duration-200"
           />
         </div>
         <div className="text-xs text-slate-550 dark:text-slate-400 font-medium">
@@ -179,7 +179,7 @@ export default function AdminUsersPage() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 transition-colors duration-200">
           <div className="flex items-center justify-between pb-3 border-b border-gray-150 dark:border-slate-850">
             <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
-              <Users className="w-5 h-5 text-amber-550" />
+              <Users className="w-5 h-5 text-[#6AA7B0]" />
               แก้ไขข้อมูลและรหัสผ่านบัญชี (สิทธิ์ระดับแอดมิน)
             </h3>
             <button
@@ -199,7 +199,7 @@ export default function AdminUsersPage() {
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                 />
               </div>
 
@@ -210,7 +210,7 @@ export default function AdminUsersPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                 />
               </div>
 
@@ -219,7 +219,7 @@ export default function AdminUsersPage() {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer font-sans transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] cursor-pointer font-sans transition-colors duration-200"
                 >
                   <option value="owner">เจ้าของธุรกิจ (Owner)</option>
                   <option value="accountant">นักบัญชีในบริษัท (Accountant)</option>
@@ -237,7 +237,7 @@ export default function AdminUsersPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-3 pr-10 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono transition-colors duration-200"
+                    className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-3 pr-10 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] font-mono transition-colors duration-200"
                   />
                   <button
                     type="button"
@@ -254,7 +254,7 @@ export default function AdminUsersPage() {
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as "active" | "inactive")}
-                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] cursor-pointer transition-colors duration-200"
                 >
                   <option value="active">ปกติ (Active)</option>
                   <option value="inactive">ระงับการเข้าใช้ (Inactive / Blocked)</option>
@@ -272,7 +272,7 @@ export default function AdminUsersPage() {
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-1.5 px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-955 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer font-sans"
+                className="flex items-center gap-1.5 px-5 py-2 bg-[#7AB5BD] hover:bg-[#8FC1C8] text-slate-955 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer font-sans"
               >
                 <Save className="w-4 h-4" />
                 บันทึกการแก้ไขของแอดมิน
@@ -350,7 +350,7 @@ export default function AdminUsersPage() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleOpenEditForm(user)}
-                          className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                          className="p-2 text-slate-400 dark:text-slate-500 hover:text-[#5C98A1] dark:hover:text-[#7AB5BD] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                           title="แก้ไขข้อมูลพนักงาน (แอดมิน)"
                         >
                           <Edit2 className="w-3.5 h-3.5" />

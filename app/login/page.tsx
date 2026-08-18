@@ -256,6 +256,12 @@ export default function LoginPage() {
 
       localStorage.setItem("me_docflow_current_user", JSON.stringify(data.user));
       localStorage.setItem("me_docflow_user_session", "true");
+      localStorage.setItem("me_docflow_companies", JSON.stringify([{
+        id: data.user.companyId,
+        companyName: data.user.companyName,
+        ownerEmail: data.user.email,
+        isActive: true,
+      }]));
       setTimeout(() => { window.dispatchEvent(new Event("activeCompanyChanged")); }, 100);
       router.push("/dashboard");
     } catch (err: any) {

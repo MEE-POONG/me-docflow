@@ -24,11 +24,13 @@ type DocumentPreviewProps = {
  * DesignerElement type only declares `style`, which is always undefined in real data.
  */
 type StyledDesignerElement = DesignerElement & {
+  fontFamily?: string
   fontSize?: number | string
   fontWeight?: string | number
   color?: string
   textAlign?: CSSProperties['textAlign']
   tableColumns?: { label: string; field: string; width?: number; align?: 'left' | 'center' | 'right' }[]
+  tableData?: string[][]
   tableHeaderBold?: boolean
   tableHeaderBg?: string
   tableShowTotalRow?: boolean
@@ -123,6 +125,7 @@ function ElementView({ element, dataOverride }: { element: StyledDesignerElement
     top: `${element.y}px`,
     width: `${element.width}px`,
     height: `${element.height}px`,
+    fontFamily: `"${element.fontFamily ?? 'TH SarabunPSK'}", "Sarabun", sans-serif`,
     ...(element.fontSize !== undefined && { fontSize: typeof element.fontSize === 'number' ? `${element.fontSize}px` : element.fontSize }),
     ...(element.fontWeight !== undefined && { fontWeight: element.fontWeight }),
     ...(element.color !== undefined && { color: element.color }),
@@ -152,6 +155,17 @@ function ElementView({ element, dataOverride }: { element: StyledDesignerElement
       return <div style={{ ...baseStyle, backgroundColor: '#000' }} />
     case 'table': {
       const items = Array.isArray(dataToUse.items) ? dataToUse.items : []
+      const columns = element.tableColumns
+      const importedRows = element.tableData
+      const tableStyle: CSSProperties = { fontSize: '12px', ...baseStyle, height: 'auto', minHeight: `${element.height}px`, borderCollapse: 'collapse' }
+      if (importedRows && columns && columns.length > 0) {
+        return (
+          <table style={{ ...tableStyle, tableLayout: 'fixed' }}>
+            <thead><tr>{columns.map((col, i) => <th key={i} style={{ ...tableCellStyle, width: col.width ? `${col.width}px` : undefined, background: '#f3f4f6', fontWeight: 'bold' }}>{col.label}</th>)}</tr></thead>
+            <tbody>{importedRows.map((row, r) => <tr key={r}>{columns.map((col, c) => <td key={c} style={{ ...tableCellStyle, width: col.width ? `${col.width}px` : undefined }}>{row[c] ?? ''}</td>)}</tr>)}</tbody>
+          </table>
+        )
+      }
       if (items.length === 0) {
         return (
           <div style={{ ...baseStyle, border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -159,9 +173,6 @@ function ElementView({ element, dataOverride }: { element: StyledDesignerElement
           </div>
         )
       }
-      const columns = element.tableColumns
-      const tableStyle: CSSProperties = { fontSize: '12px', ...baseStyle, height: 'auto', minHeight: `${element.height}px`, borderCollapse: 'collapse' }
-
       if (columns && columns.length > 0) {
         // Table designed with explicit columns/headers — render exactly as configured,
         // including each column's own width/alignment and the header's bold/background style.

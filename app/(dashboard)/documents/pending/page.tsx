@@ -28,16 +28,6 @@ export default async function PendingApprovalsPage() {
 
   return (
     <div className="max-w-[1600px] mx-auto pb-20 p-4 md:p-6 lg:p-8">
-      <div className="mb-8">
-        <div className="text-xs font-bold text-emerald-600 dark:text-emerald-500 tracking-wider mb-1 uppercase">
-          Company Workspace
-        </div>
-        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2">การอนุมัติเอกสาร</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          รายการเอกสารที่เกี่ยวข้องกับการตรวจสอบและอนุมัติ
-        </p>
-      </div>
-
       <PendingApprovalList documents={pendingDocuments as any} templates={templates as any} />
     </div>
   )

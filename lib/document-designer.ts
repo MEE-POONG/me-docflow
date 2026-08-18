@@ -33,6 +33,7 @@ export type DesignerElement = {
   width: number;
   height: number;
   content: string;
+  fontFamily?: string;
   style: Record<string, string | number | boolean>;
   config: Record<string, string | number | boolean | string[]>;
 };

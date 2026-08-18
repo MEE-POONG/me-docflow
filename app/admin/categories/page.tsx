@@ -122,7 +122,7 @@ export default function AdminCategoriesPage() {
         });
         logAdminAction(`เพิ่มหมวดหมู่เอกสารใหม่ "${name}" (รหัส: ${code.toUpperCase()})`);
       }
-      
+
       await fetchCategories();
       setIsFormOpen(false);
       setIsSaved(true);
@@ -133,7 +133,7 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const filtered = categories.filter(c => 
+  const filtered = categories.filter(c =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -142,14 +142,14 @@ export default function AdminCategoriesPage() {
     <div className="space-y-6 font-light">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">Document Folders</p>
+          <p className="text-[11px] font-bold text-[#5C98A1] dark:text-[#7AB5BD] uppercase tracking-wider mb-1">Document Folders</p>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-serif">หมวดหมู่เอกสารส่วนกลาง</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">บริหารกลุ่มแฟ้มเอกสารหลักในระบบ เพื่อการจัดสิทธิ์และคัดแยกประเภทการจัดเก็บเอกสารอย่างเป็นระเบียบ</p>
         </div>
         <div>
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-955 font-bold py-3 px-5 rounded-xl shadow-md transition-colors cursor-pointer text-xs font-sans"
+            className="flex items-center gap-2 bg-[#7AB5BD] hover:bg-[#6AA7B0] text-white font-bold py-3 px-5 rounded-xl shadow-md transition-colors cursor-pointer text-xs font-sans"
           >
             <Plus className="w-4 h-4" />
             เพิ่มหมวดหมู่ใหม่
@@ -173,7 +173,7 @@ export default function AdminCategoriesPage() {
             placeholder="ค้นหาหมวดหมู่ หรือ รหัส..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200"
+            className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#7AB5BD] transition-colors duration-200"
           />
         </div>
         <div className="text-xs text-slate-550 dark:text-slate-400 font-medium">
@@ -185,7 +185,7 @@ export default function AdminCategoriesPage() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 transition-colors duration-200">
           <div className="flex items-center justify-between pb-3 border-b border-gray-150 dark:border-slate-850">
             <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
-              <Folder className="w-5 h-5 text-amber-550" />
+              <Folder className="w-5 h-5 text-[#6AA7B0]" />
               {editingCategory ? "แก้ไขข้อมูลหมวดหมู่" : "เพิ่มหมวดหมู่เอกสารใหม่"}
             </h3>
             <button type="button" onClick={() => setIsFormOpen(false)} className="text-slate-400 dark:text-slate-550 hover:text-slate-600 dark:hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
@@ -200,7 +200,7 @@ export default function AdminCategoriesPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                   placeholder="เช่น เอกสารจัดซื้อสินค้า"
                 />
               </div>
@@ -213,7 +213,7 @@ export default function AdminCategoriesPage() {
                   maxLength={4}
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono uppercase transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] font-mono uppercase transition-colors duration-200"
                   placeholder="เช่น PUR"
                 />
               </div>
@@ -224,18 +224,18 @@ export default function AdminCategoriesPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={2}
-                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl p-3 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none font-sans transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl p-3 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] resize-none font-sans transition-colors duration-200"
                   placeholder="รายละเอียดเอกสารที่จัดเก็บภายใต้หมวดหมู่นี้..."
                 />
               </div>
-              
+
               <div className="col-span-1 md:col-span-2">
                 <label className="flex items-center text-xs font-bold text-slate-500 dark:text-slate-400 font-sans cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isActive}
                     onChange={(e) => setIsActive(e.target.checked)}
-                    className="mr-2 h-4 w-4 text-amber-500 focus:ring-amber-500 border-gray-300 rounded"
+                    className="mr-2 h-4 w-4 text-[#7AB5BD] focus:ring-[#7AB5BD] border-gray-300 rounded"
                   />
                   แสดงหมวดหมู่นี้ให้ใช้งานได้ (Active)
                 </label>
@@ -252,7 +252,7 @@ export default function AdminCategoriesPage() {
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-1.5 px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-955 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer font-sans"
+                className="flex items-center gap-1.5 px-5 py-2 bg-[#7AB5BD] hover:bg-[#8FC1C8] text-slate-955 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer font-sans"
               >
                 <Save className="w-4 h-4" />
                 บันทึกหมวดหมู่
@@ -287,14 +287,14 @@ export default function AdminCategoriesPage() {
                   <tr key={cat.id} className={`transition-colors ${cat.isActive ? 'hover:bg-gray-50/60 dark:hover:bg-slate-800/20' : 'bg-gray-50/50 dark:bg-slate-900/50 opacity-75'}`}>
                     <td className="py-4 px-6 font-bold text-gray-900 dark:text-white">
                       <div className="flex items-center gap-2.5">
-                        <Folder className={`w-4 h-4 shrink-0 ${cat.isActive ? 'text-amber-550' : 'text-gray-400'}`} />
+                        <Folder className={`w-4 h-4 shrink-0 ${cat.isActive ? 'text-[#6AA7B0]' : 'text-gray-400'}`} />
                         {cat.name}
                         {!cat.isActive && (
                           <span className="ml-2 text-[10px] bg-gray-200 dark:bg-slate-800 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded">ซ่อน</span>
                         )}
                       </div>
                     </td>
-                    <td className="py-4 px-6 font-mono text-amber-600 dark:text-amber-500 font-bold">
+                    <td className="py-4 px-6 font-mono text-[#5C98A1] dark:text-[#7AB5BD] font-bold">
                       {cat.code}
                     </td>
                     <td className="py-4 px-6 text-slate-500 dark:text-slate-400 font-light truncate max-w-xs" title={cat.description}>
@@ -311,8 +311,8 @@ export default function AdminCategoriesPage() {
                         <button
                           onClick={() => handleToggleActive(cat)}
                           className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                            cat.isActive 
-                              ? "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20" 
+                            cat.isActive
+                              ? "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
                               : "text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
                           }`}
                           title={cat.isActive ? "ซ่อนหมวดหมู่" : "แสดงหมวดหมู่"}
@@ -321,7 +321,7 @@ export default function AdminCategoriesPage() {
                         </button>
                         <button
                           onClick={() => handleOpenEdit(cat)}
-                          className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                          className="p-2 text-slate-400 dark:text-slate-500 hover:text-[#5C98A1] dark:hover:text-[#7AB5BD] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                           title="แก้ไขหมวดหมู่"
                         >
                           <Edit2 className="w-3.5 h-3.5" />

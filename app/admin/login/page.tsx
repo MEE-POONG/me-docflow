@@ -17,7 +17,7 @@ export default function AdminLoginPage() {
 
     if (email === "admin" && password === "password") {
       localStorage.setItem("me_docflow_admin_logged_in", "true");
-      
+
       // Seed audit log for admin login
       const logs = localStorage.getItem("me_docflow_audit_logs");
       const currentLogs = logs ? JSON.parse(logs) : [];
@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <div className="bg-amber-500 p-3 rounded-2xl text-slate-950 shadow-lg shadow-amber-500/20">
+          <div className="bg-[#7AB5BD] p-3 rounded-2xl text-slate-950 shadow-lg shadow-[#7AB5BD]/20">
             <ShieldAlert size={36} className="animate-pulse" />
           </div>
         </div>
@@ -54,7 +54,7 @@ export default function AdminLoginPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-slate-900 py-8 px-6 shadow-2xl sm:rounded-3xl border border-slate-800 sm:px-10 relative overflow-hidden">
-          
+
           <form onSubmit={handleLogin} className="space-y-5">
             {error && (
               <div className="bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-xl text-sm flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full pl-11 pr-3 py-3 border border-slate-700 bg-slate-950 text-white rounded-xl shadow-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm transition-all"
+                  className="appearance-none block w-full pl-11 pr-3 py-3 border border-slate-700 bg-slate-950 text-white rounded-xl shadow-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] focus:border-[#7AB5BD] text-sm transition-all"
                   placeholder="admin"
                 />
               </div>
@@ -91,7 +91,7 @@ export default function AdminLoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full pl-11 pr-10 py-3 border border-slate-700 bg-slate-950 text-white rounded-xl shadow-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm transition-all font-mono"
+                  className="appearance-none block w-full pl-11 pr-10 py-3 border border-slate-700 bg-slate-950 text-white rounded-xl shadow-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] focus:border-[#7AB5BD] text-sm transition-all font-mono"
                   placeholder="••••••••"
                 />
                 <button
@@ -113,7 +113,7 @@ export default function AdminLoginPage() {
             <div className="pt-2">
               <button
                 type="submit"
-                className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-semibold text-slate-950 bg-amber-500 hover:bg-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all cursor-pointer shadow-amber-500/10 hover:shadow-amber-500/20"
+                className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-semibold text-slate-950 bg-[#7AB5BD] hover:bg-[#8FC1C8] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#7AB5BD] transition-all cursor-pointer shadow-[#7AB5BD]/10 hover:shadow-[#7AB5BD]/20"
               >
                 เข้าสู่ระบบผู้ดูแลระบบ
                 <ArrowRight className="ml-2 h-4 w-4" />
