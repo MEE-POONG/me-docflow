@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Keep legacy form controls on the same emerald accent as the dashboard UI. */
+.create-document-form input:focus,
+.create-document-form select:focus,
+.create-document-form textarea:focus {
+  --tw-ring-color: rgb(16 185 129 / 0.25) !important;
+  border-color: rgb(16 185 129) !important;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -22,4 +30,49 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Admin Portal uses one consistent Thai/Latin typeface on every control. */
+.admin-sarabun,
+.admin-sarabun * {
+  font-family: var(--font-sarabun), "Sarabun", sans-serif !important;
+}
+
+/* Admin readability: increase sidebar, navbar, table, and form text by 2px. */
+.admin-sarabun :is(form, table) {
+  font-size: 18px;
+}
+
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table) .text-\[9px\],
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table).text-\[9px\] {
+  font-size: 11px !important;
+}
+
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table) .text-\[10px\],
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table).text-\[10px\] {
+  font-size: 12px !important;
+}
+
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table) .text-\[11px\],
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table).text-\[11px\] {
+  font-size: 13px !important;
+}
+
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table) .text-xs,
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table).text-xs {
+  font-size: 14px !important;
+}
+
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table) .text-sm,
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table).text-sm {
+  font-size: 16px !important;
+}
+
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table) .text-base,
+:is(.admin-sidebar, .admin-navbar, .admin-sarabun form, .admin-sarabun table).text-base {
+  font-size: 18px !important;
+}
+
+.admin-sarabun form :is(input, select, textarea, button):not(.text-xs):not(.text-sm):not(.text-base) {
+  font-size: 18px;
 }

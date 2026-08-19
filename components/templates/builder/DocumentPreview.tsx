@@ -11,9 +11,54 @@ import {
 type DocumentPreviewProps = {
   layoutJsonString: string | null
   dataOverride?: Record<string, any>
+  /** Shrinks the rendered page(s) to this fraction of native size — useful when embedding
+   *  in a compact space (e.g. a modal) where the template's own font sizes would otherwise
+   *  look oversized relative to the rest of the UI. Defaults to 1 (native size, used for
+   *  actual print output and the full-page preview route). */
+  scale?: number
 }
 
-export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPreviewProps) {
+/**
+ * Templates persist per-element text styling (fontSize, fontWeight, color, textAlign)
+ * as sibling fields on the element, not nested under `element.style` — the shared
+ * DesignerElement type only declares `style`, which is always undefined in real data.
+ */
+type StyledDesignerElement = DesignerElement & {
+  fontFamily?: string
+  fontSize?: number | string
+  fontWeight?: string | number
+  color?: string
+  textAlign?: CSSProperties['textAlign']
+  tableColumns?: { label: string; field: string; width?: number; align?: 'left' | 'center' | 'right' }[]
+  tableData?: string[][]
+  tableHeaderBold?: boolean
+  tableHeaderBg?: string
+  tableShowTotalRow?: boolean
+  tableTotalLabel?: string
+}
+
+const tableCellStyle: CSSProperties = {
+  border: '1px solid #000',
+  padding: '4px 6px',
+  textAlign: 'left',
+}
+
+function tableCellValue(field: string, item: any, idx: number) {
+  switch (field) {
+    case 'index':
+      return idx + 1
+    case 'total':
+      return (Number(item.qty || 0) * Number(item.unitPrice || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    case 'unitPrice':
+      return Number(item.unitPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    default:
+      return item[field] ?? '-'
+  }
+}
+
+const RIGHT_ALIGNED_FIELDS = new Set(['qty', 'unitPrice', 'total'])
+
+export function DocumentPreview({ layoutJsonString, dataOverride, scale = 1 }: DocumentPreviewProps) {
   if (!layoutJsonString) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 flex items-center justify-center min-h-[400px]">
@@ -22,7 +67,7 @@ export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPrev
     )
   }
 
-  let layoutData: { pages: DesignerPage[], elements: DesignerElement[] } | null = null
+  let layoutData: { pages: DesignerPage[], elements: StyledDesignerElement[] } | null = null
   try {
     layoutData = JSON.parse(layoutJsonString)
   } catch (e) {
@@ -47,33 +92,44 @@ export function DocumentPreview({ layoutJsonString, dataOverride }: DocumentPrev
     : [{ id: 'default-page', width: 595, height: 842, background: '#ffffff' } as DesignerPage];
 
   return (
-    <div className="flex flex-col items-center gap-8 py-8 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-auto p-4 border border-gray-200 dark:border-gray-800">
+    <div className={`flex flex-col items-center py-4 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-auto p-4 border border-gray-200 dark:border-gray-800 ${scale < 1 ? 'gap-4' : 'gap-8'}`}>
       {pages.map(page => (
-        <div 
+        <div
           key={page.id}
-          className="relative bg-white shadow-md overflow-hidden"
-          style={{
-            width: `${page.width}px`,
-            height: `${page.height}px`,
-            background: page.background || '#ffffff'
-          }}
+          style={{ width: page.width * scale, height: page.height * scale }}
         >
-          {(layoutData?.elements || []).filter(el => !el.pageId || el.pageId === page.id).map(element => (
-            <ElementView key={element.id} element={element} dataOverride={dataOverride} />
-          ))}
+          <div
+            className="relative bg-white shadow-md overflow-hidden"
+            style={{
+              width: `${page.width}px`,
+              height: `${page.height}px`,
+              background: page.background || '#ffffff',
+              transform: scale !== 1 ? `scale(${scale})` : undefined,
+              transformOrigin: 'top left',
+            }}
+          >
+            {(layoutData?.elements || []).filter(el => !el.pageId || el.pageId === page.id).map(element => (
+              <ElementView key={element.id} element={element} dataOverride={dataOverride} />
+            ))}
+          </div>
         </div>
       ))}
     </div>
   )
 }
 
-function ElementView({ element, dataOverride }: { element: DesignerElement, dataOverride?: Record<string, any> }) {
+function ElementView({ element, dataOverride }: { element: StyledDesignerElement, dataOverride?: Record<string, any> }) {
   const baseStyle: CSSProperties = {
     position: 'absolute',
     left: `${element.x}px`,
     top: `${element.y}px`,
     width: `${element.width}px`,
     height: `${element.height}px`,
+    fontFamily: `"${element.fontFamily ?? 'TH SarabunPSK'}", "Sarabun", sans-serif`,
+    ...(element.fontSize !== undefined && { fontSize: typeof element.fontSize === 'number' ? `${element.fontSize}px` : element.fontSize }),
+    ...(element.fontWeight !== undefined && { fontWeight: element.fontWeight }),
+    ...(element.color !== undefined && { color: element.color }),
+    ...(element.textAlign !== undefined && { textAlign: element.textAlign }),
     ...element.style
   }
 
@@ -97,12 +153,112 @@ function ElementView({ element, dataOverride }: { element: DesignerElement, data
       return <div style={{ ...baseStyle, border: '1px solid #000' }} />
     case 'line':
       return <div style={{ ...baseStyle, backgroundColor: '#000' }} />
-    case 'table':
+    case 'table': {
+      const items = Array.isArray(dataToUse.items) ? dataToUse.items : []
+      const columns = element.tableColumns
+      const importedRows = element.tableData
+      const tableStyle: CSSProperties = { fontSize: '12px', ...baseStyle, height: 'auto', minHeight: `${element.height}px`, borderCollapse: 'collapse' }
+      if (importedRows && columns && columns.length > 0) {
+        return (
+          <table style={{ ...tableStyle, tableLayout: 'fixed' }}>
+            <thead><tr>{columns.map((col, i) => <th key={i} style={{ ...tableCellStyle, width: col.width ? `${col.width}px` : undefined, background: '#f3f4f6', fontWeight: 'bold' }}>{col.label}</th>)}</tr></thead>
+            <tbody>{importedRows.map((row, r) => <tr key={r}>{columns.map((col, c) => <td key={c} style={{ ...tableCellStyle, width: col.width ? `${col.width}px` : undefined }}>{row[c] ?? ''}</td>)}</tr>)}</tbody>
+          </table>
+        )
+      }
+      if (items.length === 0) {
+        return (
+          <div style={{ ...baseStyle, border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {content}
+          </div>
+        )
+      }
+      if (columns && columns.length > 0) {
+        // Table designed with explicit columns/headers — render exactly as configured,
+        // including each column's own width/alignment and the header's bold/background style.
+        const hasWidths = columns.some(c => c.width)
+        return (
+          <table style={{ ...tableStyle, tableLayout: hasWidths ? 'fixed' : 'auto' }}>
+            <thead>
+              <tr>
+                {columns.map((col, i) => (
+                  <th
+                    key={i}
+                    style={{
+                      ...tableCellStyle,
+                      width: col.width ? `${col.width}px` : undefined,
+                      textAlign: col.align ?? 'left',
+                      fontWeight: (element.tableHeaderBold ?? true) ? 'bold' : 'normal',
+                      background: element.tableHeaderBg ?? '#f3f4f6',
+                    }}
+                  >
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item: any, idx: number) => (
+                <tr key={idx}>
+                  {columns.map((col, i) => (
+                    <td
+                      key={i}
+                      style={{
+                        ...tableCellStyle,
+                        width: col.width ? `${col.width}px` : undefined,
+                        textAlign: col.align ?? (RIGHT_ALIGNED_FIELDS.has(col.field) ? 'right' : 'left'),
+                      }}
+                    >
+                      {tableCellValue(col.field, item, idx)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {(element.tableShowTotalRow ?? false) && (
+                <tr>
+                  <td
+                    colSpan={Math.max(1, columns.length - 1)}
+                    style={{ ...tableCellStyle, fontWeight: 'bold', textAlign: 'right' }}
+                  >
+                    {element.tableTotalLabel || 'ยอดสุทธิ'}
+                  </td>
+                  <td
+                    style={{
+                      ...tableCellStyle,
+                      fontWeight: 'bold',
+                      width: columns[columns.length - 1]?.width ? `${columns[columns.length - 1].width}px` : undefined,
+                      textAlign: columns[columns.length - 1]?.align ?? 'right',
+                    }}
+                  >
+                    {dataToUse.total_amount ?? '-'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )
+      }
+
+      // Legacy tables (saved before column config existed) have no header info of
+      // their own — the template's design already draws the header as a separate
+      // static element, so only the data rows are rendered here to avoid duplicating it.
       return (
-        <div style={{ ...baseStyle, border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {content}
-        </div>
+        <table style={tableStyle}>
+          <tbody>
+            {items.map((item: any, idx: number) => (
+              <tr key={idx}>
+                <td style={tableCellStyle}>{idx + 1}</td>
+                <td style={tableCellStyle}>{item.name || '-'}</td>
+                <td style={{ ...tableCellStyle, textAlign: 'right' }}>{item.qty ?? '-'}</td>
+                <td style={tableCellStyle}>{item.unit || '-'}</td>
+                <td style={{ ...tableCellStyle, textAlign: 'right' }}>{Number(item.unitPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td style={{ ...tableCellStyle, textAlign: 'right' }}>{(Number(item.qty || 0) * Number(item.unitPrice || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )
+    }
     default:
       return <div style={baseStyle}>{content}</div>
   }

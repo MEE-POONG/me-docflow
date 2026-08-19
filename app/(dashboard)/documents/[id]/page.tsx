@@ -4,15 +4,18 @@ import Link from 'next/link'
 import { ArrowLeft, Calendar, FileText, User, CheckCircle2, XCircle, Clock, FileCheck, Printer } from 'lucide-react'
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
-import { PrintHelper, PrintActions } from './PrintHelper'
+import { PreviewActions, PrintHelper, PrintActions } from './PrintHelper'
+import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
+import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 
 const prisma = new PrismaClient()
 
-export default async function DocumentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ print?: string, templateId?: string }> }) {
+export default async function DocumentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ print?: string, preview?: string, templateId?: string }> }) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const documentId = resolvedParams.id;
   const isPrint = resolvedSearchParams.print === 'true';
+  const isPreview = resolvedSearchParams.preview === 'true';
   const selectedTemplateId = resolvedSearchParams.templateId;
 
   const document = await prisma.document.findUnique({
@@ -22,6 +25,7 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
       category: true,
       documentType: true,
       template: true,
+      company: true,
     }
   })
 
@@ -33,61 +37,78 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
     orderBy: { createdAt: 'desc' }
   });
 
-  const activeTemplate = selectedTemplateId 
+  const activeTemplate = selectedTemplateId
     ? templates.find(t => t.id === selectedTemplateId)
     : document.template;
+
+  const layoutData = activeTemplate?.layoutJson as { pages?: unknown[], elements?: unknown[] } | null | undefined
+  const hasLayout = Boolean(layoutData && ((layoutData.pages?.length ?? 0) > 0 || (layoutData.elements?.length ?? 0) > 0))
+
+  if ((isPrint || isPreview) && hasLayout && activeTemplate) {
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
+        {isPrint ? <PrintHelper /> : <PreviewActions />}
+        <div className="print-section mx-auto py-6 print:py-0">
+          <DocumentPreview
+            layoutJsonString={JSON.stringify(activeTemplate.layoutJson)}
+            dataOverride={mapDocumentToTemplateData(document, document.company, document.createdBy)}
+          />
+        </div>
+      </div>
+    )
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'APPROVED':
-        return <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"><CheckCircle2 className="w-4 h-4" /> อนุมัติแล้ว</span>
+        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"><CheckCircle2 className="w-3.5 h-3.5" /> อนุมัติแล้ว</span>
       case 'REJECTED':
-        return <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"><XCircle className="w-4 h-4" /> ไม่อนุมัติ</span>
+        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"><XCircle className="w-3.5 h-3.5" /> ไม่อนุมัติ</span>
       case 'PENDING':
-        return <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"><Clock className="w-4 h-4" /> รออนุมัติ</span>
+        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"><Clock className="w-3.5 h-3.5" /> รออนุมัติ</span>
       default:
-        return <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">ฉบับร่าง</span>
+        return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">ฉบับร่าง</span>
     }
   }
 
   return (
-    <div className={`max-w-[1200px] mx-auto pb-20 p-4 md:p-6 lg:p-8 ${isPrint ? 'print-section' : ''}`}>
+    <div className={`max-w-7xl mx-auto pb-20 p-2 md:p-6 ${isPrint ? 'print-section' : ''}`}>
       {isPrint && <PrintHelper />}
-      <div className="mb-6 flex items-center justify-between no-print">
-        <Link href="/documents" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors bg-white dark:bg-gray-900 px-4 py-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 no-print">
+        <Link href="/documents" className="inline-flex h-10 items-center gap-2 px-4 text-sm font-medium text-gray-600 hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm transition-colors">
           <ArrowLeft className="w-4 h-4" /> กลับหน้ารายการ
         </Link>
-        
+
         <PrintActions templates={templates} currentTemplateId={selectedTemplateId || document.templateId} documentId={document.id} />
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <div className="p-6 md:p-8 border-b border-gray-200 dark:border-gray-800 flex flex-col md:flex-row md:items-start justify-between gap-6">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="p-5 md:p-6 border-b border-gray-200 dark:border-gray-800">
           <div>
-            <div className="flex flex-wrap items-center gap-3 mb-4 no-print">
-              <span className="px-3 py-1 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400 rounded-lg text-sm font-bold tracking-wider border border-indigo-200 dark:border-indigo-800">
+            <div className="flex flex-wrap items-center gap-2 mb-3 no-print">
+              <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 rounded-md text-xs font-semibold border border-emerald-200 dark:border-emerald-800">
                 {document.documentNo}
               </span>
               {getStatusBadge(document.status)}
-              <span className="px-3 py-1 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-lg text-sm font-medium">
+              <span className="px-2.5 py-1 bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-md text-xs font-medium">
                 หมวดหมู่: {document.category?.name || '-'}
               </span>
             </div>
 
-            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mb-4">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-4">
               {document.title}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-3.5 rounded-lg border border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-white dark:bg-gray-800 rounded-md shadow-sm">
-                  <FileText className="w-4 h-4 text-indigo-500" />
+                  <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <span className="font-medium">ประเภท/เทมเพลต:</span> {activeTemplate?.name || document.documentType?.name || '-'}
               </div>
               <div className="flex items-center gap-2">
                 <div className="p-1.5 bg-white dark:bg-gray-800 rounded-md shadow-sm">
-                  <User className="w-4 h-4 text-blue-500" />
+                  <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <span className="font-medium">ผู้สร้าง:</span> {document.createdBy?.name || '-'}
               </div>
@@ -101,11 +122,11 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
           </div>
         </div>
 
-        <div className="p-6 md:p-8 bg-gray-50 dark:bg-gray-800/30">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-8 min-h-[500px] shadow-sm">
+        <div className="p-4 md:p-6 bg-gray-50 dark:bg-gray-800/30">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-5 md:p-6 min-h-[500px] shadow-sm">
             <div className="mb-6 pb-6 border-b border-gray-100 dark:border-gray-800">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                <FileCheck className="w-5 h-5 text-indigo-500" />
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                <FileCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 รายละเอียดเอกสาร
               </h3>
 
@@ -137,7 +158,7 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
                           <div>
                             <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">ข้อมูลลูกค้า / ผู้ติดต่อ</h4>
                             <div className="space-y-2">
-                              <p className="font-bold text-lg text-[#38A1C5]">{data.partnerName || '-'}</p>
+                              <p className="font-semibold text-base text-emerald-600 dark:text-emerald-400">{data.partnerName || '-'}</p>
                               <p className="text-gray-600 dark:text-gray-400 leading-relaxed max-w-sm">{data.address || '-'}</p>
                               {data.taxId && <p className="text-gray-600 dark:text-gray-400 mt-2"><span className="font-medium text-gray-500">เลขประจำตัวผู้เสียภาษี:</span> {data.taxId}</p>}
                               {data.branch && <p className="text-gray-600 dark:text-gray-400"><span className="font-medium text-gray-500">สาขา:</span> {data.branch}</p>}
@@ -173,7 +194,7 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
                         {/* Line Items */}
                         <div className="overflow-x-auto">
                           <table className="w-full text-left text-sm">
-                            <thead className="bg-[#38A1C5]/10 dark:bg-[#38A1C5]/20 text-[#2C809E] dark:text-[#5ABBD8] border-b border-[#38A1C5]/20">
+                            <thead className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-b border-emerald-100 dark:border-emerald-900/50">
                               <tr>
                                 <th className="px-6 py-4 font-bold w-16 text-center">ลำดับ</th>
                                 <th className="px-6 py-4 font-bold">ชื่อสินค้า / รายละเอียด</th>
@@ -238,8 +259,8 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
                               </div>
                             )}
                             <div className="flex justify-between items-center text-lg pt-4 border-t border-gray-200 dark:border-gray-700 mt-2">
-                              <span className="font-bold text-[#38A1C5]">จำนวนเงินรวมทั้งสิ้น</span>
-                              <span className="font-bold text-[#38A1C5]">{(data.grandTotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400">จำนวนเงินรวมทั้งสิ้น</span>
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400">{(data.grandTotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                           </div>
                         </div>

@@ -40,7 +40,7 @@ export default function AdminLogsPage() {
 
   // Filter logs based on search and type filter
   const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.action.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch = log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           log.timestamp.includes(searchTerm);
     const matchesType = filterType === "all" || log.type === filterType;
@@ -52,7 +52,7 @@ export default function AdminLogsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">Audit Trails</p>
+          <p className="text-[11px] font-bold text-[#5C98A1] dark:text-[#7AB5BD] uppercase tracking-wider mb-1">Audit Trails</p>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-serif">บันทึกกิจกรรมระบบ</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">ตรวจสอบและสืบค้นประวัติกิจกรรม กิจกรรมความปลอดภัย และประวัติธุรกรรมทั้งหมดของแอปพลิเคชัน</p>
         </div>
@@ -83,7 +83,7 @@ export default function AdminLogsPage() {
             placeholder="ค้นหาข้อความกิจกรรม หรือบัญชีผู้กระทำ..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200"
+            className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#7AB5BD] transition-colors duration-200"
           />
         </div>
 
@@ -100,7 +100,7 @@ export default function AdminLogsPage() {
               onClick={() => setFilterType(type.id)}
               className={`px-4 py-2 rounded-xl transition-all cursor-pointer font-semibold font-sans border ${
                 filterType === type.id
-                  ? "bg-amber-500 text-slate-950 border-amber-500 shadow-sm"
+                  ? "bg-[#7AB5BD] text-slate-950 border-[#7AB5BD] shadow-sm"
                   : "bg-gray-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border-gray-200 dark:border-slate-850 hover:bg-gray-100 dark:hover:bg-slate-800"
               }`}
             >
@@ -122,7 +122,7 @@ export default function AdminLogsPage() {
                 <th className="py-3.5 px-6">กิจกรรม / คำสั่งประมวลผล</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150 dark:divide-slate-800 font-mono">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-mono">
               {filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="text-center py-12 text-slate-450 dark:text-slate-500 font-sans">
@@ -134,8 +134,8 @@ export default function AdminLogsPage() {
                   <tr key={log.id} className="hover:bg-gray-50/60 dark:hover:bg-slate-800/10 transition-colors">
                     <td className="py-4 px-6">
                       {log.type === "security" ? (
-                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 px-2.5 py-1 rounded-full font-sans">
-                          <ShieldAlert className="w-3.5 h-3.5 text-amber-550 dark:text-amber-500" />
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-[#5C98A1] dark:text-[#7AB5BD] bg-[#F3F8F9] dark:bg-[#7AB5BD]/10 border border-[#E4F0F2] dark:border-[#7AB5BD]/20 px-2.5 py-1 rounded-full font-sans">
+                          <ShieldAlert className="w-3.5 h-3.5 text-[#6AA7B0] dark:text-[#7AB5BD]" />
                           Security
                         </span>
                       ) : log.type === "warning" ? (

@@ -1,17 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Package, 
-  Search, 
-  Edit2, 
-  X, 
-  Save, 
-  CheckCircle2, 
-  DollarSign, 
-  Users, 
-  FileText, 
-  HardDrive 
+import {
+  Package,
+  Search,
+  Edit2,
+  X,
+  Save,
+  CheckCircle2,
+  DollarSign,
+  Users,
+  FileText,
+  HardDrive
 } from "lucide-react";
 
 interface PackageItem {
@@ -91,9 +91,9 @@ export default function AdminPackagesPage() {
     if (!name) return;
 
     if (editingPackage) {
-      const updated = packages.map(p => 
-        p.id === editingPackage.id 
-          ? { ...p, name, price: Number(price), billing, maxUsers, maxDocs, maxStorage } 
+      const updated = packages.map(p =>
+        p.id === editingPackage.id
+          ? { ...p, name, price: Number(price), billing, maxUsers, maxDocs, maxStorage }
           : p
       );
       saveToLocalStorage(updated, `อัปเดตข้อมูลแพ็กเกจบริการ "${name}" ราคา ${price} บาท/เดือน`);
@@ -107,7 +107,7 @@ export default function AdminPackagesPage() {
   return (
     <div className="space-y-6 font-light">
       <div>
-        <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">Pricing Configuration</p>
+        <p className="text-[11px] font-bold text-[#5C98A1] dark:text-[#7AB5BD] uppercase tracking-wider mb-1">Pricing Configuration</p>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-serif">จัดการแพ็กเกจระบบ</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">แก้ไขข้อมูลราคา ลิมิตจำนวนผู้ใช้ พื้นที่จัดเก็บเอกสาร และรายละเอียดสิทธิพิเศษของแต่ละแพ็กเกจ</p>
       </div>
@@ -123,7 +123,7 @@ export default function AdminPackagesPage() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 transition-colors duration-200">
           <div className="flex items-center justify-between pb-3 border-b border-gray-150 dark:border-slate-850">
             <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
-              <Package className="w-5 h-5 text-amber-550" />
+              <Package className="w-5 h-5 text-[#6AA7B0]" />
               แก้ไขรายละเอียดแผนบริการ (แอดมิน)
             </h3>
             <button onClick={() => setIsFormOpen(false)} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
@@ -138,7 +138,7 @@ export default function AdminPackagesPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                 />
               </div>
 
@@ -149,7 +149,7 @@ export default function AdminPackagesPage() {
                   required
                   value={price}
                   onChange={(e) => setPrice(Number(e.target.value))}
-                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] font-mono transition-colors duration-200"
                 />
               </div>
 
@@ -160,7 +160,7 @@ export default function AdminPackagesPage() {
                   required
                   value={maxUsers}
                   onChange={(e) => setMaxUsers(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-955 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-955 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                   placeholder="เช่น 10 คน"
                 />
               </div>
@@ -172,7 +172,7 @@ export default function AdminPackagesPage() {
                   required
                   value={maxDocs}
                   onChange={(e) => setMaxDocs(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                   placeholder="เช่น 500 ฉบับ"
                 />
               </div>
@@ -184,7 +184,7 @@ export default function AdminPackagesPage() {
                   required
                   value={maxStorage}
                   onChange={(e) => setMaxStorage(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                   placeholder="เช่น 20 GB"
                 />
               </div>
@@ -200,7 +200,7 @@ export default function AdminPackagesPage() {
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-1.5 px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-955 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer font-sans"
+                className="flex items-center gap-1.5 px-5 py-2 bg-[#7AB5BD] hover:bg-[#8FC1C8] text-slate-955 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer font-sans"
               >
                 <Save className="w-4 h-4" />
                 บันทึกการปรับแพ็กเกจ
@@ -213,13 +213,13 @@ export default function AdminPackagesPage() {
       {/* Package Listing */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {packages.map((pkg) => (
-          <div key={pkg.id} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:border-amber-300 dark:hover:border-amber-500/50 transition-all shadow-sm duration-200">
+          <div key={pkg.id} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:border-[#ADD1D6] dark:hover:border-[#7AB5BD]/50 transition-all shadow-sm duration-200">
             <div className="space-y-2">
               <div className="flex justify-between items-start">
-                <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-100 dark:border-amber-500/20">
+                <span className="p-2 rounded-xl bg-[#F3F8F9] dark:bg-[#7AB5BD]/10 text-[#5C98A1] dark:text-[#7AB5BD] border border-[#E4F0F2] dark:border-[#7AB5BD]/20">
                   <Package className="w-5 h-5" />
                 </span>
-                <button 
+                <button
                   onClick={() => handleOpenEdit(pkg)}
                   className="p-1.5 text-slate-400 dark:text-slate-550 hover:text-slate-700 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg cursor-pointer transition-colors"
                 >

@@ -8,7 +8,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSidebar } from "./SidebarContext";
 
 export default function Navbar() {
-  const [activeCompanyName, setActiveCompanyName] = useState("บริษัท สยาม รีเทล จำกัด (มหาชน)");
+  const [activeCompanyName, setActiveCompanyName] = useState("บริษัท ของคุณ จำกัด");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -87,23 +87,49 @@ export default function Navbar() {
       const saved = localStorage.getItem("me_docflow_companies");
       const userStr = localStorage.getItem("me_docflow_current_user");
       let currentEmail = "melisara@siamretail.co.th";
+      let currentCompanyId = "";
+      let registeredCompanyName = "";
       if (userStr) {
         try {
           const u = JSON.parse(userStr);
           if (u.email) currentEmail = u.email;
+          if (u.companyId) currentCompanyId = u.companyId;
+          if (u.companyName) registeredCompanyName = u.companyName;
         } catch (e) {}
       }
 
       if (saved) {
         try {
           const list = JSON.parse(saved);
-          const userCompanies = list.filter((c: any) => c.ownerEmail === currentEmail);
+          const userCompanies = list.filter((c: any) =>
+            (currentCompanyId && c.id === currentCompanyId) || c.ownerEmail === currentEmail
+          ).map((c: any) => ({
+            ...c,
+            companyName: currentCompanyId && c.id === currentCompanyId && registeredCompanyName
+              ? registeredCompanyName
+              : c.companyName,
+          }));
           setCompanies(userCompanies);
-          const active = list.find((c: any) => c.isActive);
+          const active = userCompanies.find((c: any) => c.isActive) || userCompanies[0];
           if (active) {
-            setActiveCompanyName(active.companyName);
+            setActiveCompanyName(
+              currentCompanyId && active.id === currentCompanyId && registeredCompanyName
+                ? registeredCompanyName
+                : active.companyName
+            );
+            return;
           }
         } catch (e) {}
+      }
+
+      if (registeredCompanyName) {
+        setActiveCompanyName(registeredCompanyName);
+        setCompanies([{
+          id: currentCompanyId,
+          companyName: registeredCompanyName,
+          ownerEmail: currentEmail,
+          isActive: true,
+        }]);
       }
     };
 

@@ -194,11 +194,11 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
       {/* Back */}
       <div className="mb-6">
         <Link
-          href="/templates"
+          href="/doc-format"
           className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          กลับไปรายการ Template
+          กลับไปรายการแบบเอกสาร
         </Link>
       </div>
 
@@ -225,7 +225,7 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
             {template.templateMode === 'DESIGNER' && (
               <Link
                 href={`/doc-format/${template.id}/designer`}
-                className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
               >
                 <Paintbrush2 className="w-4 h-4" />
                 Document Designer
@@ -368,9 +368,9 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
       {/* Field Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+            <div className="flex shrink-0 items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 z-10">
               <div>
                 <h2 className="text-lg font-bold text-gray-800 dark:text-white">
                   {editingFieldId ? 'แก้ไขฟิลด์' : 'เพิ่มฟิลด์ใหม่'}
@@ -387,7 +387,7 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="min-h-0 overflow-y-auto p-6 space-y-5">
               {/* Field Type selector */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">

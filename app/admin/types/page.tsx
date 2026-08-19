@@ -104,9 +104,9 @@ export default function AdminDocumentTypesPage() {
         });
         logAdminAction(`เพิ่มประเภทเอกสารใหม่ "${name}" (คำนำหน้า: ${prefix.toUpperCase()})`);
       }
-      
+
       await fetchCategoriesAndTypes();
-      
+
       setIsFormOpen(false);
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
@@ -135,14 +135,14 @@ export default function AdminDocumentTypesPage() {
     <div className="space-y-6 font-light">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">Document Presets</p>
+          <p className="text-[11px] font-bold text-[#5C98A1] dark:text-[#7AB5BD] uppercase tracking-wider mb-1">Document Presets</p>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-serif">ประเภทเอกสารของระบบ</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">กำหนดชนิดของเอกสาร คำนำหน้า (Prefix) และจัดกลุ่มเอกสารให้อยู่ภายใต้หมวดหมู่หลักทางธุรกิจ</p>
         </div>
         <div>
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-955 font-bold py-3 px-5 rounded-xl shadow-md transition-colors cursor-pointer text-xs font-sans"
+            className="flex items-center gap-2 bg-[#7AB5BD] hover:bg-[#6AA7B0] text-white font-bold py-3 px-5 rounded-xl shadow-md transition-colors cursor-pointer text-xs font-sans"
           >
             <Plus className="w-4 h-4" />
             เพิ่มประเภทเอกสาร
@@ -167,25 +167,25 @@ export default function AdminDocumentTypesPage() {
               placeholder="ค้นหาตามชื่อ หรือ Prefix..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200"
+              className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#7AB5BD] transition-colors duration-200"
             />
           </div>
-          
+
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="w-full sm:w-56 bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200 cursor-pointer"
+            className="w-full sm:w-56 bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#7AB5BD] transition-colors duration-200 cursor-pointer"
           >
             <option value="ALL">ทุกหมวดหมู่ (All Categories)</option>
             {categories.map(c => (
               <option key={c.code} value={c.code}>[{c.code}] {c.name}</option>
             ))}
           </select>
-          
+
           <select
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
-            className="w-full sm:w-48 bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors duration-200 cursor-pointer"
+            className="w-full sm:w-48 bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#7AB5BD] transition-colors duration-200 cursor-pointer"
           >
             <option value="asc">เรียงหมวดหมู่ (A-Z)</option>
             <option value="desc">เรียงหมวดหมู่ (Z-A)</option>
@@ -200,7 +200,7 @@ export default function AdminDocumentTypesPage() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-xl p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 transition-colors duration-200">
           <div className="flex items-center justify-between pb-3 border-b border-gray-150 dark:border-slate-850">
             <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
-              <FileCode className="w-5 h-5 text-amber-550" />
+              <FileCode className="w-5 h-5 text-[#6AA7B0]" />
               {editingType ? "แก้ไขข้อมูลประเภทเอกสาร" : "เพิ่มประเภทเอกสารใหม่"}
             </h3>
             <button onClick={() => setIsFormOpen(false)} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
@@ -215,7 +215,7 @@ export default function AdminDocumentTypesPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-955 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-955 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-colors duration-200"
                   placeholder="เช่น ใบส่งมอบสินค้า (Delivery Order)"
                 />
               </div>
@@ -228,7 +228,7 @@ export default function AdminDocumentTypesPage() {
                   maxLength={5}
                   value={prefix}
                   onChange={(e) => setPrefix(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono uppercase transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] font-mono uppercase transition-colors duration-200"
                   placeholder="เช่น DO"
                 />
               </div>
@@ -238,7 +238,7 @@ export default function AdminDocumentTypesPage() {
                 <select
                   value={categoryCode}
                   onChange={(e) => setCategoryCode(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer font-sans transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] cursor-pointer font-sans transition-colors duration-200"
                 >
                   {categories.map((c) => (
                     <option key={c.code} value={c.code}>
@@ -254,7 +254,7 @@ export default function AdminDocumentTypesPage() {
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-sans transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] font-sans transition-colors duration-200"
                   placeholder="เช่น เอกสารสำหรับพนักงานจัดของส่งให้กับคู่ค้าปลายทาง"
                 />
               </div>
@@ -270,7 +270,7 @@ export default function AdminDocumentTypesPage() {
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-1.5 px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-955 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer font-sans"
+                className="flex items-center gap-1.5 px-5 py-2 bg-[#7AB5BD] hover:bg-[#8FC1C8] text-slate-955 rounded-xl text-xs font-bold shadow-sm transition-colors cursor-pointer font-sans"
               >
                 <Save className="w-4 h-4" />
                 บันทึกชนิดเอกสาร
@@ -293,7 +293,7 @@ export default function AdminDocumentTypesPage() {
                 <th className="py-3.5 px-6 text-right">จัดการ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150 dark:divide-slate-800">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="text-center py-12 text-slate-400 dark:text-slate-500">
@@ -305,11 +305,11 @@ export default function AdminDocumentTypesPage() {
                   <tr key={t.id} className="hover:bg-gray-50/60 dark:hover:bg-slate-800/20 transition-colors">
                     <td className="py-4 px-6 font-bold text-gray-900 dark:text-white">
                       <div className="flex items-center gap-2.5">
-                        <FileCode className="w-4 h-4 text-amber-550 shrink-0" />
+                        <FileCode className="w-4 h-4 text-[#6AA7B0] shrink-0" />
                         {t.name}
                       </div>
                     </td>
-                    <td className="py-4 px-6 font-mono text-amber-600 dark:text-amber-500 font-bold text-sm">
+                    <td className="py-4 px-6 font-mono text-[#5C98A1] dark:text-[#7AB5BD] font-bold text-sm">
                       {t.prefix}
                     </td>
                     <td className="py-4 px-6">
@@ -325,7 +325,7 @@ export default function AdminDocumentTypesPage() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleOpenEdit(t)}
-                          className="p-2 text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                          className="p-2 text-slate-400 dark:text-slate-500 hover:text-[#5C98A1] dark:hover:text-[#7AB5BD] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                           title="แก้ไขเอกสาร"
                         >
                           <Edit2 className="w-3.5 h-3.5" />

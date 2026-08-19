@@ -91,7 +91,7 @@ export default function AdminBusinessTypesPage() {
         await createAdminBusinessType({ label, value, isActive });
         logAdminAction(`เพิ่มประเภทธุรกิจใหม่ "${label}"`);
       }
-      
+
       await fetchTypes();
       setIsFormOpen(false);
     } catch (e: any) {
@@ -101,8 +101,8 @@ export default function AdminBusinessTypesPage() {
     }
   };
 
-  const filteredTypes = types.filter(t => 
-    t.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredTypes = types.filter(t =>
+    t.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.value.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -110,14 +110,14 @@ export default function AdminBusinessTypesPage() {
     <div className="space-y-6 font-light">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">Company Presets</p>
+          <p className="text-[11px] font-bold text-[#5C98A1] dark:text-[#7AB5BD] uppercase tracking-wider mb-1">Company Presets</p>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-serif">ประเภทธุรกิจ</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">จัดการประเภทธุรกิจที่ใช้สำหรับให้ลูกค้าเลือกระหว่างการลงทะเบียนบริษัท</p>
         </div>
         <div>
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 px-5 rounded-xl shadow-md transition-colors cursor-pointer text-xs font-sans"
+            className="flex items-center gap-2 bg-[#7AB5BD] hover:bg-[#6AA7B0] text-white font-bold py-3 px-5 rounded-xl shadow-md transition-colors cursor-pointer text-xs font-sans"
           >
             <Plus className="w-4 h-4" />
             เพิ่มประเภทธุรกิจ
@@ -134,13 +134,13 @@ export default function AdminBusinessTypesPage() {
               placeholder="ค้นหาชื่อหรือรหัสประเภทธุรกิจ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 transition-shadow"
+              className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] transition-shadow"
             />
           </div>
         </div>
-        
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left text-xs text-gray-600 dark:text-slate-350 border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-xs uppercase text-slate-500 dark:text-slate-400 font-bold tracking-wider">
                 <th className="p-4 pl-6">ชื่อประเภทธุรกิจ</th>
@@ -149,7 +149,7 @@ export default function AdminBusinessTypesPage() {
                 <th className="p-4 pr-6 text-right w-24">จัดการ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredTypes.length > 0 ? (
                 filteredTypes.map((t) => (
                   <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
@@ -157,15 +157,15 @@ export default function AdminBusinessTypesPage() {
                       <p className="font-semibold text-slate-900 dark:text-white">{t.label}</p>
                     </td>
                     <td className="p-4">
-                      <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded text-[11px] font-mono font-medium">{t.value}</span>
+                      <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-1 rounded text-xs font-mono font-medium">{t.value}</span>
                     </td>
                     <td className="p-4 text-center">
                       {t.isActive ? (
-                        <span className="inline-flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-full text-[11px] font-bold">
+                        <span className="inline-flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-full text-[10px] font-bold">
                           <CheckCircle size={12} /> ใช้งาน
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2.5 py-1 rounded-full text-[11px] font-bold">
+                        <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2.5 py-1 rounded-full text-[10px] font-bold">
                           <XCircle size={12} /> ปิดใช้งาน
                         </span>
                       )}
@@ -207,7 +207,7 @@ export default function AdminBusinessTypesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white font-serif">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 {editingType ? "แก้ไขประเภทธุรกิจ" : "เพิ่มประเภทธุรกิจใหม่"}
               </h3>
               <button
@@ -217,7 +217,7 @@ export default function AdminBusinessTypesPage() {
                 <X size={20} />
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
@@ -228,7 +228,7 @@ export default function AdminBusinessTypesPage() {
                   required
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl shadow-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl shadow-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#7AB5BD]"
                   placeholder="เช่น ร้านอาหาร / คาเฟ่"
                 />
               </div>
@@ -242,7 +242,7 @@ export default function AdminBusinessTypesPage() {
                   required
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl shadow-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                  className="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl shadow-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] font-mono"
                   placeholder="เช่น restaurant"
                 />
                 <p className="text-xs text-slate-500 mt-1.5">ภาษาอังกฤษตัวพิมพ์เล็ก ไม่มีเว้นวรรค สำหรับอ้างอิงในระบบ</p>
@@ -254,9 +254,9 @@ export default function AdminBusinessTypesPage() {
                   id="isActive"
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
-                  className="h-4 w-4 text-amber-500 rounded border-slate-300 focus:ring-amber-500"
+                  className="h-4 w-4 text-[#7AB5BD] rounded border-slate-300 focus:ring-[#7AB5BD]"
                 />
-                <label htmlFor="isActive" className="text-sm text-slate-700 dark:text-slate-300 font-semibold cursor-pointer">
+                <label htmlFor="isActive" className="text-xs text-slate-700 dark:text-slate-300 font-semibold cursor-pointer">
                   เปิดใช้งานทันที (แสดงในหน้าลงทะเบียน)
                 </label>
               </div>
@@ -265,14 +265,14 @@ export default function AdminBusinessTypesPage() {
                 <button
                   type="button"
                   onClick={() => setIsFormOpen(false)}
-                  className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-3 bg-amber-500 hover:bg-amber-400 disabled:bg-amber-300 text-slate-950 rounded-xl text-sm font-bold shadow-md transition-colors"
+                  className="flex-1 px-4 py-3 bg-[#7AB5BD] hover:bg-[#8FC1C8] disabled:bg-[#ADD1D6] text-slate-950 rounded-xl text-xs font-bold shadow-md transition-colors"
                 >
                   {isSubmitting ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
                 </button>

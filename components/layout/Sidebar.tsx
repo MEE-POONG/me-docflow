@@ -23,22 +23,40 @@ import { useSidebar } from "./SidebarContext";
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [activeCompanyName, setActiveCompanyName] = useState("บริษัท สยาม รีเทล จำกัด (มหาชน)");
+  const [activeCompanyName, setActiveCompanyName] = useState("บริษัท ของคุณ จำกัด");
   const { t } = useLanguage();
   const { isOpen, close, toggle } = useSidebar();
 
   useEffect(() => {
     const updateActiveCompany = () => {
       const saved = localStorage.getItem("me_docflow_companies");
+      const userStr = localStorage.getItem("me_docflow_current_user");
+      let currentCompanyId = "";
+      let registeredCompanyName = "";
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          currentCompanyId = user.companyId || "";
+          registeredCompanyName = user.companyName || "";
+        } catch (e) { }
+      }
       if (saved) {
         try {
           const list = JSON.parse(saved);
-          const active = list.find((c: any) => c.isActive);
+          const active = list.find((c: any) =>
+            c.isActive && (!currentCompanyId || c.id === currentCompanyId)
+          );
           if (active) {
-            setActiveCompanyName(active.companyName);
+            setActiveCompanyName(
+              currentCompanyId && active.id === currentCompanyId && registeredCompanyName
+                ? registeredCompanyName
+                : active.companyName
+            );
+            return;
           }
         } catch (e) { }
       }
+      if (registeredCompanyName) setActiveCompanyName(registeredCompanyName);
     };
 
     updateActiveCompany();
@@ -132,27 +150,6 @@ export default function Sidebar() {
             </div>
 
             {/* Template */}
-            <div className="pt-1">
-              <button
-                onClick={() => toggleMenu('template')}
-                className={`w-full flex items-center ${isOpen ? 'justify-between px-3' : 'justify-center px-0'} py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors`}
-                title={!isOpen ? t.sidebar.template : undefined}
-              >
-                <div className={`flex items-center ${isOpen ? 'gap-3' : 'justify-center'}`}>
-                  <LayoutTemplate size={20} className="text-gray-400 shrink-0" />
-                  {isOpen && <span className="text-sm font-medium truncate">{t.sidebar.template}</span>}
-                </div>
-                {isOpen && (
-                  expanded.template ? <ChevronDown size={14} className="text-gray-400 shrink-0" /> : <ChevronRight size={14} className="text-gray-400 shrink-0" />
-                )}
-              </button>
-              {isOpen && expanded.template && (
-                <div className="pl-11 pr-3 py-1 space-y-1">
-                  <Link href="/templates" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.allTemplates}</Link>
-                  {/* <Link href="/templates" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.createTemplate}</Link> */}
-                </div>
-              )}
-            </div>
 
             {/* Company Data */}
             <div className="pt-1">

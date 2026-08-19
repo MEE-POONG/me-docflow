@@ -145,15 +145,15 @@ export async function updateAdminCategory(id: string, data: { name: string; code
 export async function deleteAdminCategory(id: string) {
   // Find all global templates in this category
   const templates = await prisma.documentTemplate.findMany({ where: { categoryId: id, isGlobal: true } });
-  
+
   // Delete template fields for those templates
   for (const t of templates) {
     await prisma.templateField.deleteMany({ where: { templateId: t.id } });
   }
-  
+
   // Delete the templates
   await prisma.documentTemplate.deleteMany({ where: { categoryId: id, isGlobal: true } });
-  
+
   // Delete the document types
   await prisma.documentType.deleteMany({ where: { categoryId: id, isGlobal: true } });
 
@@ -260,7 +260,7 @@ export async function deleteAdminDocumentType(id: string) {
     const templateCount = await prisma.documentTemplate.count({
       where: { documentTypeId: id }
     });
-    
+
     if (templateCount > 0) {
       throw new Error("ไม่อนุญาตให้ลบประเภทเอกสาร เนื่องจากมีแบบฟอร์มเอกสารที่เชื่อมโยงอยู่");
     }

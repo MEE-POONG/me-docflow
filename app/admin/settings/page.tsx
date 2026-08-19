@@ -54,8 +54,8 @@ export default function AdminSettingsPage() {
 
   const handleToggleExtension = (ext: string) => {
     const current = settings.allowedExtensions;
-    const next = current.includes(ext) 
-      ? current.filter(x => x !== ext) 
+    const next = current.includes(ext)
+      ? current.filter(x => x !== ext)
       : [...current, ext];
     setSettings({ ...settings, allowedExtensions: next });
   };
@@ -64,7 +64,7 @@ export default function AdminSettingsPage() {
     <div className="space-y-6 font-light">
       {/* Header */}
       <div>
-        <p className="text-[11px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-wider mb-1">System Configurations</p>
+        <p className="text-[11px] font-bold text-[#5C98A1] dark:text-[#7AB5BD] uppercase tracking-wider mb-1">System Configurations</p>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-serif">ตั้งค่าระบบส่วนกลาง</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">ควบคุมและกำหนดนโยบายความปลอดภัย ลิมิตขนาดการจัดเก็บข้อมูล และสลับสถานะการปิดปรับปรุงแอปพลิเคชัน</p>
       </div>
@@ -78,11 +78,11 @@ export default function AdminSettingsPage() {
       )}
 
       <form onSubmit={handleSave} className="space-y-6">
-        
+
         {/* Basic Config */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors duration-200">
-          <div className="p-5 border-b border-gray-150 dark:border-slate-850 bg-gray-50/50 dark:bg-slate-950/30 flex items-center gap-3">
-            <Cpu className="w-5 h-5 text-amber-550" />
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors duration-200">
+          <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-950/30 flex items-center gap-3">
+            <Cpu className="w-5 h-5 text-[#6AA7B0]" />
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-sm">ข้อมูลพื้นฐานของซอฟต์แวร์</h3>
               <p className="text-[10px] text-slate-450 dark:text-slate-500">จัดการข้อมูลและเวอร์ชันที่แสดงบนหน้าระบบหลัก</p>
@@ -96,7 +96,7 @@ export default function AdminSettingsPage() {
                 required
                 value={settings.systemName}
                 onChange={(e) => setSettings({ ...settings, systemName: e.target.value })}
-                className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-955 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-sans transition-colors duration-200"
+                className="w-full bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-955 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] font-sans transition-colors duration-200"
               />
             </div>
             <div>
@@ -106,16 +106,16 @@ export default function AdminSettingsPage() {
                 required
                 value={settings.systemVersion}
                 onChange={(e) => setSettings({ ...settings, systemVersion: e.target.value })}
-                className="w-full bg-white dark:bg-slate-955 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono transition-colors duration-200"
+                className="w-full bg-white dark:bg-slate-955 border border-gray-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] font-mono transition-colors duration-200"
               />
             </div>
           </div>
         </div>
 
         {/* Storage & Limits */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors duration-200">
-          <div className="p-5 border-b border-gray-150 dark:border-slate-850 bg-gray-50/50 dark:bg-slate-955/30 flex items-center gap-3">
-            <HardDrive className="w-5 h-5 text-amber-555" />
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors duration-200">
+          <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-955/30 flex items-center gap-3">
+            <HardDrive className="w-5 h-5 text-[#6AA7B0]" />
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-sm">ลิมิตขนาดและอัปโหลดไฟล์</h3>
               <p className="text-[10px] text-slate-450 dark:text-slate-500">จำกัดขนาดไฟล์เอกสารแนบและตรวจสอบประเภทไฟล์ที่ยอมรับ</p>
@@ -128,7 +128,7 @@ export default function AdminSettingsPage() {
                 <select
                   value={settings.maxUploadSize}
                   onChange={(e) => setSettings({ ...settings, maxUploadSize: e.target.value })}
-                  className="w-full bg-white dark:bg-slate-950 border border-gray-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-sans cursor-pointer transition-colors duration-200"
+                  className="w-full bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-gray-950 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#7AB5BD] font-sans cursor-pointer transition-colors duration-200"
                 >
                   <option value="10MB">10 เมกะไบต์ (10MB)</option>
                   <option value="20MB">20 เมกะไบต์ (20MB)</option>
@@ -148,7 +148,7 @@ export default function AdminSettingsPage() {
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggleExtension(ext)}
-                          className="h-4 w-4 text-amber-550 focus:ring-amber-550 border-gray-300 dark:border-slate-800 bg-white dark:bg-slate-950 rounded mr-2"
+                          className="h-4 w-4 text-[#6AA7B0] focus:ring-[#6AA7B0] border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950 rounded mr-2"
                         />
                         {ext.toUpperCase()}
                       </label>
@@ -161,19 +161,19 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Maintenance & Security */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden shadow-sm transition-colors duration-200">
-          <div className="p-5 border-b border-gray-150 dark:border-slate-850 bg-gray-50/50 dark:bg-slate-955/30 flex items-center gap-3">
-            <ShieldCheck className="w-5 h-5 text-amber-550" />
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors duration-200">
+          <div className="p-5 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-955/30 flex items-center gap-3">
+            <ShieldCheck className="w-5 h-5 text-[#6AA7B0]" />
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-sm">โหมดซ่อมบำรุงและความปลอดภัยระบบ</h3>
               <p className="text-[10px] text-slate-450 dark:text-slate-500">เปิดระบบปิดเซิร์ฟเวอร์ชั่วคราวสำหรับการอัปเดตระบบฐานข้อมูล</p>
             </div>
           </div>
           <div className="p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-slate-950 border border-gray-205 dark:border-slate-850 gap-4 transition-colors duration-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-800 gap-4 transition-colors duration-200">
               <div>
                 <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 font-sans">
-                  <ShieldAlert className="w-3.5 h-3.5 text-amber-600 dark:text-amber-500 animate-pulse" />
+                  <ShieldAlert className="w-3.5 h-3.5 text-[#5C98A1] dark:text-[#7AB5BD] animate-pulse" />
                   เปิดการทำงานโหมดซ่อมบำรุง (Maintenance Mode)
                 </h4>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-sans">
@@ -185,7 +185,7 @@ export default function AdminSettingsPage() {
                   type="button"
                   onClick={() => setSettings({ ...settings, maintenanceMode: !settings.maintenanceMode })}
                   className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${
-                    settings.maintenanceMode ? "bg-amber-500" : "bg-gray-300 dark:bg-slate-800"
+                    settings.maintenanceMode ? "bg-[#7AB5BD]" : "bg-gray-300 dark:bg-slate-800"
                   }`}
                 >
                   <div
@@ -203,7 +203,7 @@ export default function AdminSettingsPage() {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-955 font-bold py-3 px-6 rounded-xl shadow-md transition-colors cursor-pointer text-xs font-sans"
+            className="flex items-center gap-2 bg-[#7AB5BD] hover:bg-[#6AA7B0] text-white font-bold py-3 px-6 rounded-xl shadow-md transition-colors cursor-pointer text-xs font-sans"
           >
             <Save className="w-4 h-4" />
             บันทึกการตั้งค่าระบบแอดมิน
