@@ -17,7 +17,7 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
         <select 
           value={selected} 
           onChange={e => setSelected(e.target.value)}
-          className="h-10 min-w-52 px-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+          className="h-9 min-w-52 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/15 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
         >
           <option value="">-- รูปแบบมาตรฐาน --</option>
           {templates.map(t => (
@@ -33,7 +33,7 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
           url.searchParams.set('preview', 'true')
           window.open(url.toString(), '_blank', 'noopener,noreferrer')
         }}
-        className="inline-flex h-10 items-center gap-2 px-4 text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors shadow-sm dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-900/50"
+        className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-300 bg-white px-3.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
       >
         <Eye className="w-4 h-4" /> พรีวิวเอกสาร
       </button>
@@ -49,7 +49,7 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
           url.searchParams.set('print', 'true');
           window.location.href = url.toString();
         }}
-        className="inline-flex h-10 items-center gap-2 px-4 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 rounded-lg transition-colors shadow-sm"
+        className="inline-flex h-9 items-center gap-2 rounded-md bg-emerald-700 px-3.5 text-sm font-medium text-white transition-colors hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-600"
       >
         <Printer className="w-4 h-4" /> พิมพ์เอกสาร
       </button>

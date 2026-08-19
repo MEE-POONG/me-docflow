@@ -4,10 +4,10 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft, Plus, Edit2, Trash2, X, Loader2,
-  GripVertical, ChevronDown, ChevronUp, AlertCircle,
+  ChevronDown, ChevronUp, AlertCircle,
   Type, Hash, Calendar, AlignLeft, Image, Paperclip,
   Table2, List, CheckSquare, Circle, PenLine, ToggleLeft, DollarSign,
-  Clock, Paintbrush2,
+  Clock,
 } from 'lucide-react';
 import {
   createTemplateField,
@@ -190,12 +190,12 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8">
+    <div className="max-w-6xl mx-auto py-6 space-y-5">
       {/* Back */}
-      <div className="mb-6">
+      <div>
         <Link
           href="/doc-format"
-          className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           กลับไปรายการแบบเอกสาร
@@ -203,9 +203,9 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
       </div>
 
       {/* Template Info Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6 mb-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div>
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px]">
+          <div className="p-6">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-wider">
                 Template
@@ -214,10 +214,10 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
                   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                   : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                 }`}>
-                {template.isActive ? 'Active' : 'Inactive'}
+                {template.isActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
               </span>
             </div>
-            <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-1">{template.name}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{template.name}</h1>
             {template.description && (
               <p className="text-sm text-gray-500 dark:text-gray-400">{template.description}</p>
             )}
@@ -225,36 +225,38 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
             {template.templateMode === 'DESIGNER' && (
               <Link
                 href={`/doc-format/${template.id}/designer`}
-                className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                className="inline-flex items-center mt-4 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
               >
-                <Paintbrush2 className="w-4 h-4" />
                 Document Designer
               </Link>
             )}
           </div>
-          <div className="shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 space-y-1">
-            <p><span className="font-medium text-gray-600 dark:text-gray-300">หมวดหมู่:</span> {template.category.name}</p>
-            <p><span className="font-medium text-gray-600 dark:text-gray-300">ประเภท:</span> {template.documentType.name}</p>
-            <p><span className="font-medium text-gray-600 dark:text-gray-300">Mode:</span> {MODE_LABELS[template.templateMode]}</p>
-            <p><span className="font-medium text-gray-600 dark:text-gray-300">กระดาษ:</span> {template.paperSize} · {template.orientation === 'PORTRAIT' ? 'แนวตั้ง' : 'แนวนอน'}</p>
-            <p><span className="font-medium text-gray-600 dark:text-gray-300">Version:</span> {template.version}</p>
+          <div className="bg-gray-50/70 dark:bg-slate-800/40 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-slate-800 p-6">
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">ข้อมูลแบบเอกสาร</h2>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between gap-4"><dt className="text-gray-500 dark:text-gray-400">หมวดหมู่</dt><dd className="font-medium text-gray-900 dark:text-gray-100 text-right">{template.category.name}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-gray-500 dark:text-gray-400">ประเภทเอกสาร</dt><dd className="font-medium text-gray-900 dark:text-gray-100 text-right">{template.documentType.name}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-gray-500 dark:text-gray-400">โหมดการสร้าง</dt><dd className="font-medium text-gray-900 dark:text-gray-100">{MODE_LABELS[template.templateMode]}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-gray-500 dark:text-gray-400">ขนาดกระดาษ</dt><dd className="font-medium text-gray-900 dark:text-gray-100">{template.paperSize} · {template.orientation === 'PORTRAIT' ? 'แนวตั้ง' : 'แนวนอน'}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-gray-500 dark:text-gray-400">เวอร์ชัน</dt><dd className="font-medium text-gray-900 dark:text-gray-100 tabular-nums">{template.version}</dd></div>
+            </dl>
           </div>
         </div>
       </div>
 
       {/* Fields Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-sm overflow-hidden">
         {/* Fields Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/30">
           <div>
-            <h2 className="text-base font-bold text-gray-800 dark:text-white">ฟิลด์ข้อมูล (Fields)</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">ฟิลด์ข้อมูลเอกสาร</h2>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-              {fields.length} ฟิลด์ · กำหนดช่องข้อมูลที่ผู้ใช้ต้องกรอกใน Template นี้
+              {fields.length} ฟิลด์ · กำหนดข้อมูลที่ผู้ใช้งานต้องกรอกในแบบเอกสารนี้
             </p>
           </div>
           <button
             onClick={() => handleOpenModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" /> เพิ่มฟิลด์
           </button>
@@ -262,9 +264,9 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
 
         {/* Fields List */}
         {fields.length === 0 ? (
-          <div className="py-16 flex flex-col items-center gap-4 text-gray-400 dark:text-gray-500">
-            <AlertCircle className="w-12 h-12 opacity-20" />
-            <p className="text-sm">ยังไม่มีฟิลด์ใน Template นี้</p>
+          <div className="py-12 flex flex-col items-center gap-3 text-gray-400 dark:text-gray-500">
+            <div className="w-10 h-10 rounded-full border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 flex items-center justify-center"><AlertCircle className="w-5 h-5" /></div>
+            <div className="text-center"><p className="text-sm font-medium text-gray-600 dark:text-gray-300">ยังไม่มีฟิลด์ข้อมูล</p><p className="text-xs mt-1">เพิ่มฟิลด์เพื่อกำหนดข้อมูลที่ต้องกรอกในเอกสาร</p></div>
             <button
               onClick={() => handleOpenModal()}
               className="text-sm text-emerald-600 dark:text-emerald-400 hover:underline font-medium"

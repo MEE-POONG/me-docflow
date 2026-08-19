@@ -69,7 +69,6 @@ export default function Sidebar() {
     documents: true,
     template: true,
     company: true,
-    approval: false,
     settings: false,
   });
 
@@ -151,6 +150,19 @@ export default function Sidebar() {
 
             {/* Template */}
 
+            {/* Reports */}
+            <div className="pt-1">
+              <Link
+                href="/reports"
+                className={`flex items-center ${isOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors`}
+                title={!isOpen ? t.sidebar.reports : undefined}
+              >
+                <PieChart size={20} className="text-gray-400 shrink-0" />
+                {isOpen && <span className="text-sm font-medium truncate">{t.sidebar.reports}</span>}
+              </Link>
+            </div>
+
+
             {/* Company Data */}
             <div className="pt-1">
               <button
@@ -176,34 +188,6 @@ export default function Sidebar() {
               )}
             </div>
 
-            {/* Approval System */}
-            <div className="pt-1">
-              <button
-                onClick={() => toggleMenu('approval')}
-                className={`w-full flex items-center ${isOpen ? 'justify-between px-3' : 'justify-center px-0'} py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors`}
-                title={!isOpen ? t.sidebar.approvalSystem : undefined}
-              >
-                <div className={`flex items-center ${isOpen ? 'gap-3' : 'justify-center'}`}>
-                  <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                  {isOpen && <span className="text-sm font-medium truncate">{t.sidebar.approvalSystem}</span>}
-                </div>
-                {isOpen && (
-                  expanded.approval ? <ChevronDown size={14} className="text-gray-400 shrink-0" /> : <ChevronRight size={14} className="text-gray-400 shrink-0" />
-                )}
-              </button>
-            </div>
-
-            {/* Reports */}
-            <div className="pt-1">
-              <Link
-                href="/reports"
-                className={`flex items-center ${isOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors`}
-                title={!isOpen ? t.sidebar.reports : undefined}
-              >
-                <PieChart size={20} className="text-gray-400 shrink-0" />
-                {isOpen && <span className="text-sm font-medium truncate">{t.sidebar.reports}</span>}
-              </Link>
-            </div>
 
             {/* Settings */}
             <div className="pt-1">
