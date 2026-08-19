@@ -2,26 +2,28 @@
 
 import { prisma } from '@/lib/prisma';
 
-// Helper to get a company by user email
-async function getCompanyIdByEmail(email: string) {
-  let company = await prisma.company.findFirst({
-    where: { email }
-  });
-  if (!company) {
-    company = await prisma.company.create({
-      data: {
-        name: 'My Company',
-        legalName: 'My Company Ltd.',
-        email: email
-      }
-    });
+async function resolveCompanyId(email: string, companyId?: string) {
+  if (companyId) {
+    const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
+    if (company) return company.id;
   }
-  return company.id;
+
+  const companyUser = await prisma.companyUser.findFirst({
+    where: { email },
+    select: { companyId: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  if (companyUser) return companyUser.companyId;
+
+  const company = await prisma.company.findFirst({ where: { email }, select: { id: true } });
+  return company?.id ?? null;
 }
 
-export async function getDashboardData(email: string) {
+export async function getDashboardData(email: string, companyId?: string) {
   if (!email) return null;
-  const companyId = await getCompanyIdByEmail(email);
+  const resolvedCompanyId = await resolveCompanyId(email, companyId);
+  if (!resolvedCompanyId) return null;
+  const accessibleResourceWhere = { OR: [{ companyId: resolvedCompanyId }, { isGlobal: true }] };
 
   // 1. Summary Cards
   const [
@@ -32,12 +34,23 @@ export async function getDashboardData(email: string) {
     customers,
     employees
   ] = await Promise.all([
-    prisma.document.count({ where: { companyId } }),
-    prisma.document.count({ where: { companyId, status: 'DRAFT' } }),
-    prisma.document.count({ where: { companyId, status: 'PENDING' } }),
-    prisma.document.count({ where: { companyId, status: 'APPROVED' } }),
-    prisma.businessPartner.count({ where: { companyId } }),
-    prisma.employee.count({ where: { companyId } })
+    prisma.document.count({ where: { companyId: resolvedCompanyId } }),
+    prisma.document.count({ where: { companyId: resolvedCompanyId, status: 'DRAFT' } }),
+    prisma.document.count({ where: { companyId: resolvedCompanyId, status: 'PENDING' } }),
+    prisma.document.count({ where: { companyId: resolvedCompanyId, status: 'APPROVED' } }),
+    prisma.businessPartner.count({ where: { companyId: resolvedCompanyId } }),
+    prisma.employee.count({ where: { companyId: resolvedCompanyId } })
+  ]);
+
+  const [templateCount, categoryCount, typeCount, accessibleTemplates] = await Promise.all([
+    prisma.documentTemplate.count({ where: accessibleResourceWhere }),
+    prisma.documentCategory.count({ where: accessibleResourceWhere }),
+    prisma.documentType.count({ where: accessibleResourceWhere }),
+    prisma.documentTemplate.findMany({
+      where: accessibleResourceWhere,
+      orderBy: { createdAt: 'desc' },
+      include: { category: true, documentType: true },
+    }),
   ]);
 
   // 2. Monthly Chart Data
@@ -45,13 +58,16 @@ export async function getDashboardData(email: string) {
   const startOfYear = new Date(currentYear, 0, 1);
   
   const docsThisYear = await prisma.document.findMany({
-    where: { companyId, createdAt: { gte: startOfYear } },
+    where: { companyId: resolvedCompanyId, createdAt: { gte: startOfYear } },
     select: { createdAt: true }
   });
   
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const monthlyCounts = Array(12).fill(0);
-  docsThisYear.forEach(doc => {
+  const chartSource = docsThisYear.length > 0
+    ? docsThisYear
+    : accessibleTemplates.filter(template => template.createdAt >= startOfYear);
+  chartSource.forEach(doc => {
     monthlyCounts[doc.createdAt.getMonth()]++;
   });
   
@@ -65,7 +81,7 @@ export async function getDashboardData(email: string) {
   // 3. Category Progress Bars
   const categoryGroups = await prisma.document.groupBy({
     by: ['categoryId'],
-    where: { companyId },
+    where: { companyId: resolvedCompanyId },
     _count: { id: true }
   });
   
@@ -88,9 +104,22 @@ export async function getDashboardData(email: string) {
   categories.sort((a, b) => b.count - a.count);
   categories = categories.slice(0, 5); // top 5
 
+  if (categories.length === 0) {
+    const templateCategoryCounts = new Map<string, number>();
+    accessibleTemplates.forEach(template => {
+      templateCategoryCounts.set(template.category.name, (templateCategoryCounts.get(template.category.name) ?? 0) + 1);
+    });
+    const totalTemplates = accessibleTemplates.length;
+    categories = Array.from(templateCategoryCounts, ([name, count]) => ({
+      name,
+      count,
+      percentage: totalTemplates > 0 ? Math.round((count / totalTemplates) * 100) : 0,
+    })).sort((a, b) => b.count - a.count).slice(0, 5);
+  }
+
   // 4. Tables
   const recentDocs = await prisma.document.findMany({
-    where: { companyId },
+    where: { companyId: resolvedCompanyId },
     orderBy: { createdAt: 'desc' },
     take: 5,
     include: {
@@ -100,7 +129,7 @@ export async function getDashboardData(email: string) {
   });
   
   const pendingDocs = await prisma.document.findMany({
-    where: { companyId, status: 'PENDING' },
+    where: { companyId: resolvedCompanyId, status: 'PENDING' },
     orderBy: { createdAt: 'desc' },
     take: 5,
     include: {
@@ -110,10 +139,20 @@ export async function getDashboardData(email: string) {
   });
 
   return {
-    summary: { totalDocs, drafts, pending, approved, customers, employees },
+    summary: { totalDocs, drafts, pending, approved, customers, employees, templateCount, categoryCount, typeCount },
     chartData: chartData.length > 0 ? chartData : [{ name: monthNames[0], value: 0 }],
+    chartMetric: docsThisYear.length > 0 ? 'documents' : 'templates',
     categories,
+    categoryMetric: categoryGroups.length > 0 ? 'documents' : 'templates',
     recentDocs,
-    pendingDocs
+    pendingDocs,
+    recentTemplates: accessibleTemplates.slice(0, 5).map(template => ({
+      id: template.id,
+      name: template.name,
+      category: template.category.name,
+      documentType: template.documentType.name,
+      isGlobal: template.isGlobal,
+      createdAt: template.createdAt,
+    })),
   };
 }

@@ -15,14 +15,16 @@ export default function DashboardPage() {
     async function fetchData() {
       const userStr = localStorage.getItem("me_docflow_current_user");
       let email = "melisara@siamretail.co.th";
+      let companyId: string | undefined;
       if (userStr) {
         try {
           const u = JSON.parse(userStr);
           if (u.email) email = u.email;
+          if (u.companyId) companyId = u.companyId;
         } catch {}
       }
       try {
-        const res = await getDashboardData(email);
+        const res = await getDashboardData(email, companyId);
         setData(res);
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
@@ -50,7 +52,11 @@ export default function DashboardPage() {
     { label: 'อนุมัติแล้ว', value: data.summary.approved.toLocaleString() },
     { label: 'ลูกค้า', value: data.summary.customers.toLocaleString() },
     { label: 'พนักงาน', value: data.summary.employees.toLocaleString() },
+    { label: 'แบบเอกสาร', value: data.summary.templateCount.toLocaleString() },
+    { label: 'หมวดหมู่', value: data.summary.categoryCount.toLocaleString() },
+    { label: 'ประเภทเอกสาร', value: data.summary.typeCount.toLocaleString() },
   ];
+  const showTemplateFallback = data.recentDocs.length === 0 && data.recentTemplates.length > 0;
 
   return (
     <div className="space-y-6">
@@ -62,7 +68,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-9 gap-4">
         {stats.map((stat, i) => (
           <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col justify-center">
             <p className="text-[13px] text-gray-500 dark:text-gray-400 font-medium mb-1">{stat.label}</p>
@@ -76,7 +82,7 @@ export default function DashboardPage() {
         
         {/* Bar Chart */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-gray-100 dark:border-slate-800 shadow-sm">
-          <h3 className="text-[15px] font-bold text-gray-800 dark:text-white mb-6">กราฟจำนวนเอกสารรายเดือน</h3>
+          <h3 className="text-[15px] font-bold text-gray-800 dark:text-white mb-6">{data.chartMetric === 'documents' ? 'กราฟจำนวนเอกสารรายเดือน' : 'กราฟแบบเอกสารที่เพิ่มรายเดือน'}</h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.chartData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
@@ -90,7 +96,7 @@ export default function DashboardPage() {
 
         {/* Progress Bars */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-gray-100 dark:border-slate-800 shadow-sm">
-          <h3 className="text-[15px] font-bold text-gray-800 dark:text-white mb-6">กราฟแยกตามหมวดหมู่เอกสาร</h3>
+          <h3 className="text-[15px] font-bold text-gray-800 dark:text-white mb-6">{data.categoryMetric === 'documents' ? 'กราฟเอกสารแยกตามหมวดหมู่' : 'แบบเอกสารแยกตามหมวดหมู่'}</h3>
           <div className="space-y-5 mt-2">
             {data.categories.length === 0 ? (
               <p className="text-sm text-gray-400 dark:text-gray-500">ยังไม่มีข้อมูลหมวดหมู่</p>
@@ -117,20 +123,28 @@ export default function DashboardPage() {
         
         {/* Recent Documents */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-gray-100 dark:border-slate-800 shadow-sm lg:col-span-2 min-h-[300px] flex flex-col">
-          <h3 className="text-[15px] font-bold text-gray-800 dark:text-white mb-4">เอกสารล่าสุด</h3>
+          <h3 className="text-[15px] font-bold text-gray-800 dark:text-white mb-4">{showTemplateFallback ? 'แบบเอกสารที่ใช้งานได้ล่าสุด' : 'เอกสารล่าสุด'}</h3>
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left text-sm text-gray-600 dark:text-gray-300">
               <thead className="text-[13px] text-gray-500 dark:text-gray-400 font-medium border-b border-gray-100 dark:border-slate-800">
                 <tr>
-                  <th className="pb-3 font-medium">เลขเอกสาร</th>
-                  <th className="pb-3 font-medium">ชื่อเอกสาร</th>
+                  <th className="pb-3 font-medium">{showTemplateFallback ? 'แหล่งที่มา' : 'เลขเอกสาร'}</th>
+                  <th className="pb-3 font-medium">{showTemplateFallback ? 'ชื่อแบบเอกสาร' : 'ชื่อเอกสาร'}</th>
                   <th className="pb-3 font-medium">หมวดหมู่</th>
                   <th className="pb-3 font-medium">ประเภท</th>
-                  <th className="pb-3 font-medium">สถานะ</th>
+                  <th className="pb-3 font-medium">{showTemplateFallback ? 'วันที่เพิ่ม' : 'สถานะ'}</th>
                 </tr>
               </thead>
               <tbody>
-                {data.recentDocs.length === 0 ? (
+                {showTemplateFallback ? data.recentTemplates.map((template) => (
+                  <tr key={template.id} className="border-b border-gray-50 dark:border-slate-800 last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="py-3"><span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${template.isGlobal ? 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400' : 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'}`}>{template.isGlobal ? 'ส่วนกลาง' : 'บริษัท'}</span></td>
+                    <td className="py-3 font-medium text-gray-900 dark:text-gray-100">{template.name}</td>
+                    <td className="py-3">{template.category}</td>
+                    <td className="py-3">{template.documentType}</td>
+                    <td className="py-3 text-gray-500 dark:text-gray-400">{new Date(template.createdAt).toLocaleDateString('th-TH')}</td>
+                  </tr>
+                )) : data.recentDocs.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="text-center py-16 text-gray-400">
                       ไม่มีเอกสาร
