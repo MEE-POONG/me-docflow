@@ -26,8 +26,16 @@ interface CompanyItem {
   phone: string;
   email: string;
   website: string;
+  businessType: string;
   isActive: boolean;
   ownerEmail: string; // To track ownership
+}
+
+interface BusinessTypeOption {
+  id: string;
+  value: string;
+  label: string;
+  isActive: boolean;
 }
 
 export default function CompanySettingsPage() {
@@ -45,7 +53,36 @@ export default function CompanySettingsPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
+  const [businessType, setBusinessType] = useState("");
+  const [businessTypes, setBusinessTypes] = useState<BusinessTypeOption[]>([]);
+  const [isLoadingBusinessTypes, setIsLoadingBusinessTypes] = useState(true);
+  const [businessTypesError, setBusinessTypesError] = useState("");
   const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadBusinessTypes = async () => {
+      try {
+        const response = await fetch("/api/business-types", { signal: controller.signal });
+        if (!response.ok) {
+          throw new Error("ไม่สามารถโหลดข้อมูลประเภทธุรกิจได้");
+        }
+
+        const data: BusinessTypeOption[] = await response.json();
+        setBusinessTypes(data.filter((item) => item.isActive));
+        setBusinessTypesError("");
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        setBusinessTypesError("ไม่สามารถโหลดประเภทธุรกิจได้ กรุณาลองใหม่อีกครั้ง");
+      } finally {
+        if (!controller.signal.aborted) setIsLoadingBusinessTypes(false);
+      }
+    };
+
+    loadBusinessTypes();
+    return () => controller.abort();
+  }, []);
 
   // Load from localStorage or seed initial data
   useEffect(() => {
@@ -75,6 +112,7 @@ export default function CompanySettingsPage() {
             phone: "",
             email: currentEmail,
             website: "",
+            businessType: "",
             isActive: true,
             ownerEmail: currentEmail
           };
@@ -98,6 +136,7 @@ export default function CompanySettingsPage() {
           phone: "02-600-0000",
           email: "contact@siamretail.co.th",
           website: "www.siamretail.co.th",
+          businessType: "retail",
           isActive: currentEmail === "melisara@siamretail.co.th",
           ownerEmail: "melisara@siamretail.co.th"
         }
@@ -111,6 +150,7 @@ export default function CompanySettingsPage() {
           phone: "",
           email: currentEmail,
           website: "",
+          businessType: "",
           isActive: true,
           ownerEmail: currentEmail
         });
@@ -135,6 +175,7 @@ export default function CompanySettingsPage() {
     setPhone("");
     setEmail("");
     setWebsite("");
+    setBusinessType("");
     setIsFormOpen(true);
   };
 
@@ -150,6 +191,7 @@ export default function CompanySettingsPage() {
     setPhone(company.phone);
     setEmail(company.email);
     setWebsite(company.website);
+    setBusinessType(company.businessType ?? "");
     setIsFormOpen(true);
   };
 
@@ -183,7 +225,7 @@ export default function CompanySettingsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyName || !taxId || !address || !phone || !email) {
+    if (!companyName || !businessType || !taxId || !address || !phone || !email) {
       alert("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน");
       return;
     }
@@ -192,7 +234,7 @@ export default function CompanySettingsPage() {
       // Edit mode (Preserve the original ownerEmail)
       const updated = companies.map((c) =>
         c.id === editingCompany.id
-          ? { ...c, companyName, taxId, address, phone, email, website }
+          ? { ...c, companyName, businessType, taxId, address, phone, email, website }
           : c
       );
       saveToLocalStorage(updated);
@@ -207,6 +249,7 @@ export default function CompanySettingsPage() {
         phone,
         email,
         website,
+        businessType,
         isActive: isFirstOwnCompany,
         ownerEmail: currentUserEmail
       };
@@ -281,6 +324,36 @@ export default function CompanySettingsPage() {
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                   placeholder="เช่น บริษัท สยาม คอร์ปอเรชั่น จำกัด"
                 />
+              </div>
+
+              <div className="col-span-1 md:col-span-2">
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">ประเภทธุรกิจ</label>
+                <select
+                  required
+                  value={businessType}
+                  onChange={(e) => setBusinessType(e.target.value)}
+                  disabled={isLoadingBusinessTypes || businessTypes.length === 0}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                >
+                  <option value="">
+                    {isLoadingBusinessTypes
+                      ? "กำลังโหลดประเภทธุรกิจ..."
+                      : businessTypes.length === 0
+                        ? "ยังไม่มีประเภทธุรกิจที่เปิดใช้งาน"
+                        : "เลือกประเภทธุรกิจ"}
+                  </option>
+                  {businessTypes.map((type) => (
+                    <option key={type.id} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+                {businessTypesError && (
+                  <p className="mt-1.5 flex items-center gap-1 text-xs text-red-600">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {businessTypesError}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -374,6 +447,7 @@ export default function CompanySettingsPage() {
             <thead className="text-xs font-bold text-gray-500 uppercase bg-gray-50/70 border-b border-gray-100">
               <tr>
                 <th className="py-3 px-6">ชื่อบริษัท</th>
+                <th className="py-3 px-6">ประเภทธุรกิจ</th>
                 <th className="py-3 px-6">เลขประจำตัวผู้เสียภาษี</th>
                 <th className="py-3 px-6">ข้อมูลติดต่อ</th>
                 <th className="py-3 px-6">สถานะการใช้งาน</th>
@@ -383,7 +457,7 @@ export default function CompanySettingsPage() {
             <tbody className="divide-y divide-gray-100">
               {userOwnCompanies.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-10 text-gray-400">
+                  <td colSpan={6} className="text-center py-10 text-gray-400">
                     ไม่มีรายชื่อบริษัทในระบบ
                   </td>
                 </tr>
@@ -417,6 +491,12 @@ export default function CompanySettingsPage() {
                             <p className="text-[10px] text-gray-400 font-medium truncate max-w-xs">{company.address}</p>
                           </div>
                         </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 border border-sky-100">
+                          {(businessTypes.find((type) => type.value === company.businessType)?.label
+                            ?? company.businessType) || "ยังไม่ระบุ"}
+                        </span>
                       </td>
                       <td className="py-4 px-6 font-mono text-gray-600">
                         {company.taxId}
