@@ -353,7 +353,7 @@ export default function DocumentsClient({
                     </td>
                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white max-w-[220px]">
                       <span className="truncate block" title={doc.title}>
-                        {doc.title}
+                        {doc.title === 'เอกสารใหม่' ? doc.documentType.name : (doc.title?.startsWith('เอกสารใหม่ - ') ? doc.title.replace('เอกสารใหม่', doc.documentType.name) : doc.title)}
                       </span>
                       {doc.note && (
                         <span className="block text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 truncate">

@@ -128,8 +128,12 @@ export async function createDocument(data: {
   categoryId: string;
   documentTypeId: string;
   templateId?: string | null;
-  status: DocumentStatus;
+  status?: DocumentStatus;
   note?: string | null;
+  dataJson?: any;
+  subtotalSatang?: number;
+  vatSatang?: number;
+  totalSatang?: number;
 }) {
   const companyId = await getDefaultCompanyId();
   const createdById = await getDefaultUserId(companyId);
@@ -139,7 +143,7 @@ export async function createDocument(data: {
   const year = new Date().getFullYear();
   const documentNo = `DOC-${year}-${String(existingCount + 1).padStart(4, '0')}`;
 
-  await prisma.document.create({
+  const document = await prisma.document.create({
     data: {
       companyId,
       categoryId: data.categoryId,
@@ -148,12 +152,16 @@ export async function createDocument(data: {
       createdById,
       documentNo,
       title: data.title,
-      status: data.status,
+      status: data.status || 'DRAFT',
       note: data.note || null,
-      dataJson: {},
+      dataJson: data.dataJson ? (typeof data.dataJson === 'string' ? JSON.parse(data.dataJson) : data.dataJson) : {},
+      subtotalSatang: data.subtotalSatang || null,
+      vatSatang: data.vatSatang || null,
+      totalSatang: data.totalSatang || null,
     },
   });
   revalidatePath('/documents');
+  return { success: true, document };
 }
 
 export async function updateDocument(
@@ -163,23 +171,32 @@ export async function updateDocument(
     categoryId: string;
     documentTypeId: string;
     templateId?: string | null;
-    status: DocumentStatus;
+    status?: DocumentStatus;
     note?: string | null;
+    dataJson?: any;
+    subtotalSatang?: number;
+    vatSatang?: number;
+    totalSatang?: number;
   }
 ) {
   const companyId = await getDefaultCompanyId();
-  await prisma.document.update({
+  const document = await prisma.document.update({
     where: { id, companyId },
     data: {
       title: data.title,
       categoryId: data.categoryId,
       documentTypeId: data.documentTypeId,
       templateId: data.templateId || null,
-      status: data.status,
+      ...(data.status ? { status: data.status } : {}),
       note: data.note || null,
+      ...(data.dataJson ? { dataJson: typeof data.dataJson === 'string' ? JSON.parse(data.dataJson) : data.dataJson } : {}),
+      ...(data.subtotalSatang !== undefined ? { subtotalSatang: data.subtotalSatang } : {}),
+      ...(data.vatSatang !== undefined ? { vatSatang: data.vatSatang } : {}),
+      ...(data.totalSatang !== undefined ? { totalSatang: data.totalSatang } : {}),
     },
   });
   revalidatePath('/documents');
+  return { success: true, document };
 }
 
 export async function updateDocumentStatus(id: string, status: DocumentStatus) {

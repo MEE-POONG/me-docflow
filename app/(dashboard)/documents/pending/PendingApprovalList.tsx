@@ -208,6 +208,7 @@ export default function PendingApprovalList({ documents, templates }: Props) {
               <tr>
                 <th className="px-6 py-4 font-normal">{t.documentsList.colDocNo}</th>
                 <th className="px-6 py-4 font-normal">{t.documentsList.colTitle}</th>
+                <th className="px-6 py-4 font-normal">{t.documentsList.colCategory}</th>
                 <th className="px-6 py-4 font-normal">{t.common.status}</th>
                 <th className="px-6 py-4 font-normal">{t.documentsList.colCreatedBy}</th>
                 <th className="px-6 py-4 font-normal">{t.documentsList.colCreatedAt}</th>
@@ -217,7 +218,7 @@ export default function PendingApprovalList({ documents, templates }: Props) {
             <tbody className="divide-y divide-gray-50 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
               {filteredDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                     <AlertCircle className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
                     <p className="text-base font-medium">{t.pendingApproval.emptyTitle}</p>
                     <p className="text-sm mt-1">{t.pendingApproval.emptyHint}</p>
@@ -231,13 +232,18 @@ export default function PendingApprovalList({ documents, templates }: Props) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-gray-900 dark:text-white font-medium">
-                        <Link href={`/documents/${doc.id}`} className="hover:underline">{doc.title}</Link>
+                        <Link href={`/documents/${doc.id}`} className="hover:underline">
+                          {doc.title === 'เอกสารใหม่' ? doc.documentType?.name : (doc.title?.startsWith('เอกสารใหม่ - ') ? doc.title.replace('เอกสารใหม่', doc.documentType?.name) : doc.title)}
+                        </Link>
                       </div>
                       {doc.status === 'REJECTED' && doc.rejectedReason && (
                         <div className="text-xs text-rose-500 dark:text-rose-400 mt-1 flex items-start gap-1">
                           <span className="font-semibold">{t.pendingApproval.rejectedReasonLabel}</span> {doc.rejectedReason}
                         </div>
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                      {doc.category?.name || '-'}
                     </td>
                     <td className="px-6 py-4">
                       {getStatusBadge(doc.status)}

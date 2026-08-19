@@ -22,7 +22,7 @@ interface UserItem {
   fullName: string;
   email: string;
   role: string;
-  status: "active" | "inactive";
+  status: string;
   password?: string;
 }
 
@@ -37,7 +37,7 @@ export default function AdminUsersPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("employee");
-  const [status, setStatus] = useState<"active" | "inactive">("active");
+  const [status, setStatus] = useState<string>("active");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 

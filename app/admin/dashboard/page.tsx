@@ -42,7 +42,7 @@ export default function AdminDashboardPage() {
       setRecentLogs(logList.slice(0, 5));
     } else {
       // Seed default logs
-      const defaultLogs = [
+      const defaultLogs: AuditLog[] = [
         { id: "1", timestamp: new Date(Date.now() - 60000 * 5).toLocaleString(), user: "melisara@siamretail.co.th", action: "ล็อกอินเข้าสู่บริษัท สยาม รีเทล จำกัด", type: "info" },
         { id: "2", timestamp: new Date(Date.now() - 60000 * 20).toLocaleString(), user: "somchai@siamretail.co.th", action: "อัปเดตรหัสผ่านส่วนบุคคล", type: "warning" },
         { id: "3", timestamp: new Date(Date.now() - 3600000 * 2).toLocaleString(), user: "system@medocflow.com", action: "สลับการตั้งค่าพ่วงปี/เดือนสำหรับเลขเอกสารใบเสนอราคา (QT)", type: "info" },
