@@ -7,7 +7,7 @@ import {
   GripVertical, ChevronDown, ChevronUp, AlertCircle,
   Type, Hash, Calendar, AlignLeft, Image, Paperclip,
   Table2, List, CheckSquare, Circle, PenLine, ToggleLeft, DollarSign,
-  Clock, Paintbrush2,
+  Clock,
 } from 'lucide-react';
 import {
   createTemplateField,
@@ -227,7 +227,6 @@ export default function TemplateDetailClient({ template }: { template: TemplateI
                 href={`/doc-format/${template.id}/designer`}
                 className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
               >
-                <Paintbrush2 className="w-4 h-4" />
                 Document Designer
               </Link>
             )}

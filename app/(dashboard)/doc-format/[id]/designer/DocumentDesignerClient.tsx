@@ -6,7 +6,7 @@ import {
   Undo2, Redo2, ZoomIn, ZoomOut, Download, Save,
   Type, Heading1, AlignLeft, AlignCenter, AlignRight, AlignJustify, Image, Building2,
   Table2, Minus, Square, PenLine, Calendar,
-  Hash, CheckSquare, QrCode, Barcode,
+  Hash, CheckSquare, QrCode,
   ChevronRight, MousePointer2, Trash2,
   ScanLine, Eye, X, Printer
 } from 'lucide-react';
@@ -191,6 +191,43 @@ function loadInitialElements(layoutJson: unknown): DesignerElement[] {
   return [];
 }
 
+type PaperPreset = 'A4' | 'A5' | 'LETTER' | 'LEGAL' | 'RECEIPT_80' | 'CUSTOM';
+
+const PAPER_PRESETS: Record<Exclude<PaperPreset, 'CUSTOM'>, { label: string; width: number; height: number }> = {
+  A4: { label: 'A4 (210 × 297 มม.)', width: 595, height: 842 },
+  A5: { label: 'A5 (148 × 210 มม.)', width: 419, height: 595 },
+  LETTER: { label: 'Letter (8.5 × 11 นิ้ว)', width: 612, height: 792 },
+  LEGAL: { label: 'Legal (8.5 × 14 นิ้ว)', width: 612, height: 1008 },
+  RECEIPT_80: { label: 'ใบเสร็จ 80 มม.', width: 227, height: 600 },
+};
+
+function getInitialPaper(template: TemplateInfo) {
+  if (template.layoutJson && typeof template.layoutJson === 'object' && 'pages' in template.layoutJson) {
+    const pages = (template.layoutJson as { pages?: { width?: unknown; height?: unknown }[] }).pages;
+    const width = Number(pages?.[0]?.width);
+    const height = Number(pages?.[0]?.height);
+    if (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0) {
+      return { width, height };
+    }
+  }
+
+  const presetKey = template.paperSize in PAPER_PRESETS
+    ? template.paperSize as keyof typeof PAPER_PRESETS
+    : 'A4';
+  const preset = PAPER_PRESETS[presetKey];
+  return template.orientation === 'LANDSCAPE'
+    ? { width: preset.height, height: preset.width }
+    : { width: preset.width, height: preset.height };
+}
+
+function detectPaperPreset(width: number, height: number): PaperPreset {
+  const match = Object.entries(PAPER_PRESETS).find(([, preset]) =>
+    (preset.width === width && preset.height === height) ||
+    (preset.width === height && preset.height === width)
+  );
+  return (match?.[0] as PaperPreset | undefined) ?? 'CUSTOM';
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function DocumentDesignerClient({ template, documents, onSave }: { template: TemplateInfo; documents?: PreviewDocument[]; onSave?: (id: string, layoutJson: unknown) => Promise<void> }) {
@@ -208,6 +245,7 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [rightPanelWidth, setRightPanelWidth] = useState(208);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [paperDimensions, setPaperDimensions] = useState(() => getInitialPaper(template));
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ id: string; startX: number; startY: number; elX: number; elY: number } | null>(null);
@@ -268,7 +306,7 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
     const newEl: DesignerElement = {
       id: makeId(),
       type,
-      x: 40 + Math.floor(Math.random() * 60),
+      x: 40 + (elements.length % 4) * 20,
       y: 40 + elements.length * 20,
       width: defaults.width ?? 120,
       height: defaults.height ?? 30,
@@ -377,10 +415,26 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
   };
 
   // ── Paper size ────────────────────────────────────────────────────────────
-  const PAPER_W = template.paperSize === 'A5' ? 419 : template.paperSize === 'LETTER' ? 612 : 595;
-  const PAPER_H = template.paperSize === 'A5' ? 595 : template.paperSize === 'LETTER' ? 792 : 842;
-  const [paperW, paperH] =
-    template.orientation === 'LANDSCAPE' ? [PAPER_H, PAPER_W] : [PAPER_W, PAPER_H];
+  const { width: paperW, height: paperH } = paperDimensions;
+  const paperPreset = detectPaperPreset(paperW, paperH);
+
+  const updatePaperSize = (width: number, height: number) => {
+    setPaperDimensions({
+      width: Math.min(1600, Math.max(180, Math.round(width))),
+      height: Math.min(2400, Math.max(180, Math.round(height))),
+    });
+    setIsDirty(true);
+  };
+
+  const selectPaperPreset = (preset: PaperPreset) => {
+    if (preset === 'CUSTOM') return;
+    const size = PAPER_PRESETS[preset];
+    const isLandscape = paperW > paperH;
+    updatePaperSize(
+      isLandscape ? size.height : size.width,
+      isLandscape ? size.width : size.height
+    );
+  };
 
   const scaledW = paperW * (zoom / 100);
   const scaledH = paperH * (zoom / 100);
@@ -722,6 +776,58 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                   <p className="text-[11px] text-gray-300 font-mono truncate">{value}</p>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Page setup */}
+          <div className="border-b border-white/10">
+            <div className="px-3 py-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              Page setup
+            </div>
+            <div className="px-3 pb-3 space-y-2.5">
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-1">ขนาดกระดาษ</label>
+                <select
+                  value={paperPreset}
+                  onChange={e => selectPaperPreset(e.target.value as PaperPreset)}
+                  className="w-full bg-[#1e1f30] border border-white/10 rounded text-xs text-gray-200 px-2 py-1.5 focus:outline-none focus:border-blue-500"
+                >
+                  {Object.entries(PAPER_PRESETS).map(([key, preset]) => (
+                    <option key={key} value={key}>{preset.label}</option>
+                  ))}
+                  <option value="CUSTOM">กำหนดเอง</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">กว้าง (px)</label>
+                  <input
+                    type="number" min={180} max={1600} value={paperW}
+                    onChange={e => updatePaperSize(Number(e.target.value), paperH)}
+                    className="w-full bg-[#1e1f30] border border-white/10 rounded text-xs text-gray-200 px-2 py-1.5 focus:outline-none focus:border-blue-500 tabular-nums"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">สูง (px)</label>
+                  <input
+                    type="number" min={180} max={2400} value={paperH}
+                    onChange={e => updatePaperSize(paperW, Number(e.target.value))}
+                    className="w-full bg-[#1e1f30] border border-white/10 rounded text-xs text-gray-200 px-2 py-1.5 focus:outline-none focus:border-blue-500 tabular-nums"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => updatePaperSize(paperH, paperW)}
+                className="w-full py-1.5 rounded border border-white/10 bg-[#1e1f30] text-[10px] text-gray-300 hover:text-white hover:border-blue-500 transition-colors"
+              >
+                สลับแนวตั้ง / แนวนอน
+              </button>
+              <p className="text-[9px] leading-relaxed text-gray-600">
+                ขนาดจะถูกใช้กับหน้าออกแบบ พรีวิว และไฟล์ที่บันทึก
+              </p>
             </div>
           </div>
 
