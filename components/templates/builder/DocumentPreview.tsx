@@ -5,6 +5,7 @@ import {
   type DesignerElement, 
   type DesignerPage,
   renderElementContent,
+  renderDynamicFields,
   sampleDocumentData 
 } from '@/lib/document-designer'
 
@@ -162,7 +163,7 @@ function ElementView({ element, dataOverride }: { element: StyledDesignerElement
         return (
           <table style={{ ...tableStyle, tableLayout: 'fixed' }}>
             <thead><tr>{columns.map((col, i) => <th key={i} style={{ ...tableCellStyle, width: col.width ? `${col.width}px` : undefined, background: '#f3f4f6', fontWeight: 'bold' }}>{col.label}</th>)}</tr></thead>
-            <tbody>{importedRows.map((row, r) => <tr key={r}>{columns.map((col, c) => <td key={c} style={{ ...tableCellStyle, width: col.width ? `${col.width}px` : undefined }}>{row[c] ?? ''}</td>)}</tr>)}</tbody>
+            <tbody>{importedRows.map((row, r) => <tr key={r}>{columns.map((col, c) => <td key={c} style={{ ...tableCellStyle, width: col.width ? `${col.width}px` : undefined }}>{renderDynamicFields(row[c] ?? '', dataToUse)}</td>)}</tr>)}</tbody>
           </table>
         )
       }

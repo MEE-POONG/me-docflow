@@ -33,7 +33,7 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
           url.searchParams.set('preview', 'true')
           window.open(url.toString(), '_blank', 'noopener,noreferrer')
         }}
-        className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-300 bg-white px-3.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+        className="inline-flex h-9 items-center gap-2 rounded-md border border-emerald-300 bg-white px-3.5 text-sm font-medium text-emerald-700 transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:border-emerald-700 dark:bg-gray-900 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
       >
         <Eye className="w-4 h-4" /> พรีวิวเอกสาร
       </button>
@@ -49,7 +49,7 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
           url.searchParams.set('print', 'true');
           window.location.href = url.toString();
         }}
-        className="inline-flex h-9 items-center gap-2 rounded-md bg-emerald-700 px-3.5 text-sm font-medium text-white transition-colors hover:bg-emerald-800 dark:bg-emerald-700 dark:hover:bg-emerald-600"
+        className="inline-flex h-9 items-center gap-2 rounded-md bg-emerald-600 px-3.5 text-sm font-medium text-white transition-colors hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500"
       >
         <Printer className="w-4 h-4" /> พิมพ์เอกสาร
       </button>
