@@ -45,7 +45,7 @@ export async function updateAdminCompany(id: string, data: any) {
       address: data.address,
       phone: data.phone,
       email: data.email,
-      status: data.isVerified ? CompanyStatus.ACTIVE : CompanyStatus.INACTIVE,
+      status: data.isVerified ? CompanyStatus.ACTIVE : CompanyStatus.SUSPENDED,
     },
   });
   revalidatePath('/admin/companies');

@@ -16,6 +16,8 @@ export default async function PendingApprovalsPage() {
       createdBy: true,
       company: true,
       template: true,
+      category: true,
+      documentType: true,
     },
     orderBy: {
       createdAt: 'desc'

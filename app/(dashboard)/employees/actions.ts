@@ -86,11 +86,13 @@ export async function createEmployee(email: string, data: {
     bankAccountDocumentUrl = await saveFile(formData.get('bankAccountDocument') as File | null);
   }
   
+  const { employeeEmail, departmentId, ...restData } = data;
+
   await prisma.employee.create({
     data: {
-      ...data,
-      email: data.employeeEmail,
-      departmentId: data.departmentId || null,
+      ...restData,
+      email: employeeEmail,
+      departmentId: departmentId || null,
       companyId,
       profilePictureUrl,
       idCardDocumentUrl,
@@ -114,10 +116,12 @@ export async function updateEmployee(id: string, email: string, data: {
 }, formData?: FormData) {
   const companyId = await getCompanyIdByEmail(email);
   
+  const { employeeEmail, departmentId, ...restData } = data;
+  
   const updateData: any = {
-    ...data,
-    email: data.employeeEmail,
-    departmentId: data.departmentId || null,
+    ...restData,
+    email: employeeEmail,
+    departmentId: departmentId || null,
   };
 
   if (formData) {

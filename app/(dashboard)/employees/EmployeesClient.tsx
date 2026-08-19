@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Search, Loader2 } from 'lucide-react';
-import { createEmployee, updateEmployee, deleteEmployee, getEmployees } from './actions';
+import { createEmployee, updateEmployee, deleteEmployee, getEmployees, getDepartments } from './actions';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 // Types matched to schema and actions
@@ -37,6 +37,7 @@ export default function EmployeesClient({
   departments: Department[];
 }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [clientDepartments, setClientDepartments] = useState<Department[]>(departments);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -59,8 +60,11 @@ export default function EmployeesClient({
       try {
         const myEmps = await getEmployees(currentEmail);
         setEmployees(myEmps as any);
+        const myDepts = await getDepartments(currentEmail);
+        setClientDepartments(myDepts as any);
       } catch (err) {
         setEmployees(initialEmployees);
+        setClientDepartments(departments);
       }
     };
     fetchMyEmployees();
@@ -247,14 +251,14 @@ export default function EmployeesClient({
             />
           </div>
           
-          <select 
+          <select
             value={filterDepartment}
             onChange={(e) => setFilterDepartment(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 focus:outline-none focus:border-gray-300 dark:focus:border-gray-500 transition-colors"
+            className="w-full md:w-auto px-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors"
           >
             <option value="ALL">{t.employees.allDepartments}</option>
-            {departments.map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
+            {clientDepartments.map(dept => (
+              <option key={dept.id} value={dept.id}>{dept.name}</option>
             ))}
           </select>
 
@@ -422,15 +426,15 @@ export default function EmployeesClient({
                 <div className="space-y-1.5 col-span-2 sm:col-span-1">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.employees.formDepartment}</label>
                   <select
-                    value={formData.departmentId}
-                    onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 transition-colors text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
-                  >
-                    <option value="">{t.employees.selectDepartment}</option>
-                    {departments.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
+                  value={formData.departmentId}
+                  onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 dark:bg-gray-800 transition-colors"
+                >
+                  <option value="">{t.employees.selectDepartment}</option>
+                  {clientDepartments.map(dept => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
                 </div>
 
                 <div className="space-y-1.5 col-span-2 sm:col-span-1">

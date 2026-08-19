@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     }
 
     // 3. Map frontend role to Prisma CompanyUserRole
-    let dbRole = CompanyUserRole.STAFF;
+    let dbRole: CompanyUserRole = CompanyUserRole.STAFF;
     switch (role) {
       case 'owner':
         dbRole = CompanyUserRole.OWNER;

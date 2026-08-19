@@ -112,7 +112,9 @@ export default function DocumentsList({ initialDocuments }: { initialDocuments: 
                       <Link href={`/documents/${doc.id}`} className="hover:underline">{doc.documentNo}</Link>
                     </td>
                     <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">
-                      <Link href={`/documents/${doc.id}`} className="hover:underline">{doc.title}</Link>
+                      <Link href={`/documents/${doc.id}`} className="hover:underline">
+                        {doc.title === 'เอกสารใหม่' ? doc.documentType?.name : (doc.title?.startsWith('เอกสารใหม่ - ') ? doc.title.replace('เอกสารใหม่', doc.documentType?.name) : doc.title)}
+                      </Link>
                     </td>
                     <td className="px-6 py-4 text-gray-600 dark:text-gray-400 whitespace-nowrap">
                       {doc.category?.name || '-'}
