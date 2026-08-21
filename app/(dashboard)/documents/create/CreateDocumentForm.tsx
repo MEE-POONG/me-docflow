@@ -2,9 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Loader2, Link as LinkIcon, ArrowLeft, ArrowRight, Search, Plus, Trash2, Printer, Download, MoreHorizontal, Share2, FileText, CheckCircle2 } from 'lucide-react'
-import { createDocument, updateDocument } from '@/app/actions/documents'
+import { Save, Loader2, Link as LinkIcon, ArrowLeft, ArrowRight, Search, Plus, Trash2, Printer, Download, MoreHorizontal, Share2, FileText, CheckCircle2, Send } from 'lucide-react'
+import { createDocument, updateDocument, submitDocument } from '@/app/actions/documents'
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
+import { PurchaseOrderPrintLayout } from '@/components/templates/PurchaseOrderPrintLayout'
+import { InvoicePrintLayout } from '@/components/templates/InvoicePrintLayout'
+import { WithholdingTaxPrintLayout } from '@/components/templates/WithholdingTaxPrintLayout'
 import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import Link from 'next/link'
@@ -205,6 +208,23 @@ export default function CreateDocumentForm({ folders, tags, categories, document
     })
   }
 
+  const handleSubmitForApproval = () => {
+    const savedId = savedDocument?.id || initialData?.id;
+    if (!savedId) return;
+
+    if (confirm(`คุณต้องการยื่นขออนุมัติเอกสารนี้ใช่หรือไม่?`)) {
+      startTransition(async () => {
+        const result = await submitDocument(savedId)
+        if (result.success) {
+          router.push('/documents')
+          router.refresh()
+        } else {
+          alert('เกิดข้อผิดพลาดในการยื่นขออนุมัติ')
+        }
+      })
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="create-document-form max-w-[1400px] mx-auto pb-20 p-2 md:p-6">
       {/* Top Action Bar */}
@@ -269,10 +289,21 @@ export default function CreateDocumentForm({ folders, tags, categories, document
               <button
                 type="button"
                 onClick={() => router.push('/documents')}
-                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
               >
-                <CheckCircle2 className="w-5 h-5" /> {t.createDocument.done}
+                <CheckCircle2 className="w-4 h-4" /> {t.createDocument.done}
               </button>
+              {savedDocument?.status !== 'PENDING' && savedDocument?.status !== 'APPROVED' && (
+                <button
+                  type="button"
+                  onClick={handleSubmitForApproval}
+                  disabled={isPending}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                  ยื่นขออนุมัติ
+                </button>
+              )}
             </>
           )}
         </div>
@@ -327,39 +358,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 {documentTypes.filter(t => t.categoryId === docInfo.categoryId).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">{t.createDocument.templateOptional}</label>
-              <select
-                value={docInfo.templateId}
-                onChange={e => handleTemplateChange(e.target.value)}
-                className="w-full text-sm p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-              >
-                <option value="">{t.createDocument.noTemplate}</option>
-                {matchingTemplates.length > 0 && (
-                  <optgroup label={t.createDocument.templatesForSelectedType}>
-                    {matchingTemplates.map(template => (
-                      <option key={template.id} value={template.id}>
-                        {template.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {otherTemplates.length > 0 && (
-                  <optgroup label={t.createDocument.otherFormTemplates}>
-                    {otherTemplates.map(template => (
-                      <option key={template.id} value={template.id}>
-                        {template.name} — {template.category?.name || '-'} / {template.documentType?.name || '-'}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-              {templates.length === 0 && (
-                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                  {t.createDocument.noFormTemplates}
-                </p>
-              )}
-            </div>
+
           </div>
         </div>
         )}
@@ -446,6 +445,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
           const isFixedAsset = selectedDocType?.name?.includes('ทะเบียนทรัพย์สิน') || selectedDocType?.name?.toLowerCase().includes('fixed asset') || selectedDocType?.name?.toLowerCase().includes('asset register')
           const isFinancialStatement = selectedDocType?.name?.includes('งบการเงิน') || selectedDocType?.name?.toLowerCase().includes('financial statement')
           const isInvoice = selectedDocType?.name?.includes('ใบแจ้งหนี้') || selectedDocType?.name?.includes('ใบวางบิล') || selectedDocType?.name?.toLowerCase().includes('invoice') || selectedDocType?.name?.toLowerCase().includes('billing note')
+          const isWithholdingTax = selectedDocType?.name?.includes('หัก ณ ที่จ่าย') || selectedDocType?.name?.includes('50 ทวิ')
           
           if (isPayslip) {
             const basicSalary = Number(customData.basicSalary) || 0
@@ -3483,79 +3483,182 @@ export default function CreateDocumentForm({ folders, tags, categories, document
               <div className="p-6 lg:p-10 space-y-8 pt-2">
                 <div className="bg-teal-50 dark:bg-teal-900/10 p-6 rounded-xl border border-teal-100 dark:border-teal-800">
                   <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">ใบสั่งซื้อ (Purchase Order - PO)</h2>
-                    <p className="text-gray-500 mt-2">เอกสารสำหรับสั่งซื้อสินค้าหรือบริการจากผู้ขาย/ซัพพลายเออร์</p>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">ใบสั่งซื้อ (Purchase Order)</h2>
                   </div>
                   
                   <div className="space-y-8">
                     {/* ข้อมูลผู้ขายและเอกสาร */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-white dark:bg-gray-800 rounded-lg border border-teal-100 dark:border-teal-800/50">
                       <div className="md:col-span-2 border-b border-teal-100 dark:border-teal-800/50 pb-2 mb-2 flex justify-between items-end">
-                        <h3 className="font-bold text-teal-700 dark:text-teal-500">1. ข้อมูลผู้ขาย (Vendor Info)</h3>
+                        <h3 className="font-bold text-teal-700 dark:text-teal-500">1. ข้อมูลผู้จำหน่าย (Vendor Info)</h3>
                       </div>
                       
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">สั่งซื้อจาก (Vendor Name)</label>
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ผู้จำหน่าย (Vendor Name)</label>
                         <input type="text" value={customData.po_vendorName || ''} onChange={e => setCustomData({...customData, po_vendorName: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="ชื่อบริษัทผู้ขาย / ซัพพลายเออร์..." />
                       </div>
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ที่อยู่ผู้ขาย (Vendor Address)</label>
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ที่อยู่ผู้จำหน่าย (Vendor Address)</label>
                         <textarea rows={2} value={customData.po_vendorAddress || ''} onChange={e => setCustomData({...customData, po_vendorAddress: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="ที่อยู่สำหรับติดต่อ / ออกใบกำกับภาษี..." />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เลขประจำตัวผู้เสียภาษี (Tax ID)</label>
+                        <input type="text" value={customData.po_vendorTaxId || ''} onChange={e => setCustomData({...customData, po_vendorTaxId: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="เลขประจำตัวผู้เสียภาษี 13 หลัก..." />
+                      </div>
+
+                      <div className="md:col-span-2 border-b border-teal-100 dark:border-teal-800/50 pb-2 mb-2 mt-4">
+                        <h3 className="font-bold text-teal-700 dark:text-teal-500">2. ข้อมูลเอกสารและผู้ติดต่อ</h3>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">วันที่สั่งซื้อ (PO Date)</label>
-                        <input type="date" value={customData.po_date || ''} onChange={e => setCustomData({...customData, po_date: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">กำหนดส่งของ (Delivery Date)</label>
-                        <input type="date" value={customData.po_deliveryDate || ''} onChange={e => setCustomData({...customData, po_deliveryDate: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" />
-                      </div>
-                      <div>
                         <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เลขที่ใบสั่งซื้อ (PO No.)</label>
-                        <input type="text" value={customData.po_refNo || ''} onChange={e => setCustomData({...customData, po_refNo: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="เช่น PO-202310001..." />
+                        <input type="text" value={customData.po_refNo || ''} onChange={e => setCustomData({...customData, po_refNo: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="เช่น PO2024030001..." />
                       </div>
                       <div>
-                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เงื่อนไขการชำระเงิน (Payment Terms)</label>
-                        <input type="text" value={customData.po_paymentTerms || ''} onChange={e => setCustomData({...customData, po_paymentTerms: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="เช่น เครดิต 30 วัน, เงินสด..." />
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">วันที่ (Date)</label>
+                        <input type="date" value={customData.po_date || formData.date} onChange={e => { setCustomData({...customData, po_date: e.target.value}); setFormData({...formData, date: e.target.value}); }} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ครบกำหนด (Due Date)</label>
+                        <input type="date" value={customData.po_dueDate || formData.dueDate} onChange={e => { setCustomData({...customData, po_dueDate: e.target.value}); setFormData({...formData, dueDate: e.target.value}); }} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ผู้สั่งซื้อ (Buyer)</label>
+                        <input type="text" value={customData.po_buyer || ''} onChange={e => setCustomData({...customData, po_buyer: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="ชื่อผู้สั่งซื้อ..." />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ชื่องาน (Project Name)</label>
+                        <input type="text" value={customData.po_projectName || ''} onChange={e => setCustomData({...customData, po_projectName: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="ระบุชื่องาน..." />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ผู้ติดต่อ (Contact Person)</label>
+                        <input type="text" value={customData.po_contactName || ''} onChange={e => setCustomData({...customData, po_contactName: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="ชื่อผู้ติดต่อ..." />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เบอร์โทร (Phone)</label>
+                        <input type="text" value={customData.po_contactPhone || ''} onChange={e => setCustomData({...customData, po_contactPhone: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="เบอร์โทรติดต่อ..." />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">อีเมล (Email)</label>
+                        <input type="email" value={customData.po_contactEmail || ''} onChange={e => setCustomData({...customData, po_contactEmail: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="อีเมล..." />
                       </div>
                     </div>
 
                     {/* รายการสินค้าและราคารวม */}
                     <div className="grid grid-cols-1 gap-6 p-5 bg-white dark:bg-gray-800 rounded-lg border border-teal-100 dark:border-teal-800/50">
-                      <div className="border-b border-teal-100 dark:border-teal-800/50 pb-2 mb-2">
-                        <h3 className="font-bold text-teal-700 dark:text-teal-500">2. รายการสั่งซื้อ (Order Items)</h3>
+                      <div className="border-b border-teal-100 dark:border-teal-800/50 pb-2 mb-2 flex justify-between items-center">
+                        <h3 className="font-bold text-teal-700 dark:text-teal-500">3. รายการสั่งซื้อ (Order Items)</h3>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                            <input type="radio" name="po_priceType" checked={formData.priceType === 'exclude_vat'} onChange={() => setFormData({...formData, priceType: 'exclude_vat'})} className="accent-teal-600" /> ราคาแยกภาษี
+                          </label>
+                          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                            <input type="radio" name="po_priceType" checked={formData.priceType === 'include_vat'} onChange={() => setFormData({...formData, priceType: 'include_vat'})} className="accent-teal-600" /> ราคารวมภาษี
+                          </label>
+                        </div>
                       </div>
                       
-                      <div>
-                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">รายละเอียดรายการสั่งซื้อ (Items Details)</label>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono bg-gray-50 dark:bg-gray-900 p-2 rounded">
-                          รูปแบบแนะนำ: ลำดับ | รหัส/รายการสินค้า | จำนวน | หน่วย | ราคาต่อหน่วย | ราคารวม<br/>
-                          เช่น: 1 | กระดาษ A4 | 50 | รีม | 100 | 5,000
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-400">
+                              <th className="py-2 px-2 w-10 text-center">#</th>
+                              <th className="py-2 px-2">รายละเอียด</th>
+                              <th className="py-2 px-2 w-24 text-right">จำนวน</th>
+                              <th className="py-2 px-2 w-24">หน่วย</th>
+                              <th className="py-2 px-2 w-32 text-right">ราคาต่อหน่วย</th>
+                              <th className="py-2 px-2 w-32 text-right">มูลค่า</th>
+                              <th className="py-2 px-2 w-10"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {formData.items.map((item: any, index: number) => {
+                              const itemAmount = (Number(item.qty) * Number(item.unitPrice));
+                              return (
+                              <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                                <td className="py-2 px-2 text-center text-gray-500">{index + 1}</td>
+                                <td className="py-2 px-2">
+                                  <input type="text" value={item.name} onChange={e => handleItemChange(index, 'name', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-teal-500 rounded bg-transparent outline-none dark:text-white" placeholder="ชื่อสินค้า..." />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="number" min="0" value={item.qty} onChange={e => handleItemChange(index, 'qty', Number(e.target.value))} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-teal-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="text" value={item.unit} onChange={e => handleItemChange(index, 'unit', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-teal-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="number" min="0" value={item.unitPrice} onChange={e => handleItemChange(index, 'unitPrice', Number(e.target.value))} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-teal-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2 text-right text-gray-700 dark:text-gray-300 font-medium">
+                                  {itemAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </td>
+                                <td className="py-2 px-2 text-center">
+                                  <button type="button" onClick={() => removeItem(index)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            )})}
+                          </tbody>
+                        </table>
+                        <div className="mt-3">
+                          <button type="button" onClick={addItem} className="flex items-center gap-1 text-sm font-medium text-teal-600 hover:text-teal-700 dark:text-teal-400">
+                            <Plus className="w-4 h-4" /> เพิ่มรายการ
+                          </button>
                         </div>
-                        <textarea rows={6} value={customData.po_itemsText || ''} onChange={e => setCustomData({...customData, po_itemsText: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700 font-mono text-sm leading-relaxed" placeholder="1. ...\n2. ..." />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-gray-100 dark:border-gray-700 mt-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 mt-2">
                         <div>
-                          <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">รวมเป็นเงิน (Sub Total)</label>
-                          <div className="flex items-center gap-2">
-                            <input type="number" min="0" value={customData.po_subTotal || ''} onChange={e => setCustomData({...customData, po_subTotal: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="0.00" />
-                            <span className="text-gray-600 dark:text-gray-400">บาท</span>
-                          </div>
+                          {/* Empty space for layout balance, or can put remarks here */}
                         </div>
-                        <div>
-                          <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ภาษีมูลค่าเพิ่ม 7% (VAT)</label>
-                          <div className="flex items-center gap-2">
-                            <input type="number" min="0" value={customData.po_vat || ''} onChange={e => setCustomData({...customData, po_vat: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-700" placeholder="0.00" />
-                            <span className="text-gray-600 dark:text-gray-400">บาท</span>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600 dark:text-gray-400 font-medium">รวมเป็นเงิน</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
                           </div>
-                        </div>
-                        <div className="md:col-span-2 lg:col-span-1">
-                          <label className="block text-sm font-bold text-gray-900 dark:text-white mb-1">ยอดสุทธิ (Grand Total)</label>
-                          <div className="flex items-center gap-2">
-                            <input type="number" min="0" value={customData.po_grandTotal || ''} onChange={e => setCustomData({...customData, po_grandTotal: e.target.value})} className="w-full p-2.5 border-2 border-teal-300 dark:border-teal-600 rounded-md outline-none focus:ring-2 focus:ring-teal-500/50 bg-teal-50 dark:bg-teal-900/30 text-lg font-bold text-teal-900 dark:text-teal-300" placeholder="0.00" />
-                            <span className="font-bold text-gray-900 dark:text-white">บาท</span>
+                          
+                          <div className="flex justify-between items-center text-sm">
+                            <div className="flex items-center gap-2">
+                              <label className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 font-medium cursor-pointer">
+                                <input type="checkbox" checked={formData.discountPercent > 0} onChange={e => setFormData({...formData, discountPercent: e.target.checked ? 10 : 0})} className="w-3.5 h-3.5 accent-teal-600"/>
+                                ส่วนลด
+                              </label>
+                              {formData.discountPercent > 0 && (
+                                <div className="flex items-center gap-1 border-b border-gray-300 dark:border-gray-600">
+                                  <input type="number" value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: Number(e.target.value)})} className="w-10 text-center bg-transparent outline-none text-gray-700 dark:text-gray-300" />
+                                  <span className="text-gray-500">%</span>
+                                </div>
+                              )}
+                            </div>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">
+                              {formData.discountPercent > 0 ? '-' : ''}{discountAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600 dark:text-gray-400 font-medium">ราคาหลังหักส่วนลด</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{afterDiscount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm">
+                            <label className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 font-medium cursor-pointer">
+                              <input type="checkbox" checked={formData.hasVat} onChange={e => setFormData({...formData, hasVat: e.target.checked})} className="w-3.5 h-3.5 accent-teal-600"/>
+                              ภาษีมูลค่าเพิ่ม 7%
+                            </label>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{vatAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+                          
+                          {formData.hasVat && formData.priceType === 'include_vat' && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-600 dark:text-gray-400 font-medium">ราคาไม่รวมภาษีมูลค่าเพิ่ม</span>
+                              <span className="font-medium text-gray-800 dark:text-gray-200">{(afterDiscount - vatAmount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                            </div>
+                          )}
+
+                          <div className="flex justify-between items-center text-base pt-3 border-t border-gray-200 dark:border-gray-700">
+                            <span className="text-teal-700 dark:text-teal-500 font-bold">จำนวนเงินรวมทั้งสิ้น</span>
+                            <span className="font-bold text-gray-900 dark:text-white text-lg">{grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
                           </div>
                         </div>
                       </div>
@@ -3564,8 +3667,343 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 </div>
 
                 <div className="max-w-4xl mx-auto mt-8">
-                  <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks / Instructions)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-teal-500/50 dark:bg-gray-800" />
+                  <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
+                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-800" placeholder="เช่น ส่งสินค้าที่ชั้น 12..." />
+                </div>
+              </div>
+            )
+          }
+
+          if (isInvoice) {
+            return (
+              <div className="p-6 lg:p-10 space-y-8 pt-2">
+                <div className="bg-purple-50 dark:bg-purple-900/10 p-6 rounded-xl border border-purple-100 dark:border-purple-800">
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">ใบวางบิล / ใบแจ้งหนี้ (Invoice / Billing Note)</h2>
+                    <p className="text-gray-500 mt-2">แบบฟอร์มบันทึกข้อมูลใบแจ้งหนี้เพื่อส่งให้ลูกค้า</p>
+                  </div>
+                  
+                  <div className="space-y-8 max-w-4xl mx-auto">
+                    {/* ข้อมูลลูกค้า และ ข้อมูลเอกสาร */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-white dark:bg-gray-800 rounded-lg border border-purple-100 dark:border-purple-800/50">
+                      
+                      <div className="md:col-span-2 border-b border-purple-100 dark:border-purple-800/50 pb-2 mb-2 flex justify-between items-end">
+                        <h3 className="font-bold text-purple-700 dark:text-purple-500">1. ข้อมูลลูกค้า (Customer Info)</h3>
+                      </div>
+                      
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ลูกค้า (Customer Name)</label>
+                        <input type="text" value={customData.inv_customerName || ''} onChange={e => setCustomData({...customData, inv_customerName: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-purple-500/50 dark:bg-gray-700" placeholder="ชื่อบริษัทลูกค้า..." />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ที่อยู่ลูกค้า (Customer Address)</label>
+                        <textarea rows={2} value={customData.inv_customerAddress || ''} onChange={e => setCustomData({...customData, inv_customerAddress: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-purple-500/50 dark:bg-gray-700" placeholder="ที่อยู่สำหรับติดต่อ / ออกใบแจ้งหนี้..." />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เลขประจำตัวผู้เสียภาษี (Tax ID)</label>
+                        <input type="text" value={customData.inv_customerTaxId || ''} onChange={e => setCustomData({...customData, inv_customerTaxId: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-purple-500/50 dark:bg-gray-700" placeholder="เลขประจำตัวผู้เสียภาษี 13 หลัก..." />
+                      </div>
+
+                      <div className="md:col-span-2 border-b border-purple-100 dark:border-purple-800/50 pb-2 mb-2 mt-4">
+                        <h3 className="font-bold text-purple-700 dark:text-purple-500">2. ข้อมูลเอกสารและผู้ติดต่อ</h3>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เลขที่ใบแจ้งหนี้ (Invoice No.)</label>
+                        <input type="text" value={customData.inv_refNo || ''} onChange={e => setCustomData({...customData, inv_refNo: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-purple-500/50 dark:bg-gray-700" placeholder="เช่น INV2024030001..." />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">วันที่ (Date)</label>
+                        <input type="date" value={customData.inv_date || formData.date} onChange={e => { setCustomData({...customData, inv_date: e.target.value}); setFormData({...formData, date: e.target.value}); }} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-purple-500/50 dark:bg-gray-700" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ครบกำหนด (Due Date)</label>
+                        <input type="date" value={customData.inv_dueDate || formData.dueDate} onChange={e => { setCustomData({...customData, inv_dueDate: e.target.value}); setFormData({...formData, dueDate: e.target.value}); }} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-purple-500/50 dark:bg-gray-700" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ผู้ขาย (Seller)</label>
+                        <input type="text" value={customData.inv_seller || ''} onChange={e => setCustomData({...customData, inv_seller: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-purple-500/50 dark:bg-gray-700" placeholder="ชื่อผู้ขาย..." />
+                      </div>
+                    </div>
+
+                    {/* รายการสินค้าและราคารวม */}
+                    <div className="grid grid-cols-1 gap-6 p-5 bg-white dark:bg-gray-800 rounded-lg border border-purple-100 dark:border-purple-800/50">
+                      <div className="border-b border-purple-100 dark:border-purple-800/50 pb-2 mb-2 flex justify-between items-center">
+                        <h3 className="font-bold text-purple-700 dark:text-purple-500">3. รายการสินค้า (Items)</h3>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                            <input type="radio" name="inv_priceType" checked={formData.priceType === 'exclude_vat'} onChange={() => setFormData({...formData, priceType: 'exclude_vat'})} className="accent-purple-600" /> ราคาแยกภาษี
+                          </label>
+                          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                            <input type="radio" name="inv_priceType" checked={formData.priceType === 'include_vat'} onChange={() => setFormData({...formData, priceType: 'include_vat'})} className="accent-purple-600" /> ราคารวมภาษี
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-400">
+                              <th className="py-2 px-2 w-10 text-center">#</th>
+                              <th className="py-2 px-2">รายละเอียด</th>
+                              <th className="py-2 px-2 w-24 text-right">จำนวน</th>
+                              <th className="py-2 px-2 w-24">หน่วย</th>
+                              <th className="py-2 px-2 w-32 text-right">ราคาต่อหน่วย</th>
+                              <th className="py-2 px-2 w-32 text-right">มูลค่า</th>
+                              <th className="py-2 px-2 w-10"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {formData.items.map((item: any, index: number) => {
+                              const itemAmount = (Number(item.qty) * Number(item.unitPrice));
+                              return (
+                              <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                                <td className="py-2 px-2 text-center text-gray-500">{index + 1}</td>
+                                <td className="py-2 px-2">
+                                  <input type="text" value={item.name} onChange={e => handleItemChange(index, 'name', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-purple-500 rounded bg-transparent outline-none dark:text-white" placeholder="ชื่อสินค้า..." />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="number" min="0" value={item.qty} onChange={e => handleItemChange(index, 'qty', Number(e.target.value))} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-purple-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="text" value={item.unit} onChange={e => handleItemChange(index, 'unit', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-purple-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="number" min="0" value={item.unitPrice} onChange={e => handleItemChange(index, 'unitPrice', Number(e.target.value))} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-purple-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2 text-right text-gray-700 dark:text-gray-300 font-medium">
+                                  {itemAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </td>
+                                <td className="py-2 px-2 text-center">
+                                  <button type="button" onClick={() => removeItem(index)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            )})}
+                          </tbody>
+                        </table>
+                        <div className="mt-3">
+                          <button type="button" onClick={addItem} className="flex items-center gap-1 text-sm font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400">
+                            <Plus className="w-4 h-4" /> เพิ่มรายการ
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 mt-2">
+                        <div>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600 dark:text-gray-400 font-medium">รวมเป็นเงิน</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+                          
+                          <div className="flex justify-between items-center text-sm">
+                            <div className="flex items-center gap-2">
+                              <label className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 font-medium cursor-pointer">
+                                <input type="checkbox" checked={formData.discountPercent > 0} onChange={e => setFormData({...formData, discountPercent: e.target.checked ? 10 : 0})} className="w-3.5 h-3.5 accent-purple-600"/>
+                                ส่วนลด
+                              </label>
+                              {formData.discountPercent > 0 && (
+                                <div className="flex items-center gap-1 border-b border-gray-300 dark:border-gray-600">
+                                  <input type="number" value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: Number(e.target.value)})} className="w-10 text-center bg-transparent outline-none text-gray-700 dark:text-gray-300" />
+                                  <span className="text-gray-500">%</span>
+                                </div>
+                              )}
+                            </div>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">
+                              {formData.discountPercent > 0 ? '-' : ''}{discountAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600 dark:text-gray-400 font-medium">ราคาหลังหักส่วนลด</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{afterDiscount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm">
+                            <label className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 font-medium cursor-pointer">
+                              <input type="checkbox" checked={formData.hasVat} onChange={e => setFormData({...formData, hasVat: e.target.checked})} className="w-3.5 h-3.5 accent-purple-600"/>
+                              ภาษีมูลค่าเพิ่ม 7%
+                            </label>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{vatAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+                          
+                          {formData.hasVat && formData.priceType === 'include_vat' && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-600 dark:text-gray-400 font-medium">ราคาไม่รวมภาษีมูลค่าเพิ่ม</span>
+                              <span className="font-medium text-gray-800 dark:text-gray-200">{(afterDiscount - vatAmount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                            </div>
+                          )}
+
+                          <div className="flex justify-between items-center text-base pt-3 border-t border-gray-200 dark:border-gray-700">
+                            <span className="text-purple-700 dark:text-purple-500 font-bold">จำนวนเงินรวมทั้งสิ้น</span>
+                            <span className="font-bold text-gray-900 dark:text-white text-lg">{grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="max-w-4xl mx-auto mt-8">
+                  <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
+                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-purple-500/50 dark:bg-gray-800" placeholder="เช่น บัญชีธนาคาร 1234567890..." />
+                </div>
+              </div>
+            )
+          }
+
+          if (isWithholdingTax) {
+            const whtItems = customData.wht_items || [{ name: '', date: '', amount: 0, tax: 0 }]
+            const handleWhtItemChange = (idx: number, field: string, value: any) => {
+              const newItems = [...whtItems]
+              newItems[idx] = { ...newItems[idx], [field]: value }
+              setCustomData({ ...customData, wht_items: newItems })
+            }
+            const addWhtItem = () => {
+              setCustomData({ ...customData, wht_items: [...whtItems, { name: '', date: '', amount: 0, tax: 0 }] })
+            }
+            const removeWhtItem = (idx: number) => {
+              setCustomData({ ...customData, wht_items: whtItems.filter((_: any, i: number) => i !== idx) })
+            }
+            
+            const totalAmount = whtItems.reduce((acc: number, item: any) => acc + (Number(item.amount) || 0), 0)
+            const totalTax = whtItems.reduce((acc: number, item: any) => acc + (Number(item.tax) || 0), 0)
+
+            return (
+              <div className="p-6 lg:p-10 space-y-8 pt-2">
+                <div className="bg-sky-50 dark:bg-sky-900/10 p-6 rounded-xl border border-sky-100 dark:border-sky-800">
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)</h2>
+                    <p className="text-gray-500 mt-2">แบบฟอร์มสำหรับการออกหนังสือรับรองการหักภาษี ณ ที่จ่าย</p>
+                  </div>
+                  
+                  <div className="space-y-8 max-w-4xl mx-auto">
+                    {/* ประเภทแบบยื่น */}
+                    <div className="p-5 bg-white dark:bg-gray-800 rounded-lg border border-sky-100 dark:border-sky-800/50">
+                      <h3 className="font-bold text-sky-700 dark:text-sky-500 mb-4 border-b border-sky-100 pb-2">แบบยื่นภาษี</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {['ภ.ง.ด.1ก', 'ภ.ง.ด.1ก พิเศษ', 'ภ.ง.ด.2', 'ภ.ง.ด.3', 'ภ.ง.ด.2ก', 'ภ.ง.ด.3ก', 'ภ.ง.ด.53'].map(type => (
+                          <label key={type} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            <input type="radio" name="wht_formType" checked={customData.wht_formType === type || (!customData.wht_formType && type === 'ภ.ง.ด.53')} onChange={() => setCustomData({...customData, wht_formType: type})} className="accent-sky-600" />
+                            {type}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-white dark:bg-gray-800 rounded-lg border border-sky-100 dark:border-sky-800/50">
+                      {/* ข้อมูลผู้มีหน้าที่หักภาษี ณ ที่จ่าย */}
+                      <div className="md:col-span-2 border-b border-sky-100 dark:border-sky-800/50 pb-2 mb-2">
+                        <h3 className="font-bold text-sky-700 dark:text-sky-500">1. ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (Payer)</h3>
+                      </div>
+                      
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ชื่อผู้มีหน้าที่หักภาษี</label>
+                        <input type="text" value={customData.wht_payerName !== undefined ? customData.wht_payerName : (company?.name || '')} onChange={e => setCustomData({...customData, wht_payerName: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="ชื่อบริษัท..." />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ที่อยู่</label>
+                        <textarea rows={2} value={customData.wht_payerAddress !== undefined ? customData.wht_payerAddress : (company?.address || '')} onChange={e => setCustomData({...customData, wht_payerAddress: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="ที่อยู่บริษัท..." />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เลขประจำตัวผู้เสียภาษี (13 หลัก)</label>
+                        <input type="text" value={customData.wht_payerTaxId !== undefined ? customData.wht_payerTaxId : (company?.taxId || '')} onChange={e => setCustomData({...customData, wht_payerTaxId: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="เลขประจำตัวผู้เสียภาษี 13 หลัก..." />
+                      </div>
+
+                      {/* ข้อมูลผู้ถูกหักภาษี ณ ที่จ่าย */}
+                      <div className="md:col-span-2 border-b border-sky-100 dark:border-sky-800/50 pb-2 mb-2 mt-4">
+                        <h3 className="font-bold text-sky-700 dark:text-sky-500">2. ผู้ถูกหักภาษี ณ ที่จ่าย (Payee)</h3>
+                      </div>
+                      
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ชื่อผู้ถูกหักภาษี (บุคคล/นิติบุคคล)</label>
+                        <input type="text" value={customData.wht_payeeName || ''} onChange={e => setCustomData({...customData, wht_payeeName: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="ชื่อผู้รับเงิน..." />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ที่อยู่</label>
+                        <textarea rows={2} value={customData.wht_payeeAddress || ''} onChange={e => setCustomData({...customData, wht_payeeAddress: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="ที่อยู่ผู้รับเงิน..." />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เลขประจำตัวผู้เสียภาษี (13 หลัก)</label>
+                        <input type="text" value={customData.wht_payeeTaxId || ''} onChange={e => setCustomData({...customData, wht_payeeTaxId: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="เลขประจำตัวผู้เสียภาษี 13 หลัก..." />
+                      </div>
+                    </div>
+
+                    {/* ตารางรายการเงินได้ */}
+                    <div className="p-5 bg-white dark:bg-gray-800 rounded-lg border border-sky-100 dark:border-sky-800/50">
+                      <div className="border-b border-sky-100 dark:border-sky-800/50 pb-2 mb-4 flex justify-between items-center">
+                        <h3 className="font-bold text-sky-700 dark:text-sky-500">3. ประเภทเงินได้พึงประเมินที่จ่าย</h3>
+                      </div>
+                      
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-400">
+                              <th className="py-2 px-2 w-10 text-center">#</th>
+                              <th className="py-2 px-2">ประเภทเงินได้ / คำอธิบาย</th>
+                              <th className="py-2 px-2 w-32">วัน/เดือน/ปี ที่จ่าย</th>
+                              <th className="py-2 px-2 w-32 text-right">จำนวนเงินที่จ่าย</th>
+                              <th className="py-2 px-2 w-32 text-right">ภาษีที่หักและนำส่งไว้</th>
+                              <th className="py-2 px-2 w-10"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {whtItems.map((item: any, index: number) => (
+                              <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                                <td className="py-2 px-2 text-center text-gray-500">{index + 1}</td>
+                                <td className="py-2 px-2">
+                                  <input type="text" value={item.name} onChange={e => handleWhtItemChange(index, 'name', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-sky-500 rounded bg-transparent outline-none dark:text-white" placeholder="เช่น ค่าบริการ, ค่าขนส่ง..." />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="text" value={item.date} onChange={e => handleWhtItemChange(index, 'date', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-sky-500 rounded bg-transparent outline-none dark:text-white text-sm" placeholder="DD/MM/YYYY" />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="number" min="0" value={item.amount || ''} onChange={e => handleWhtItemChange(index, 'amount', Number(e.target.value))} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-sky-500 rounded bg-transparent outline-none dark:text-white" placeholder="0.00" />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="number" min="0" value={item.tax || ''} onChange={e => handleWhtItemChange(index, 'tax', Number(e.target.value))} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-sky-500 rounded bg-transparent outline-none dark:text-white" placeholder="0.00" />
+                                </td>
+                                <td className="py-2 px-2 text-center">
+                                  <button type="button" onClick={() => removeWhtItem(index)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <div className="mt-3">
+                          <button type="button" onClick={addWhtItem} className="flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400">
+                            <Plus className="w-4 h-4" /> เพิ่มรายการเงินได้
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 mt-2">
+                        <div></div>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center text-sm font-bold border-t border-gray-200 dark:border-gray-700 pt-3">
+                            <span className="text-gray-800 dark:text-gray-200">รวมเงินที่จ่ายและภาษีที่หักนำส่ง</span>
+                            <div className="flex gap-4">
+                              <span className="w-32 text-right">{totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                              <span className="w-32 text-right">{totalTax.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                              <span className="w-10"></span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-white dark:bg-gray-800 rounded-lg border border-sky-100 dark:border-sky-800/50">
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">วันที่ออกหนังสือรับรองฯ (Date)</label>
+                        <input type="date" value={customData.wht_date || formData.date} onChange={e => { setCustomData({...customData, wht_date: e.target.value}); setFormData({...formData, date: e.target.value}); }} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )
@@ -4321,46 +4759,141 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                         <h3 className="font-bold text-indigo-700 dark:text-indigo-500">2. รายการสินค้า/บริการ (Items & Services)</h3>
                       </div>
                       
-                      <div>
-                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">รายละเอียดรายการ (Items Details)</label>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono bg-gray-50 dark:bg-gray-900 p-2 rounded">
-                          รูปแบบแนะนำ: ลำดับ | รายการสินค้า/บริการ | จำนวน | ราคา/หน่วย | จำนวนเงินรวม<br/>
-                          เช่น:<br/>
-                          1 | ค่าที่ปรึกษาประจำเดือนตุลาคม 2566 | 1 | 25,000 | 25,000<br/>
-                          2 | ค่าบริการดูแลเซิร์ฟเวอร์ | 1 | 5,000 | 5,000
+                      {/* Line Items Table */}
+                      <div className="border border-indigo-100 dark:border-indigo-800/50 rounded-lg overflow-hidden">
+                        <table className="w-full text-sm text-left">
+                          <thead className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400">
+                            <tr>
+                              <th className="px-4 py-3 font-medium w-16 text-center">ลำดับ</th>
+                              <th className="px-4 py-3 font-medium">รายการสินค้า/บริการ</th>
+                              <th className="px-4 py-3 font-medium w-32 text-right">จำนวน</th>
+                              <th className="px-4 py-3 font-medium w-32">หน่วย</th>
+                              <th className="px-4 py-3 font-medium w-40 text-right">ราคา/หน่วย</th>
+                              <th className="px-4 py-3 font-medium w-40 text-right">จำนวนเงิน</th>
+                              <th className="px-4 py-3 font-medium w-16 text-center"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                            {formData.items.map((item: any, index: number) => (
+                              <tr key={item.id} className="bg-white dark:bg-gray-800 group hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                                <td className="px-4 py-4 text-center text-gray-500">{index + 1}</td>
+                                <td className="px-4 py-4">
+                                  <input 
+                                    type="text" 
+                                    value={item.name} 
+                                    onChange={e => handleItemChange(index, 'name', e.target.value)} 
+                                    placeholder="กรอกชื่อรายการ..."
+                                    className="w-full p-2 border border-transparent focus:border-indigo-300 dark:focus:border-indigo-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-transparent"
+                                  />
+                                </td>
+                                <td className="px-4 py-4">
+                                  <input 
+                                    type="number" 
+                                    value={item.qty} 
+                                    onChange={e => handleItemChange(index, 'qty', Number(e.target.value))} 
+                                    className="w-full p-2 text-right border border-transparent focus:border-indigo-300 dark:focus:border-indigo-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-transparent"
+                                  />
+                                </td>
+                                <td className="px-4 py-4">
+                                  <input 
+                                    type="text" 
+                                    value={item.unit} 
+                                    onChange={e => handleItemChange(index, 'unit', e.target.value)} 
+                                    className="w-full p-2 border border-transparent focus:border-indigo-300 dark:focus:border-indigo-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-transparent"
+                                  />
+                                </td>
+                                <td className="px-4 py-4">
+                                  <input 
+                                    type="number" 
+                                    value={item.unitPrice} 
+                                    onChange={e => handleItemChange(index, 'unitPrice', Number(e.target.value))} 
+                                    className="w-full p-2 text-right border border-transparent focus:border-indigo-300 dark:focus:border-indigo-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-transparent"
+                                  />
+                                </td>
+                                <td className="px-4 py-4 text-right font-medium text-gray-700 dark:text-gray-200">
+                                  {(item.qty * item.unitPrice).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </td>
+                                <td className="px-4 py-4 text-center">
+                                  <button type="button" onClick={() => removeItem(index)} className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                                    <Trash2 className="w-4 h-4 mx-auto" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border-t border-indigo-100 dark:border-indigo-800/50">
+                          <button 
+                            type="button" 
+                            onClick={addItem}
+                            className="flex items-center gap-1.5 px-4 py-2 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            <Plus className="w-4 h-4" /> เพิ่มรายการ
+                          </button>
                         </div>
-                        <textarea rows={6} value={customData.inv_itemsText || ''} onChange={e => setCustomData({...customData, inv_itemsText: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-indigo-500/50 dark:bg-gray-700 font-mono text-sm leading-relaxed" placeholder="1 | สินค้า A | 2 | 1000 | 2000" />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100 dark:border-gray-700 mt-2">
-                        <div className="hidden md:block"></div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-indigo-100 dark:border-indigo-800/50 mt-4">
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1 text-right">รวมเป็นเงิน (Subtotal)</label>
-                            <div className="flex items-center gap-2 justify-end">
-                              <input type="number" min="0" value={customData.inv_subtotal || ''} onChange={e => setCustomData({...customData, inv_subtotal: e.target.value})} className="w-48 p-2.5 text-right border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-indigo-500/50 dark:bg-gray-700" placeholder="0.00" />
-                              <span className="text-gray-600 dark:text-gray-400 w-8">บาท</span>
-                            </div>
+                            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 cursor-pointer">
+                              <input type="checkbox" checked={formData.hasVat} onChange={e => setFormData({...formData, hasVat: e.target.checked})} className="w-4 h-4 accent-indigo-600" />
+                              คำนวณภาษีมูลค่าเพิ่ม 7% (VAT)
+                            </label>
+                            {formData.hasVat && (
+                              <div className="ml-6 flex items-center gap-3">
+                                <label className="text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">รูปแบบภาษี</label>
+                                <select value={formData.priceType} onChange={e => setFormData({...formData, priceType: e.target.value})} className="w-full sm:w-48 p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800 text-sm">
+                                  <option value="exclude_vat">ราคายังไม่รวมภาษี (Exclude VAT)</option>
+                                  <option value="include_vat">ราคารวมภาษีแล้ว (Include VAT)</option>
+                                </select>
+                              </div>
+                            )}
                           </div>
-                          <div>
-                            <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1 text-right">ภาษีมูลค่าเพิ่ม (VAT Amount)</label>
-                            <div className="flex items-center gap-2 justify-end">
-                              <input type="number" min="0" value={customData.inv_vatAmount || ''} onChange={e => setCustomData({...customData, inv_vatAmount: e.target.value})} className="w-48 p-2.5 text-right border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-indigo-500/50 dark:bg-gray-700" placeholder="0.00" />
-                              <span className="text-gray-600 dark:text-gray-400 w-8">บาท</span>
-                            </div>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="font-bold text-gray-600 dark:text-gray-300">รวมเป็นเงิน (Subtotal)</span>
+                            <span className="font-bold text-gray-800 dark:text-gray-200">{subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
                           </div>
-                          <div className="pt-2 border-t-2 border-indigo-100 dark:border-indigo-900/30">
-                            <label className="block text-sm font-bold text-indigo-900 dark:text-indigo-400 mb-1 text-right">จำนวนเงินรวมทั้งสิ้น (Grand Total)</label>
-                            <div className="flex items-center gap-2 justify-end">
-                              <input type="number" min="0" value={customData.inv_grandTotal || ''} onChange={e => setCustomData({...customData, inv_grandTotal: e.target.value})} className="w-48 p-2.5 text-right border-2 border-indigo-400 dark:border-indigo-600 rounded-md outline-none focus:ring-2 focus:ring-indigo-500/50 bg-indigo-50 dark:bg-indigo-900/30 font-bold text-lg text-indigo-900 dark:text-indigo-300" placeholder="0.00" />
-                              <span className="font-bold text-indigo-900 dark:text-indigo-400 w-8">บาท</span>
+                          
+                          <div className="flex justify-between items-center text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-600 dark:text-gray-300">ส่วนลด (Discount)</span>
+                              <input
+                                type="number"
+                                value={formData.discountPercent}
+                                onChange={e => setFormData({...formData, discountPercent: Number(e.target.value)})}
+                                className="w-16 p-1 text-right border border-gray-300 dark:border-gray-600 rounded outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800"
+                              />
+                              <span className="text-gray-500 font-medium">%</span>
                             </div>
+                            <span className="font-bold text-gray-800 dark:text-gray-200">{discountAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+                          
+                          {formData.discountPercent > 0 && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="font-bold text-gray-600 dark:text-gray-300">ราคาหลังหักส่วนลด (After Discount)</span>
+                              <span className="font-bold text-gray-800 dark:text-gray-200">{afterDiscount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                            </div>
+                          )}
+
+                          {formData.hasVat && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="font-bold text-gray-600 dark:text-gray-300">ภาษีมูลค่าเพิ่ม 7% (VAT)</span>
+                              <span className="font-bold text-gray-800 dark:text-gray-200">{vatAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                            </div>
+                          )}
+                          
+                          <div className="pt-2 border-t-2 border-indigo-200 dark:border-indigo-900/50 flex justify-between items-center">
+                            <span className="font-bold text-indigo-900 dark:text-indigo-400 text-base">จำนวนเงินรวมทั้งสิ้น (Grand Total)</span>
+                            <span className="font-bold text-indigo-900 dark:text-indigo-400 text-lg">{grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
@@ -4694,11 +5227,67 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
         {step === 3 && (
           <div className="p-6 lg:p-10">
-            <div className="mb-6">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t.createDocument.step3Title}</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t.createDocument.step3Subtitle}
-              </p>
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{t.createDocument.step3Title}</h2>
+                <div className="mt-4 mb-2">
+                  <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เลือกเทมเพลตเพื่อแสดงตัวอย่าง</label>
+                  <select
+                    value={docInfo.templateId}
+                    onChange={e => handleTemplateChange(e.target.value)}
+                    className="w-full md:w-96 text-sm p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  >
+                    <option value="">{t.createDocument.noTemplate}</option>
+                    {matchingTemplates.length > 0 && (
+                      <optgroup label={t.createDocument.templatesForSelectedType}>
+                        {matchingTemplates.map(template => (
+                          <option key={template.id} value={template.id}>
+                            {template.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {otherTemplates.length > 0 && (
+                      <optgroup label={t.createDocument.otherFormTemplates}>
+                        {otherTemplates.map(template => (
+                          <option key={template.id} value={template.id}>
+                            {template.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                </div>
+              </div>
+              
+              {savedDocument && (
+                <div className="flex items-center gap-3">
+                  <div className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center gap-2">
+                    <span className="text-gray-500 dark:text-gray-400">สถานะ:</span>
+                    {savedDocument.status === 'PENDING' ? (
+                      <span className="text-amber-600 dark:text-amber-400">รออนุมัติ</span>
+                    ) : savedDocument.status === 'APPROVED' ? (
+                      <span className="text-emerald-600 dark:text-emerald-400">อนุมัติแล้ว</span>
+                    ) : savedDocument.status === 'REJECTED' ? (
+                      <span className="text-rose-600 dark:text-rose-400">ถูกปฏิเสธ</span>
+                    ) : (
+                      <span className="text-gray-600 dark:text-gray-300">ฉบับร่าง (ยังไม่ยื่นอนุมัติ)</span>
+                    )}
+                  </div>
+                  
+                  {savedDocument.status !== 'PENDING' && savedDocument.status !== 'APPROVED' && (
+                    <button
+                      type="button"
+                      onClick={handleSubmitForApproval}
+                      disabled={isPending}
+                      className="flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
+                    >
+                      {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      ขอยื่นอนุมัติ
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             {(() => {
               const previewTemplate = templates.find(pt => pt.id === docInfo.templateId)
@@ -4706,6 +5295,55 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 return (
                   <div className="p-10 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
                     {t.createDocument.noSavedData}
+                  </div>
+                )
+              }
+              const selectedDocType = documentTypes.find(t => t.id === docInfo.documentTypeId)
+              const isPO = selectedDocType?.name?.includes('สั่งซื้อ') || selectedDocType?.name?.toUpperCase().includes('PO') || selectedDocType?.name?.toLowerCase().includes('purchase order')
+              const isInvoice = selectedDocType?.name?.includes('ใบแจ้งหนี้') || selectedDocType?.name?.includes('ใบวางบิล') || selectedDocType?.name?.toLowerCase().includes('invoice') || selectedDocType?.name?.toLowerCase().includes('billing note')
+
+              if (isPO && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
+                return (
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 border-b border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      ตัวอย่างใบสั่งซื้อ (Purchase Order)
+                    </div>
+                    <div className="p-4 bg-gray-100 dark:bg-gray-900 overflow-x-auto">
+                      <div className="min-w-[800px] transform origin-top left-1/2 -translate-x-1/2 relative" style={{ transform: 'scale(0.85)' }}>
+                        <PurchaseOrderPrintLayout data={mapDocumentToTemplateData(savedDocument, company, { name: getCurrentUser().name })} />
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              if (isInvoice && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
+                return (
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 border-b border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      ตัวอย่างใบแจ้งหนี้ (Invoice)
+                    </div>
+                    <div className="p-4 bg-gray-100 dark:bg-gray-900 overflow-x-auto">
+                      <div className="min-w-[800px] transform origin-top left-1/2 -translate-x-1/2 relative" style={{ transform: 'scale(0.85)' }}>
+                        <InvoicePrintLayout data={mapDocumentToTemplateData(savedDocument, company, { name: getCurrentUser().name })} />
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              const isWithholdingTax = selectedDocType?.name?.includes('หัก ณ ที่จ่าย') || selectedDocType?.name?.includes('50 ทวิ')
+              if (isWithholdingTax && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
+                return (
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 border-b border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      ตัวอย่างหนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)
+                    </div>
+                    <div className="p-4 bg-gray-100 dark:bg-gray-900 overflow-x-auto">
+                      <div className="min-w-[800px] transform origin-top left-1/2 -translate-x-1/2 relative flex justify-center" style={{ transform: 'scale(0.85)' }}>
+                        <WithholdingTaxPrintLayout data={mapDocumentToTemplateData(savedDocument, company, { name: getCurrentUser().name })} />
+                      </div>
+                    </div>
                   </div>
                 )
               }

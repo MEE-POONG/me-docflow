@@ -89,7 +89,7 @@ export async function createDocument(formData: {
         createdById: user.id,
         title: formData.title,
         documentNo: documentNo,
-        status: 'PENDING', // Default to pending for approval flow demo
+        status: 'DRAFT', // Default to pending for approval flow demo
         dataJson: formData.dataJson ? JSON.parse(formData.dataJson) : {},
         subtotalSatang: formData.subtotalSatang || null,
         vatSatang: formData.vatSatang || null,
@@ -156,5 +156,25 @@ export async function deleteDocument(id: string) {
   } catch (error) {
     console.error('Failed to delete document:', error)
     return { success: false, error: 'Failed to delete document' }
+  }
+}
+
+export async function submitDocument(id: string) {
+  try {
+    const updatedDoc = await prisma.document.update({
+      where: { id },
+      data: {
+        status: 'PENDING',
+      }
+    })
+
+    revalidatePath('/documents')
+    revalidatePath(`/documents/${id}`)
+    revalidatePath('/documents/pending')
+    
+    return { success: true, document: updatedDoc }
+  } catch (error) {
+    console.error('Failed to submit document:', error)
+    return { success: false, error: 'Failed to submit document' }
   }
 }

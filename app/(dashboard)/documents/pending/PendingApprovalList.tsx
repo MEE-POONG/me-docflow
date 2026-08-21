@@ -7,6 +7,9 @@ import { format } from 'date-fns'
 import { th, enUS } from 'date-fns/locale'
 import Link from 'next/link'
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
+import { PurchaseOrderPrintLayout } from '@/components/templates/PurchaseOrderPrintLayout'
+import { InvoicePrintLayout } from '@/components/templates/InvoicePrintLayout'
+import { WithholdingTaxPrintLayout } from '@/components/templates/WithholdingTaxPrintLayout'
 import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 
@@ -30,6 +33,12 @@ type Document = {
     email?: string
     role?: string | null
   }
+  documentType?: {
+    name: string
+  } | null
+  category?: {
+    name: string
+  } | null
 }
 
 type Template = {
@@ -261,16 +270,14 @@ export default function PendingApprovalList({ documents, templates }: Props) {
                       <Link href={`/documents/${doc.id}`} className="inline-flex items-center justify-center p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title={t.documentsList.viewDetails}>
                         <Eye className="w-5 h-5" />
                       </Link>
-                      {doc.status === 'APPROVED' && (
-                        <button
-                          type="button"
-                          onClick={() => openPrintPreview(doc)}
-                          className="inline-flex items-center justify-center p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-                          title={t.pendingApproval.printReport}
-                        >
-                          <Printer className="w-5 h-5" />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => openPrintPreview(doc)}
+                        className="inline-flex items-center justify-center p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
+                        title={t.pendingApproval.printReport}
+                      >
+                        <Printer className="w-5 h-5" />
+                      </button>
                       {doc.status === 'PENDING' && (
                         <>
                           <button
@@ -421,6 +428,34 @@ export default function PendingApprovalList({ documents, templates }: Props) {
               <div className="p-5 overflow-auto flex-1 bg-gray-50 dark:bg-gray-900/40">
                 {(() => {
                   const selectedTemplate = templates.find(t => t.id === printTemplateId)
+                  const isPO = printPreviewDoc.documentType?.name?.includes('สั่งซื้อ') || printPreviewDoc.documentType?.name?.toUpperCase().includes('PO') || printPreviewDoc.documentType?.name?.toLowerCase().includes('purchase order')
+                  const isInvoice = printPreviewDoc.documentType?.name?.includes('ใบแจ้งหนี้') || printPreviewDoc.documentType?.name?.includes('ใบวางบิล') || printPreviewDoc.documentType?.name?.toLowerCase().includes('invoice') || printPreviewDoc.documentType?.name?.toLowerCase().includes('billing note')
+                  
+                  if (isPO && (!selectedTemplate || !hasLayoutElements(selectedTemplate.layoutJson))) {
+                    return (
+                      <div className="bg-white p-4 mx-auto" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
+                        <PurchaseOrderPrintLayout data={mapDocumentToTemplateData(printPreviewDoc, printPreviewDoc.company, printPreviewDoc.createdBy)} />
+                      </div>
+                    )
+                  }
+
+                  if (isInvoice && (!selectedTemplate || !hasLayoutElements(selectedTemplate.layoutJson))) {
+                    return (
+                      <div className="bg-white p-4 mx-auto" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
+                        <InvoicePrintLayout data={mapDocumentToTemplateData(printPreviewDoc, printPreviewDoc.company, printPreviewDoc.createdBy)} />
+                      </div>
+                    )
+                  }
+
+                  const isWithholdingTax = printPreviewDoc.documentType?.name?.includes('หัก ณ ที่จ่าย') || printPreviewDoc.documentType?.name?.includes('50 ทวิ')
+                  if (isWithholdingTax && (!selectedTemplate || !hasLayoutElements(selectedTemplate.layoutJson))) {
+                    return (
+                      <div className="bg-white p-4 mx-auto" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
+                        <WithholdingTaxPrintLayout data={mapDocumentToTemplateData(printPreviewDoc, printPreviewDoc.company, printPreviewDoc.createdBy)} />
+                      </div>
+                    )
+                  }
+
                   if (!selectedTemplate || !hasLayoutElements(selectedTemplate.layoutJson)) {
                     return (
                       <div className="p-10 text-center text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
