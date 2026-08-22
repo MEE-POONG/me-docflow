@@ -132,7 +132,7 @@ export default function DocumentsList({ initialDocuments }: { initialDocuments: 
                       {format(new Date(doc.createdAt), 'dd MMM yyyy', { locale: dateLocale })}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <DocumentActions id={doc.id} title={doc.title} />
+                      <DocumentActions id={doc.id} title={doc.title} status={doc.status} />
                     </td>
                   </tr>
                 ))
