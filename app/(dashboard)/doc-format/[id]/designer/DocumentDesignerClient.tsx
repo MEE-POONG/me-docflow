@@ -50,6 +50,21 @@ interface DesignerElement {
   tableTotalLabel?: string;
 }
 
+type ResizeDirection = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
+
+type AlignmentGuides = { x: number | null; y: number | null };
+
+const RESIZE_HANDLES: { direction: ResizeDirection; className: string; cursor: string }[] = [
+  { direction: 'nw', className: '-left-[3px] -top-[3px]', cursor: 'nwse-resize' },
+  { direction: 'n', className: 'left-1/2 -top-[3px] -translate-x-1/2', cursor: 'ns-resize' },
+  { direction: 'ne', className: '-right-[3px] -top-[3px]', cursor: 'nesw-resize' },
+  { direction: 'e', className: '-right-[3px] top-1/2 -translate-y-1/2', cursor: 'ew-resize' },
+  { direction: 'se', className: '-right-[3px] -bottom-[3px]', cursor: 'nwse-resize' },
+  { direction: 's', className: 'left-1/2 -bottom-[3px] -translate-x-1/2', cursor: 'ns-resize' },
+  { direction: 'sw', className: '-left-[3px] -bottom-[3px]', cursor: 'nesw-resize' },
+  { direction: 'w', className: '-left-[3px] top-1/2 -translate-y-1/2', cursor: 'ew-resize' },
+];
+
 type TemplateInfo = {
   id: string;
   name: string;
@@ -161,9 +176,9 @@ const ELEMENT_PALETTE: { type: ElementType; label: string; icon: React.ElementTy
 // ─── Default element properties ──────────────────────────────────────────────
 
 const DEFAULT_PROPS: Record<ElementType, Partial<DesignerElement>> = {
-  text: { width: 200, height: 30, content: 'ข้อความ', fontFamily: 'TH SarabunPSK', fontSize: 14 },
-  heading: { width: 330, height: 58, content: 'ใบเสนอราคา', fontFamily: 'TH SarabunPSK', fontSize: 24, fontWeight: 'bold' },
-  paragraph: { width: 250, height: 60, content: 'ข้อความย่อหน้า', fontFamily: 'TH SarabunPSK', fontSize: 12 },
+  text: { width: 200, height: 30, content: 'ข้อความ', fontFamily: 'TH SarabunPSK', fontSize: 14, color: '#111827' },
+  heading: { width: 330, height: 58, content: 'ใบเสนอราคา', fontFamily: 'TH SarabunPSK', fontSize: 24, fontWeight: 'bold', color: '#111827' },
+  paragraph: { width: 250, height: 60, content: 'ข้อความย่อหน้า', fontFamily: 'TH SarabunPSK', fontSize: 12, color: '#111827' },
   image: { width: 120, height: 120, content: '[Image]' },
   logo: { width: 80, height: 80, content: '[Logo]' },
   table: { width: 300, height: 100, content: '[Table]', fontFamily: 'TH SarabunPSK' },
@@ -176,6 +191,14 @@ const DEFAULT_PROPS: Record<ElementType, Partial<DesignerElement>> = {
   qr_code: { width: 80, height: 80, content: '{{qr}}' },
   barcode: { width: 150, height: 50, content: '{{barcode}}' },
 };
+
+const PRIMARY_COLORS = [
+  '#FFFFFF', '#111827', '#374151', '#6B7280', '#9CA3AF', '#D1D5DB',
+  '#DC2626', '#EA580C', '#D97706', '#16A34A', '#00897B', '#0891B2',
+  '#2563EB', '#4F46E5', '#7C3AED', '#DB2777',
+];
+
+const RECENT_COLORS_STORAGE_KEY = 'document-designer-recent-colors';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -236,6 +259,8 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
     loadInitialElements(template.layoutJson)
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectionBox, setSelectionBox] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [previewDocumentId, setPreviewDocumentId] = useState('');
   const [zoom, setZoom] = useState(72); // percentage
   const [history, setHistory] = useState<DesignerElement[][]>([loadInitialElements(template.layoutJson)]);
@@ -246,9 +271,37 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
   const [rightPanelWidth, setRightPanelWidth] = useState(208);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [paperDimensions, setPaperDimensions] = useState(() => getInitialPaper(template));
+  const [paperWidthInput, setPaperWidthInput] = useState(() => String(getInitialPaper(template).width));
+  const [paperHeightInput, setPaperHeightInput] = useState(() => String(getInitialPaper(template).height));
+  const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuides>({ x: null, y: null });
+  const [recentColors, setRecentColors] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(RECENT_COLORS_STORAGE_KEY) ?? '[]');
+      return Array.isArray(stored) ? stored.filter(color => /^#[0-9a-fA-F]{6}$/.test(color)).slice(0, 8) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ id: string; startX: number; startY: number; elX: number; elY: number } | null>(null);
+  const dragRef = useRef<{
+    ids: string[];
+    startX: number;
+    startY: number;
+    positions: Record<string, { x: number; y: number }>;
+  } | null>(null);
+  const marqueeRef = useRef<{ startX: number; startY: number } | null>(null);
+  const resizeRef = useRef<{
+    id: string;
+    direction: ResizeDirection;
+    startX: number;
+    startY: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const panelResizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
@@ -314,40 +367,122 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
       fontFamily: defaults.fontFamily,
       fontSize: defaults.fontSize,
       fontWeight: defaults.fontWeight,
+      color: defaults.color,
       tableColumns: type === 'table' ? DEFAULT_TABLE_COLUMNS.map(c => ({ ...c })) : undefined,
       tableRows: type === 'table' ? 2 : undefined,
     };
     const newEls = [...elements, newEl];
     setElements(newEls);
     setSelectedId(newEl.id);
+    setSelectedIds([newEl.id]);
     pushHistory(newEls);
   };
 
   // ── Delete selected ───────────────────────────────────────────────────────
   const deleteSelected = () => {
     if (!selectedId) return;
-    const newEls = elements.filter(e => e.id !== selectedId);
+    const idsToDelete = selectedIds.length > 1 ? selectedIds : [selectedId];
+    const newEls = elements.filter(e => !idsToDelete.includes(e.id));
     setElements(newEls);
     setSelectedId(null);
+    setSelectedIds([]);
     pushHistory(newEls);
   };
 
   // ── Drag to move ──────────────────────────────────────────────────────────
   const handleMouseDown = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    const activeIds = selectedIds.includes(id) ? selectedIds : [id];
     setSelectedId(id);
-    const el = elements.find(el => el.id === id)!;
-    dragRef.current = { id, startX: e.clientX, startY: e.clientY, elX: el.x, elY: el.y };
+    setSelectedIds(activeIds);
+    dragRef.current = {
+      ids: activeIds,
+      startX: e.clientX,
+      startY: e.clientY,
+      positions: Object.fromEntries(elements
+        .filter(element => activeIds.includes(element.id))
+        .map(element => [element.id, { x: element.x, y: element.y }]))
+    };
 
     const onMove = (mv: MouseEvent) => {
       const currentDrag = dragRef.current;
       if (!currentDrag) return;
       const scale = zoom / 100;
-      const dx = (mv.clientX - currentDrag.startX) / scale;
-      const dy = (mv.clientY - currentDrag.startY) / scale;
+      const rawDx = (mv.clientX - currentDrag.startX) / scale;
+      const rawDy = (mv.clientY - currentDrag.startY) / scale;
+      const movingElements = elements.filter(element => currentDrag.ids.includes(element.id));
+      if (!movingElements.length) return;
+
+      const groupLeft = Math.min(...movingElements.map(element => currentDrag.positions[element.id].x));
+      const groupTop = Math.min(...movingElements.map(element => currentDrag.positions[element.id].y));
+      const groupRight = Math.max(...movingElements.map(element => currentDrag.positions[element.id].x + element.width));
+      const groupBottom = Math.max(...movingElements.map(element => currentDrag.positions[element.id].y + element.height));
+      const groupWidth = groupRight - groupLeft;
+      const groupHeight = groupBottom - groupTop;
+
+      const snapTolerance = 6;
+      const otherElements = elements.filter(element => !currentDrag.ids.includes(element.id));
+      const xTargets = [paperW / 2, ...otherElements.flatMap(element => [
+        element.x,
+        element.x + element.width / 2,
+        element.x + element.width,
+      ])];
+      const yTargets = [paperH / 2, ...otherElements.flatMap(element => [
+        element.y,
+        element.y + element.height / 2,
+        element.y + element.height,
+      ])];
+
+      const maxGroupX = Math.max(0, paperW - groupWidth);
+      const maxGroupY = Math.max(0, paperH - groupHeight);
+      const rawGroupX = Math.min(maxGroupX, Math.max(0, groupLeft + rawDx));
+      const rawGroupY = Math.min(maxGroupY, Math.max(0, groupTop + rawDy));
+      let nextGroupX = rawGroupX;
+      let nextGroupY = rawGroupY;
+      let guideX: number | null = null;
+      let guideY: number | null = null;
+
+      const movingXAnchors = [0, groupWidth / 2, groupWidth];
+      const movingYAnchors = [0, groupHeight / 2, groupHeight];
+      let closestXDistance = snapTolerance + 1;
+      let closestYDistance = snapTolerance + 1;
+
+      for (const target of xTargets) {
+        for (const anchor of movingXAnchors) {
+          const candidateX = target - anchor;
+          const distance = Math.abs(rawGroupX - candidateX);
+          if (distance <= snapTolerance && distance < closestXDistance) {
+            closestXDistance = distance;
+            nextGroupX = candidateX;
+            guideX = target;
+          }
+        }
+      }
+
+      for (const target of yTargets) {
+        for (const anchor of movingYAnchors) {
+          const candidateY = target - anchor;
+          const distance = Math.abs(rawGroupY - candidateY);
+          if (distance <= snapTolerance && distance < closestYDistance) {
+            closestYDistance = distance;
+            nextGroupY = candidateY;
+            guideY = target;
+          }
+        }
+      }
+
+      nextGroupX = Math.min(maxGroupX, Math.max(0, nextGroupX));
+      nextGroupY = Math.min(maxGroupY, Math.max(0, nextGroupY));
+      const snappedDx = nextGroupX - groupLeft;
+      const snappedDy = nextGroupY - groupTop;
+      setAlignmentGuides({ x: guideX, y: guideY });
       setElements(prev => prev.map(el =>
-        el.id === currentDrag.id
-          ? { ...el, x: Math.max(0, currentDrag.elX + dx), y: Math.max(0, currentDrag.elY + dy) }
+        currentDrag.ids.includes(el.id)
+          ? {
+            ...el,
+            x: currentDrag.positions[el.id].x + snappedDx,
+            y: currentDrag.positions[el.id].y + snappedDy,
+          }
           : el
       ));
     };
@@ -360,6 +495,127 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
         });
         dragRef.current = null;
       }
+      setAlignmentGuides({ x: null, y: null });
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  // ── Drag on empty canvas to select multiple elements ─────────────────────
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const scale = zoom / 100;
+    const startX = (e.clientX - rect.left) / scale;
+    const startY = (e.clientY - rect.top) / scale;
+    marqueeRef.current = { startX, startY };
+    setSelectedId(null);
+    setSelectedIds([]);
+    setSelectionBox({ x: startX, y: startY, width: 0, height: 0 });
+
+    const onMove = (event: MouseEvent) => {
+      const start = marqueeRef.current;
+      if (!start) return;
+      const currentX = Math.min(paperW, Math.max(0, (event.clientX - rect.left) / scale));
+      const currentY = Math.min(paperH, Math.max(0, (event.clientY - rect.top) / scale));
+      const box = {
+        x: Math.min(start.startX, currentX),
+        y: Math.min(start.startY, currentY),
+        width: Math.abs(currentX - start.startX),
+        height: Math.abs(currentY - start.startY),
+      };
+      setSelectionBox(box);
+
+      const enclosedIds = elements.filter(element =>
+        element.x >= box.x &&
+        element.y >= box.y &&
+        element.x + element.width <= box.x + box.width &&
+        element.y + element.height <= box.y + box.height
+      ).map(element => element.id);
+      setSelectedIds(enclosedIds);
+      setSelectedId(enclosedIds.at(-1) ?? null);
+    };
+
+    const onUp = () => {
+      marqueeRef.current = null;
+      setSelectionBox(null);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  // ── Drag handles to resize ───────────────────────────────────────────────
+  const handleResizeMouseDown = (e: React.MouseEvent, id: string, direction: ResizeDirection) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedId(id);
+    setSelectedIds([id]);
+
+    const element = elements.find(el => el.id === id);
+    if (!element) return;
+
+    resizeRef.current = {
+      id,
+      direction,
+      startX: e.clientX,
+      startY: e.clientY,
+      x: element.x,
+      y: element.y,
+      width: element.width,
+      height: element.height,
+    };
+
+    const onMove = (event: MouseEvent) => {
+      const current = resizeRef.current;
+      if (!current) return;
+
+      const scale = zoom / 100;
+      const dx = (event.clientX - current.startX) / scale;
+      const dy = (event.clientY - current.startY) / scale;
+      const minWidth = element.type === 'checkbox' ? 10 : 20;
+      const minHeight = element.type === 'line' ? 2 : element.type === 'checkbox' ? 10 : 12;
+
+      let nextX = current.x;
+      let nextY = current.y;
+      let nextWidth = current.width;
+      let nextHeight = current.height;
+
+      if (current.direction.includes('e')) {
+        nextWidth = Math.min(paperW - current.x, Math.max(minWidth, current.width + dx));
+      }
+      if (current.direction.includes('s')) {
+        nextHeight = Math.min(paperH - current.y, Math.max(minHeight, current.height + dy));
+      }
+      if (current.direction.includes('w')) {
+        nextX = Math.min(current.x + current.width - minWidth, Math.max(0, current.x + dx));
+        nextWidth = current.width + current.x - nextX;
+      }
+      if (current.direction.includes('n')) {
+        nextY = Math.min(current.y + current.height - minHeight, Math.max(0, current.y + dy));
+        nextHeight = current.height + current.y - nextY;
+      }
+
+      setElements(previous => previous.map(el => el.id === current.id
+        ? { ...el, x: nextX, y: nextY, width: nextWidth, height: nextHeight }
+        : el
+      ));
+    };
+
+    const onUp = () => {
+      if (resizeRef.current) {
+        setElements(previous => {
+          pushHistory(previous);
+          return previous;
+        });
+        resizeRef.current = null;
+      }
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
@@ -369,10 +625,33 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
   };
 
   // ── Update property ───────────────────────────────────────────────────────
+  const rememberColor = (color: string) => {
+    const normalized = color.toUpperCase();
+    if (!/^#[0-9A-F]{6}$/.test(normalized)) return;
+    setRecentColors(current => {
+      const next = [normalized, ...current.filter(item => item !== normalized)].slice(0, 8);
+      window.localStorage.setItem(RECENT_COLORS_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
   const updateProp = <K extends keyof DesignerElement>(key: K, value: DesignerElement[K]) => {
     if (!selectedId) return;
     const newEls = elements.map(el =>
       el.id === selectedId ? { ...el, [key]: value } : el
+    );
+    setElements(newEls);
+    setIsDirty(true);
+  };
+
+  const updateTextColor = (color: string) => {
+    if (!selectedId) return;
+    rememberColor(color);
+    const targetIds = selectedIds.length > 0 ? selectedIds : [selectedId];
+    const newEls = elements.map(el =>
+      targetIds.includes(el.id) && !['line', 'image', 'logo', 'qr_code', 'barcode', 'checkbox', 'table', 'signature', 'box'].includes(el.type)
+        ? { ...el, color }
+        : el
     );
     setElements(newEls);
     setIsDirty(true);
@@ -419,12 +698,16 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
   const paperPreset = detectPaperPreset(paperW, paperH);
 
   const updatePaperSize = (width: number, height: number) => {
-    setPaperDimensions({
-      width: Math.min(1600, Math.max(180, Math.round(width))),
-      height: Math.min(2400, Math.max(180, Math.round(height))),
-    });
+    const nextWidth = Number.isFinite(width) && width > 0 ? Math.round(width) : paperW;
+    const nextHeight = Number.isFinite(height) && height > 0 ? Math.round(height) : paperH;
+    setPaperDimensions({ width: nextWidth, height: nextHeight });
+    setPaperWidthInput(String(nextWidth));
+    setPaperHeightInput(String(nextHeight));
     setIsDirty(true);
   };
+
+  const commitPaperWidth = () => updatePaperSize(Number(paperWidthInput), paperH);
+  const commitPaperHeight = () => updatePaperSize(paperW, Number(paperHeightInput));
 
   const selectPaperPreset = (preset: PaperPreset) => {
     if (preset === 'CUSTOM') return;
@@ -575,7 +858,10 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
         {/* ── Center: Canvas ─────────────────────────────────────────── */}
         <main
           className="flex-1 overflow-auto bg-[#252636] flex items-start justify-center py-8 px-6 print:block print:overflow-visible print:bg-white print:p-0 print:m-0"
-          onClick={() => setSelectedId(null)}
+          onClick={() => {
+            setSelectedId(null);
+            setSelectedIds([]);
+          }}
         >
           <div
             ref={canvasRef}
@@ -589,7 +875,36 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
               backgroundSize: `${zoom / 5}px ${zoom / 5}px`,
             }}
             onClick={e => e.stopPropagation()}
+            onMouseDown={handleCanvasMouseDown}
           >
+            {alignmentGuides.x !== null && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 z-30 w-px origin-center scale-x-50 bg-blue-400/50 print:hidden"
+                style={{ left: alignmentGuides.x * (zoom / 100) }}
+              />
+            )}
+            {alignmentGuides.y !== null && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 z-30 h-px origin-center scale-y-50 bg-blue-400/50 print:hidden"
+                style={{ top: alignmentGuides.y * (zoom / 100) }}
+              />
+            )}
+
+            {selectionBox && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute z-40 border border-blue-400/60 bg-blue-300/10 print:hidden"
+                style={{
+                  left: selectionBox.x * (zoom / 100),
+                  top: selectionBox.y * (zoom / 100),
+                  width: selectionBox.width * (zoom / 100),
+                  height: selectionBox.height * (zoom / 100),
+                }}
+              />
+            )}
+
             {/* Elements */}
             {elements.map(el => (
               <div
@@ -598,9 +913,9 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                 style={{ position: 'absolute', left: el.x * (zoom / 100), top: el.y * (zoom / 100), width: el.width * (zoom / 100), height: Math.max(el.height, 2) * (zoom / 100) }}
               >
                 <div
-                  className={`w-full h-full select-none cursor-move border-2 transition-colors ${selectedId === el.id
-                    ? 'border-blue-500 ring-2 ring-blue-400/30'
-                    : 'border-transparent hover:border-blue-300/60'
+                  className={`w-full h-full select-none cursor-move border transition-colors ${selectedIds.includes(el.id)
+                    ? 'border-blue-400/60 ring-1 ring-blue-300/15'
+                    : 'border-transparent hover:border-blue-300/35'
                     }`}
                   style={{
                     fontFamily: `"${el.fontFamily ?? 'TH SarabunPSK'}", "Sarabun", sans-serif`,
@@ -712,6 +1027,19 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                     el.content || <span style={{ color: '#d1d5db', fontStyle: 'italic', fontSize: 11 * (zoom / 100) }}>ว่าง</span>
                   )}
                 </div>
+
+                {selectedId === el.id && selectedIds.length === 1 && RESIZE_HANDLES.map(handle => (
+                  <button
+                    key={handle.direction}
+                    type="button"
+                    aria-label={`Resize ${handle.direction}`}
+                    title="ลากเพื่อปรับขนาด"
+                    onMouseDown={(event) => handleResizeMouseDown(event, el.id, handle.direction)}
+                    onClick={(event) => event.stopPropagation()}
+                    className={`absolute z-20 h-[6px] w-[6px] rounded-[1px] border border-blue-400/70 bg-white/90 shadow-none ${handle.className} print:hidden`}
+                    style={{ cursor: handle.cursor }}
+                  />
+                ))}
               </div>
             ))}
 
@@ -803,16 +1131,26 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1">กว้าง (px)</label>
                   <input
-                    type="number" min={180} max={1600} value={paperW}
-                    onChange={e => updatePaperSize(Number(e.target.value), paperH)}
+                    type="number"
+                    value={paperWidthInput}
+                    onChange={e => setPaperWidthInput(e.target.value)}
+                    onBlur={commitPaperWidth}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                    }}
                     className="w-full bg-[#1e1f30] border border-white/10 rounded text-xs text-gray-200 px-2 py-1.5 focus:outline-none focus:border-blue-500 tabular-nums"
                   />
                 </div>
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-1">สูง (px)</label>
                   <input
-                    type="number" min={180} max={2400} value={paperH}
-                    onChange={e => updatePaperSize(paperW, Number(e.target.value))}
+                    type="number"
+                    value={paperHeightInput}
+                    onChange={e => setPaperHeightInput(e.target.value)}
+                    onBlur={commitPaperHeight}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                    }}
                     className="w-full bg-[#1e1f30] border border-white/10 rounded text-xs text-gray-200 px-2 py-1.5 focus:outline-none focus:border-blue-500 tabular-nums"
                   />
                 </div>
@@ -1000,16 +1338,49 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                         <input
                           type="color"
                           value={selectedEl.tableHeaderBg ?? '#f3f4f6'}
-                          onChange={e => { updateProp('tableHeaderBg', e.target.value); commitProp(); }}
+                          onChange={e => { rememberColor(e.target.value); updateProp('tableHeaderBg', e.target.value); }}
+                          onBlur={commitProp}
                           className="w-8 h-7 bg-transparent border border-white/10 rounded cursor-pointer"
                         />
                         <input
+                          key={`table-header-color-${selectedEl.id}-${selectedEl.tableHeaderBg ?? '#f3f4f6'}`}
                           type="text"
-                          value={selectedEl.tableHeaderBg ?? '#f3f4f6'}
-                          onChange={e => updateProp('tableHeaderBg', e.target.value)}
+                          defaultValue={selectedEl.tableHeaderBg ?? '#f3f4f6'}
+                          onChange={e => {
+                            if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+                              rememberColor(e.target.value);
+                              updateProp('tableHeaderBg', e.target.value);
+                            }
+                          }}
                           onBlur={commitProp}
                           className="flex-1 min-w-0 bg-[#1e1f30] border border-white/10 rounded text-[10px] text-gray-300 px-2 py-1 focus:outline-none"
                         />
+                      </div>
+                      <div className="mt-2">
+                        <p className="mb-1 text-[9px] text-gray-600">สีหลัก</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {PRIMARY_COLORS.map(color => (
+                            <button
+                              key={color}
+                              type="button"
+                              title={color}
+                              aria-label={`ใช้สี ${color}`}
+                              onClick={() => { rememberColor(color); updateProp('tableHeaderBg', color); commitProp(); }}
+                              className={`h-5 w-5 rounded border ${(selectedEl.tableHeaderBg ?? '#F3F4F6').toUpperCase() === color ? 'border-blue-400 ring-1 ring-blue-400' : 'border-white/20 hover:border-white/60'}`}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                        </div>
+                        {recentColors.length > 0 && (
+                          <>
+                            <p className="mb-1 mt-2 text-[9px] text-gray-600">สีที่ใช้ล่าสุด</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {recentColors.map(color => (
+                                <button key={color} type="button" title={color} aria-label={`ใช้สีล่าสุด ${color}`} onClick={() => { updateProp('tableHeaderBg', color); commitProp(); }} className="h-5 w-5 rounded border border-white/20 hover:border-white/60" style={{ backgroundColor: color }} />
+                              ))}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -1066,6 +1437,62 @@ export default function DocumentDesignerClient({ template, documents, onSave }: 
                 {/* Font Size */}
                 {selectedEl.fontSize !== undefined && (
                   <PropNumber label="Font Size" value={selectedEl.fontSize} onChange={v => { updateProp('fontSize', v); commitProp(); }} />
+                )}
+
+                {/* Text Color */}
+                {!['line', 'image', 'logo', 'qr_code', 'barcode', 'checkbox', 'table', 'signature', 'box'].includes(selectedEl.type) && (
+                  <div>
+                    <label className="block text-[10px] text-gray-500 mb-1">Text Color</label>
+                    <div className="flex items-center gap-2 rounded border border-white/10 bg-[#1e1f30] p-1.5">
+                      <input
+                        type="color"
+                        value={selectedEl.color ?? '#111827'}
+                        onChange={e => updateTextColor(e.target.value)}
+                        onBlur={commitProp}
+                        aria-label="เลือกสีตัวอักษร"
+                        className="h-7 w-9 cursor-pointer rounded border-0 bg-transparent p-0"
+                      />
+                      <input
+                        key={`text-color-code-${selectedEl.id}-${selectedEl.color ?? '#111827'}`}
+                        type="text"
+                        defaultValue={selectedEl.color ?? '#111827'}
+                        onChange={e => {
+                          const value = e.target.value;
+                          if (/^#[0-9a-fA-F]{6}$/.test(value)) updateTextColor(value);
+                        }}
+                        onBlur={commitProp}
+                        maxLength={7}
+                        aria-label="รหัสสีตัวอักษร"
+                        className="min-w-0 flex-1 bg-transparent text-xs uppercase text-gray-200 outline-none"
+                      />
+                    </div>
+                    <div className="mt-2">
+                      <p className="mb-1 text-[9px] text-gray-600">สีหลัก</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {PRIMARY_COLORS.map(color => (
+                          <button
+                            key={color}
+                            type="button"
+                            title={color}
+                            aria-label={`ใช้สี ${color}`}
+                            onClick={() => { updateTextColor(color); commitProp(); }}
+                            className={`h-5 w-5 rounded border ${(selectedEl.color ?? '#111827').toUpperCase() === color ? 'border-blue-400 ring-1 ring-blue-400' : 'border-white/20 hover:border-white/60'}`}
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                      {recentColors.length > 0 && (
+                        <>
+                          <p className="mb-1 mt-2 text-[9px] text-gray-600">สีที่ใช้ล่าสุด</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {recentColors.map(color => (
+                              <button key={color} type="button" title={color} aria-label={`ใช้สีล่าสุด ${color}`} onClick={() => { updateTextColor(color); commitProp(); }} className="h-5 w-5 rounded border border-white/20 hover:border-white/60" style={{ backgroundColor: color }} />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 {/* Text Align */}

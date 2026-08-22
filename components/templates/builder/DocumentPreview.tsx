@@ -38,6 +38,53 @@ type StyledDesignerElement = DesignerElement & {
   tableTotalLabel?: string
 }
 
+type PreviewPage = DesignerPage & {
+  elements?: StyledDesignerElement[]
+}
+
+type PreviewLayout = {
+  pages: PreviewPage[]
+  elements: StyledDesignerElement[]
+}
+
+function parseStoredLayout(value: string): unknown {
+  let parsed: unknown = value
+
+  // Some older templates were saved as a JSON string inside the JSON column.
+  // Unwrap those values without making the preview depend on one storage version.
+  for (let depth = 0; depth < 3 && typeof parsed === 'string'; depth += 1) {
+    parsed = JSON.parse(parsed)
+  }
+
+  return parsed
+}
+
+function normalizePreviewLayout(value: unknown): PreviewLayout | null {
+  if (!value || typeof value !== 'object') return null
+
+  const record = value as Record<string, unknown>
+  const nestedLayout = record.layout && typeof record.layout === 'object'
+    ? record.layout as Record<string, unknown>
+    : null
+  const source = nestedLayout ?? record
+  const rawPages = Array.isArray(source.pages) ? source.pages : []
+  const pages = rawPages.filter((page): page is PreviewPage => Boolean(page && typeof page === 'object'))
+
+  const rootElements = Array.isArray(source.elements)
+    ? source.elements.filter((element): element is StyledDesignerElement => Boolean(element && typeof element === 'object'))
+    : []
+  const pageElements = pages.flatMap(page =>
+    Array.isArray(page.elements)
+      ? page.elements.map(element => ({ ...element, pageId: element.pageId || page.id }))
+      : []
+  )
+  const elements = [...rootElements, ...pageElements]
+
+  if (pages.length === 0 && elements.length === 0) return null
+
+  return { pages, elements }
+}
+
 const tableCellStyle: CSSProperties = {
   border: '1px solid #000',
   padding: '4px 6px',
@@ -68,10 +115,10 @@ export function DocumentPreview({ layoutJsonString, dataOverride, scale = 1 }: D
     )
   }
 
-  let layoutData: { pages: DesignerPage[], elements: StyledDesignerElement[] } | null = null
+  let layoutData: PreviewLayout | null = null
   try {
-    layoutData = JSON.parse(layoutJsonString)
-  } catch (e) {
+    layoutData = normalizePreviewLayout(parseStoredLayout(layoutJsonString))
+  } catch {
     return (
       <div className="bg-red-50 p-4 rounded-xl border border-red-200">
         <p className="text-red-500">รูปแบบเทมเพลตไม่ถูกต้อง (Invalid Layout JSON)</p>
@@ -79,7 +126,7 @@ export function DocumentPreview({ layoutJsonString, dataOverride, scale = 1 }: D
     )
   }
 
-  if (!layoutData || (!layoutData.pages && !layoutData.elements)) {
+  if (!layoutData) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 flex items-center justify-center min-h-[400px]">
         <p className="text-gray-500">เทมเพลตหน้าว่าง (Empty template)</p>
@@ -88,13 +135,27 @@ export function DocumentPreview({ layoutJsonString, dataOverride, scale = 1 }: D
   }
 
   // Fallback for older layouts that only have elements
-  const pages = layoutData.pages && layoutData.pages.length > 0 
+  const pages = layoutData.pages.length > 0
     ? layoutData.pages 
     : [{ id: 'default-page', width: 595, height: 842, background: '#ffffff' } as DesignerPage];
 
+  const knownPageIds = new Set(pages.map(page => page.id))
+  const hasMatchingPage = layoutData.elements.some(element => !element.pageId || knownPageIds.has(element.pageId))
+
+  function elementsForPage(page: DesignerPage, pageIndex: number) {
+    const matching = layoutData?.elements.filter(element => !element.pageId || element.pageId === page.id) ?? []
+    if (matching.length > 0) return matching
+
+    // A few imported/legacy templates generated a new page id without rewriting the
+    // elements' old pageId. They still belong to the only/first page and should not
+    // silently disappear from preview.
+    if (pageIndex === 0 && !hasMatchingPage) return layoutData?.elements ?? []
+    return []
+  }
+
   return (
     <div className={`flex flex-col items-center py-4 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-auto p-4 border border-gray-200 dark:border-gray-800 ${scale < 1 ? 'gap-4' : 'gap-8'}`}>
-      {pages.map(page => (
+      {pages.map((page, pageIndex) => (
         <div
           key={page.id}
           style={{ width: page.width * scale, height: page.height * scale }}
@@ -109,7 +170,7 @@ export function DocumentPreview({ layoutJsonString, dataOverride, scale = 1 }: D
               transformOrigin: 'top left',
             }}
           >
-            {(layoutData?.elements || []).filter(el => !el.pageId || el.pageId === page.id).map(element => (
+            {elementsForPage(page, pageIndex).map(element => (
               <ElementView key={element.id} element={element} dataOverride={dataOverride} />
             ))}
           </div>
