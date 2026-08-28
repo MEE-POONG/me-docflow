@@ -20,9 +20,10 @@ async function resolveCompanyId(email: string, companyId?: string) {
 }
 
 export async function getDashboardData(email: string, companyId?: string) {
-  if (!email) return null;
-  const resolvedCompanyId = await resolveCompanyId(email, companyId);
-  if (!resolvedCompanyId) return null;
+  try {
+    if (!email) return null;
+    const resolvedCompanyId = await resolveCompanyId(email, companyId);
+    if (!resolvedCompanyId) return null;
   const accessibleResourceWhere = { OR: [{ companyId: resolvedCompanyId }, { isGlobal: true }] };
 
   // 1. Summary Cards
@@ -155,4 +156,8 @@ export async function getDashboardData(email: string, companyId?: string) {
       createdAt: template.createdAt,
     })),
   };
+  } catch (error) {
+    console.error("Failed to fetch user dashboard data:", error);
+    return null;
+  }
 }

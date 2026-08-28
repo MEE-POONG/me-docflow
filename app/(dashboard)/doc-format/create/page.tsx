@@ -1,9 +1,10 @@
-import { PrismaClient } from '@prisma/client'
+import { connection } from 'next/server'
+import { prisma } from '@/lib/prisma'
 import CreateTemplateForm from './CreateTemplateForm'
 
-const prisma = new PrismaClient()
-
 export default async function CreateTemplatePage() {
+  await connection()
+
   const categories = await prisma.documentCategory.findMany({
     orderBy: { showOrder: 'asc' }
   })

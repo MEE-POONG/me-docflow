@@ -16,6 +16,36 @@ interface TemplateItem {
   layoutJson?: string | null;
 }
 
+function getTemplatePageSize(layoutJson?: string | null) {
+  const fallback = { width: 595, height: 842 };
+  if (!layoutJson) return fallback;
+
+  try {
+    let parsed: unknown = layoutJson;
+    for (let depth = 0; depth < 3 && typeof parsed === "string"; depth += 1) {
+      parsed = JSON.parse(parsed);
+    }
+    if (!parsed || typeof parsed !== "object") return fallback;
+
+    const root = parsed as Record<string, unknown>;
+    const source = root.layout && typeof root.layout === "object"
+      ? root.layout as Record<string, unknown>
+      : root;
+    const firstPage = Array.isArray(source.pages) && source.pages[0] && typeof source.pages[0] === "object"
+      ? source.pages[0] as Record<string, unknown>
+      : source;
+    const width = Number(firstPage.width);
+    const height = Number(firstPage.height);
+
+    return {
+      width: Number.isFinite(width) && width > 0 ? width : fallback.width,
+      height: Number.isFinite(height) && height > 0 ? height : fallback.height,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 export default function AdminTemplatesPage() {
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -23,6 +53,7 @@ export default function AdminTemplatesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaved, setIsSaved] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<TemplateItem | null>(null);
+  const [previewScale, setPreviewScale] = useState(0.72);
 
   // Form states
   const [name, setName] = useState("");
@@ -43,6 +74,21 @@ export default function AdminTemplatesPage() {
   useEffect(() => {
     fetchTemplates();
   }, []);
+
+  useEffect(() => {
+    if (!previewTemplate) return;
+
+    const updatePreviewScale = () => {
+      const page = getTemplatePageSize(previewTemplate.layoutJson);
+      const availableWidth = Math.min(window.innerWidth * 0.84, 1040) - 64;
+      const availableHeight = Math.min(window.innerHeight * 0.92, 900) - 118;
+      setPreviewScale(Math.max(0.18, Math.min(0.82, availableWidth / page.width, availableHeight / page.height)));
+    };
+
+    updatePreviewScale();
+    window.addEventListener("resize", updatePreviewScale);
+    return () => window.removeEventListener("resize", updatePreviewScale);
+  }, [previewTemplate]);
 
   const logAdminAction = (actionMsg: string) => {
     const logs = localStorage.getItem("me_docflow_audit_logs");
@@ -355,30 +401,42 @@ export default function AdminTemplatesPage() {
 
       {/* Preview Modal */}
       {previewTemplate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-50 dark:bg-slate-900 w-full max-w-5xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-slate-700">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-[2px] animate-in fade-in duration-200">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-template-preview-title"
+            className="bg-slate-100 dark:bg-slate-900 w-full max-w-6xl h-[92vh] max-h-[900px] rounded-xl shadow-[0_24px_80px_rgba(15,23,42,0.35)] flex flex-col overflow-hidden border border-slate-300 dark:border-slate-700"
+          >
+            <header className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-500 rounded-lg">
-                  <Eye className="w-5 h-5" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
+                  <Eye className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 dark:text-white">ตัวอย่างก่อนพิมพ์: {previewTemplate.name}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">พรีวิวรูปแบบเอกสารที่จะนำไปใช้จริง</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">Document preview</p>
+                  <h3 id="admin-template-preview-title" className="text-sm font-semibold text-slate-900 dark:text-white">{previewTemplate.name}</h3>
                 </div>
+              </div>
+              <div className="ml-auto mr-3 hidden items-center gap-2 sm:flex">
+                <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+                  ตัวอย่างก่อนนำไปใช้งานจริง
+                </span>
+                <span className="text-[11px] tabular-nums text-slate-400">{Math.round(previewScale * 100)}%</span>
               </div>
               <button
                 onClick={() => setPreviewTemplate(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                aria-label="ปิดหน้าต่างพรีวิว"
+                className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
-            </div>
+            </header>
 
-            <div className="flex-1 overflow-auto p-6 bg-gray-100 dark:bg-slate-900/50">
-              <DocumentPreview layoutJsonString={previewTemplate.layoutJson || null} />
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3 sm:p-4 bg-slate-200/70 dark:bg-slate-900/60">
+              <DocumentPreview layoutJsonString={previewTemplate.layoutJson || null} scale={previewScale} />
             </div>
-          </div>
+          </section>
         </div>
       )}
     </div>

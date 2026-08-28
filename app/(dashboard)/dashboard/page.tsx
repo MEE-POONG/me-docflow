@@ -43,7 +43,17 @@ export default function DashboardPage() {
     );
   }
 
-  if (!data) return null;
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 space-y-4">
+        <div className="text-rose-500 font-bold text-xl">ไม่สามารถโหลดข้อมูลแดชบอร์ดได้</div>
+        <p className="text-gray-500 text-sm max-w-md text-center">
+          ระบบไม่สามารถเชื่อมต่อกับฐานข้อมูลได้ (อาจเกิดจากปัญหา Network หรือยังไม่ได้เปิด IP Whitelist ใน MongoDB Atlas) 
+          กรุณาตรวจสอบการตั้งค่าฐานข้อมูลแล้วรีเฟรชหน้าใหม่อีกครั้ง
+        </p>
+      </div>
+    );
+  }
 
   const stats = [
     { label: 'เอกสารทั้งหมด', value: data.summary.totalDocs.toLocaleString() },

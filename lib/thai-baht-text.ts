@@ -7,8 +7,8 @@ export function arabicToThaiText(amount: number): string {
   // Ensure it's a number and format to 2 decimal places string
   const numberString = Number(amount).toFixed(2)
   const parts = numberString.split('.')
-  let baht = parts[0]
-  let satang = parts[1]
+  const baht = parts[0]
+  const satang = parts[1]
 
   const thaiNumerals = ['ศูนย์', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า']
   const unitPositions = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน', 'ล้าน']

@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { Sarabun, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const sarabunFont = Sarabun({
+const promptFont = localFont({
+  src: [
+    { path: "../public/fonts/prompt/Prompt-Regular.ttf", weight: "400", style: "normal" },
+    { path: "../public/fonts/prompt/Prompt-Medium.ttf", weight: "500", style: "normal" },
+    { path: "../public/fonts/prompt/Prompt-SemiBold.ttf", weight: "600", style: "normal" },
+    { path: "../public/fonts/prompt/Prompt-Bold.ttf", weight: "700", style: "normal" },
+  ],
   variable: "--font-sarabun",
-  subsets: ["latin", "thai"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
+  fallback: ["Leelawadee UI", "Tahoma", "Arial", "sans-serif"],
 });
 
 export const metadata: Metadata = {
@@ -30,7 +31,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${sarabunFont.variable} ${geistMono.variable} h-full antialiased font-sans`}
+      className={`${promptFont.variable} h-full antialiased font-sans`}
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider

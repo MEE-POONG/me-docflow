@@ -242,7 +242,11 @@ export default function PendingApprovalList({ documents, templates }: Props) {
                     <td className="px-6 py-4">
                       <div className="text-gray-900 dark:text-white font-medium">
                         <Link href={`/documents/${doc.id}`} className="hover:underline">
-                          {doc.title === 'เอกสารใหม่' ? doc.documentType?.name : (doc.title?.startsWith('เอกสารใหม่ - ') ? doc.title.replace('เอกสารใหม่', doc.documentType?.name) : doc.title)}
+                          {doc.title === 'เอกสารใหม่'
+                            ? (doc.documentType?.name ?? doc.title)
+                            : (doc.title.startsWith('เอกสารใหม่ - ')
+                              ? doc.title.replace('เอกสารใหม่', doc.documentType?.name ?? 'เอกสาร')
+                              : doc.title)}
                         </Link>
                       </div>
                       {doc.status === 'REJECTED' && doc.rejectedReason && (

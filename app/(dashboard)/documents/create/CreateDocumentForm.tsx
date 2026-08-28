@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Loader2, Link as LinkIcon, ArrowLeft, ArrowRight, Search, Plus, Trash2, Printer, Download, MoreHorizontal, Share2, FileText, CheckCircle2, Send } from 'lucide-react'
+import { Save, Loader2, Link as LinkIcon, ArrowLeft, ArrowRight, Search, Plus, Trash2, Printer, Download, MoreHorizontal, Share2, FileText, CheckCircle2, Send, Eye, X } from 'lucide-react'
 import { createDocument, updateDocument, submitDocument } from '@/app/actions/documents'
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
 import { PurchaseOrderPrintLayout } from '@/components/templates/PurchaseOrderPrintLayout'
@@ -44,6 +44,8 @@ export default function CreateDocumentForm({ folders, tags, categories, document
   const [isPending, startTransition] = useTransition()
   const [step, setStep] = useState<1 | 2 | 3>(initialData ? 2 : 1)
   const [savedDocument, setSavedDocument] = useState<any>(initialData || null)
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [previewTemplateId, setPreviewTemplateId] = useState('')
   const initialCategoryId = initialData?.categoryId || categories[0]?.id || ''
   const initialDocumentTypeId = initialData?.documentTypeId
     || documentTypes.find(type => type.categoryId === initialCategoryId)?.id
@@ -266,6 +268,16 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
               >
                 <ArrowLeft className="w-4 h-4" /> {t.createDocument.back}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewTemplateId(docInfo.templateId)
+                  setShowPreviewModal(true)
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors shadow-sm"
+              >
+                <Eye className="w-5 h-5" /> ดูตัวอย่าง (Preview)
               </button>
               <button
                 type="submit"
@@ -3059,7 +3071,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                         <textarea rows={4} value={customData.companyReg_chapter3 || ''} onChange={e => setCustomData({...customData, companyReg_chapter3: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-indigo-500/50 dark:bg-gray-700" placeholder="จำนวนกรรมการ, อำนาจหน้าที่, การเลือกตั้งกรรมการ..." />
                       </div>
                       <div>
-                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมวดที่ 4 การประชุมผู้ถือหุ้น (Chapter 4: Shareholders' Meetings)</label>
+                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมวดที่ 4 การประชุมผู้ถือหุ้น (Chapter 4: Shareholders&apos; Meetings)</label>
                         <textarea rows={4} value={customData.companyReg_chapter4 || ''} onChange={e => setCustomData({...customData, companyReg_chapter4: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-indigo-500/50 dark:bg-gray-700" placeholder="ข้อกำหนดการเรียกประชุม, องค์ประชุม, การลงมติ..." />
                       </div>
                       <div>
@@ -4547,7 +4559,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                           <option value="">-- เลือกวิธีคิดค่าเสื่อม --</option>
                           <option value="วิธีเส้นตรง (Straight Line)">วิธีเส้นตรง (Straight Line)</option>
                           <option value="วิธียอดลดลงคู่ (Double Declining)">วิธียอดลดลงคู่ (Double Declining)</option>
-                          <option value="วิธีผลรวมจำนวนปี (Sum-of-the-Years'-Digits)">วิธีผลรวมจำนวนปี (Sum-of-the-Years'-Digits)</option>
+                          <option value="วิธีผลรวมจำนวนปี (Sum-of-the-Years'-Digits)">วิธีผลรวมจำนวนปี (Sum-of-the-Years&apos;-Digits)</option>
                           <option value="วิธีจำนวนผลผลิต (Units of Production)">วิธีจำนวนผลผลิต (Units of Production)</option>
                         </select>
                       </div>
@@ -4677,7 +4689,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                     {/* ผู้สอบบัญชีและความเห็น */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-white dark:bg-gray-800 rounded-lg border border-fuchsia-100 dark:border-fuchsia-800/50">
                       <div className="md:col-span-2 border-b border-fuchsia-100 dark:border-fuchsia-800/50 pb-2 mb-2">
-                        <h3 className="font-bold text-fuchsia-700 dark:text-fuchsia-500">3. รายงานผู้สอบบัญชี (Auditor's Report)</h3>
+                        <h3 className="font-bold text-fuchsia-700 dark:text-fuchsia-500">3. รายงานผู้สอบบัญชี (Auditor&apos;s Report)</h3>
                       </div>
                       
                       <div className="md:col-span-2">
@@ -5364,6 +5376,122 @@ export default function CreateDocumentForm({ folders, tags, categories, document
           </div>
         )}
       </div>
+
+      {/* Preview Modal before saving */}
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Eye className="w-5 h-5 text-emerald-500" />
+                แสดงตัวอย่างเอกสารก่อนบันทึก
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">เลือกเทมเพลตสำหรับตัวอย่าง</label>
+              <select
+                value={previewTemplateId}
+                onChange={e => setPreviewTemplateId(e.target.value)}
+                className="w-full md:w-80 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+              >
+                <option value="">รูปแบบมาตรฐาน (Standard)</option>
+                {templates.filter(t => t.documentTypeId === docInfo.documentTypeId).map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="p-6 overflow-auto flex-1 bg-gray-100 dark:bg-gray-900/40">
+              {(() => {
+                const dummyDocument = {
+                  id: 'preview',
+                  documentNo: 'PREVIEW-001',
+                  title: formData.partnerName ? `${docInfo.title} - ${formData.partnerName}` : docInfo.title,
+                  categoryId: docInfo.categoryId,
+                  documentTypeId: docInfo.documentTypeId,
+                  templateId: previewTemplateId,
+                  dataJson: {
+                    ...customData,
+                    ...formData,
+                    subtotal,
+                    discountAmount,
+                    afterDiscount,
+                    vatAmount,
+                    grandTotal,
+                  },
+                  createdAt: new Date(),
+                  createdBy: { name: getCurrentUser().name || 'ผู้ใช้งาน' },
+                  documentType: documentTypes.find(t => t.id === docInfo.documentTypeId)
+                };
+
+                const previewTemplate = templates.find(pt => pt.id === previewTemplateId);
+                const selectedDocType = documentTypes.find(t => t.id === docInfo.documentTypeId);
+                const isPO = selectedDocType?.name?.includes('สั่งซื้อ') || selectedDocType?.name?.toUpperCase().includes('PO') || selectedDocType?.name?.toLowerCase().includes('purchase order');
+                const isInvoice = selectedDocType?.name?.includes('ใบแจ้งหนี้') || selectedDocType?.name?.includes('ใบวางบิล') || selectedDocType?.name?.toLowerCase().includes('invoice') || selectedDocType?.name?.toLowerCase().includes('billing note');
+                const isWithholdingTax = selectedDocType?.name?.includes('หัก ณ ที่จ่าย') || selectedDocType?.name?.includes('50 ทวิ');
+
+                if (isPO && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
+                  return (
+                    <div className="bg-white mx-auto shadow-sm" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
+                      <PurchaseOrderPrintLayout data={mapDocumentToTemplateData(dummyDocument, company, dummyDocument.createdBy)} />
+                    </div>
+                  );
+                }
+                
+                if (isInvoice && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
+                  return (
+                    <div className="bg-white mx-auto shadow-sm" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
+                      <InvoicePrintLayout data={mapDocumentToTemplateData(dummyDocument, company, dummyDocument.createdBy)} />
+                    </div>
+                  );
+                }
+
+                if (isWithholdingTax && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
+                  return (
+                    <div className="bg-white mx-auto shadow-sm" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
+                      <WithholdingTaxPrintLayout data={mapDocumentToTemplateData(dummyDocument, company, dummyDocument.createdBy)} />
+                    </div>
+                  );
+                }
+
+                if (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson)) {
+                  return (
+                    <div className="p-10 text-center text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 max-w-lg mx-auto mt-10">
+                      ไม่มีเทมเพลตสำหรับรูปแบบมาตรฐาน กรุณาบันทึกเอกสารหรือเลือกเทมเพลตอื่น
+                    </div>
+                  );
+                }
+
+                return (
+                  <DocumentPreview
+                    layoutJsonString={JSON.stringify(previewTemplate.layoutJson)}
+                    dataOverride={mapDocumentToTemplateData(dummyDocument, company, dummyDocument.createdBy)}
+                    scale={0.7}
+                  />
+                );
+              })()}
+            </div>
+            
+            <div className="p-4 bg-gray-50 dark:bg-gray-800/50 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(false)}
+                className="px-5 py-2.5 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg shadow-sm transition-all"
+              >
+                ปิดหน้าต่างตัวอย่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   )
 }

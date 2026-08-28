@@ -5,10 +5,15 @@ import { revalidatePath } from 'next/cache';
 import { CompanyStatus } from '@prisma/client';
 
 export async function getDashboardStats() {
-  const companiesCount = await prisma.company.count();
-  const usersCount = await prisma.companyUser.count();
-  const documentsCount = await prisma.document.count().catch(() => 1248); // Fallback if document doesn't exist yet
-  return { companiesCount, usersCount, documentsCount };
+  try {
+    const companiesCount = await prisma.company.count();
+    const usersCount = await prisma.companyUser.count();
+    const documentsCount = await prisma.document.count().catch(() => 1248); // Fallback if document doesn't exist yet
+    return { companiesCount, usersCount, documentsCount };
+  } catch (error) {
+    console.error("Failed to fetch admin dashboard stats:", error);
+    return { companiesCount: 0, usersCount: 0, documentsCount: 0 };
+  }
 }
 
 export async function getAdminCompanies() {
