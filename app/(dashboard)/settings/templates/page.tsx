@@ -16,9 +16,30 @@ export default function GlobalTemplatesSettingsPage() {
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
 
   useEffect(() => {
-    getGlobalCategoriesAndSettings().then((data) => {
+    let cid = null;
+    const userStr = localStorage.getItem("me_docflow_current_user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        cid = user.companyId;
+      } catch (e) {}
+    }
+    if (!cid) {
+      const companiesStr = localStorage.getItem("me_docflow_companies");
+      if (companiesStr) {
+        try {
+          const comps = JSON.parse(companiesStr);
+          if (comps && comps.length > 0) cid = comps[0].id;
+        } catch (e) {}
+      }
+    }
+    if (!cid) cid = "64abc0000000000000000001";
+    setUserCompanyId(cid);
+
+    getGlobalCategoriesAndSettings(cid).then((data) => {
       setCategories(data.categories);
       if (data.enabledGlobalCategoryIds === null) {
         // If not configured, default to all enabled
@@ -42,9 +63,10 @@ export default function GlobalTemplatesSettingsPage() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userCompanyId) return;
     startTransition(async () => {
       try {
-        await updateGlobalCategoriesSettings(Array.from(enabledIds));
+        await updateGlobalCategoriesSettings(userCompanyId, Array.from(enabledIds));
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 3000);
       } catch (err) {

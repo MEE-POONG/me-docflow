@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plus, Search, Filter, LayoutTemplate, Calendar, CheckCircle2, XCircle, Upload, X, Loader2, FileUp } from 'lucide-react'
 import { format } from 'date-fns'
@@ -8,6 +8,7 @@ import { th } from 'date-fns/locale'
 import TemplateActions from './TemplateActions'
 import { createTemplate } from './actions'
 import { PaperOrientation, PaperSize, TemplateMode } from '@prisma/client'
+import { getTemplatesByCompany, getCategoriesByCompany, getDocumentTypesByCompany } from '../documents/actions'
 
 type CategoryOption = { id: string; name: string }
 type DocumentTypeOption = { id: string; name: string; categoryId: string }
@@ -106,8 +107,13 @@ async function preprocessImageForOcr(dataUrl: string, sourceWidth: number, sourc
   return { dataUrl: canvas.toDataURL('image/png'), factor, width, height }
 }
 
-export default function TemplatesList({ initialTemplates, categories, documentTypes }: { initialTemplates: TemplateRow[]; categories: CategoryOption[]; documentTypes: DocumentTypeOption[] }) {
+export default function TemplatesList({ initialTemplates, categories: initialCategories, documentTypes: initialDocumentTypes }: { initialTemplates: TemplateRow[]; categories: CategoryOption[]; documentTypes: DocumentTypeOption[] }) {
   const [activeTab, setActiveTab] = useState<'company' | 'system'>('company')
+  const [allTemplates, setAllTemplates] = useState<TemplateRow[]>(initialTemplates)
+  const [myCategories, setMyCategories] = useState<CategoryOption[]>(initialCategories)
+  const [myDocumentTypes, setMyDocumentTypes] = useState<DocumentTypeOption[]>(initialDocumentTypes)
+  const [isLoadingData, setIsLoadingData] = useState(true)
+
   const [showImportModal, setShowImportModal] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
@@ -115,13 +121,62 @@ export default function TemplatesList({ initialTemplates, categories, documentTy
   const [ocrProgress, setOcrProgress] = useState(0)
   const [ocrStatus, setOcrStatus] = useState('')
   const [importName, setImportName] = useState('')
-  const [importCategoryId, setImportCategoryId] = useState(categories[0]?.id || '')
+  const [importCategoryId, setImportCategoryId] = useState(initialCategories[0]?.id || '')
   const [importDocumentTypeId, setImportDocumentTypeId] = useState(
-    documentTypes.find(type => type.categoryId === categories[0]?.id)?.id || ''
+    initialDocumentTypes.find(type => type.categoryId === initialCategories[0]?.id)?.id || ''
   )
 
-  const filteredDocumentTypes = documentTypes.filter(type => type.categoryId === importCategoryId)
-  const templates = initialTemplates.filter(template => activeTab === 'company' ? !template.isGlobal : template.isGlobal)
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoadingData(true);
+        const userStr = localStorage.getItem("me_docflow_current_user");
+        let userCompanyId = null;
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          userCompanyId = user.companyId;
+        }
+        if (!userCompanyId) {
+          const companiesStr = localStorage.getItem("me_docflow_companies");
+          if (companiesStr) {
+            const comps = JSON.parse(companiesStr);
+            if (comps && comps.length > 0) userCompanyId = comps[0].id;
+          }
+        }
+
+        if (userCompanyId) {
+          const [fetchedTemplates, fetchedCategories, fetchedTypes] = await Promise.all([
+            getTemplatesByCompany(userCompanyId),
+            getCategoriesByCompany(userCompanyId),
+            getDocumentTypesByCompany(userCompanyId)
+          ]);
+          setAllTemplates(fetchedTemplates as unknown as TemplateRow[]);
+          setMyCategories(fetchedCategories as unknown as CategoryOption[]);
+          setMyDocumentTypes(fetchedTypes as unknown as DocumentTypeOption[]);
+
+          if (fetchedCategories.length > 0 && !importCategoryId) {
+            setImportCategoryId(fetchedCategories[0].id);
+            setImportDocumentTypeId(fetchedTypes.find(type => type.categoryId === fetchedCategories[0].id)?.id || '');
+          }
+        } else {
+          setAllTemplates(initialTemplates);
+          setMyCategories(initialCategories);
+          setMyDocumentTypes(initialDocumentTypes);
+        }
+      } catch (e) {
+        console.error("Failed to fetch templates data", e);
+        setAllTemplates(initialTemplates);
+        setMyCategories(initialCategories);
+        setMyDocumentTypes(initialDocumentTypes);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchData();
+  }, [initialTemplates, initialCategories, initialDocumentTypes])
+
+  const filteredDocumentTypes = myDocumentTypes.filter(type => type.categoryId === importCategoryId)
+  const templates = allTemplates.filter(template => activeTab === 'company' ? !template.isGlobal : template.isGlobal)
 
   const handleImport = async () => {
     if (!importFile || !importName.trim() || !importCategoryId || !importDocumentTypeId) return
@@ -469,9 +524,9 @@ export default function TemplatesList({ initialTemplates, categories, documentTy
                   <select value={importCategoryId} onChange={event => {
                     const categoryId = event.target.value
                     setImportCategoryId(categoryId)
-                    setImportDocumentTypeId(documentTypes.find(type => type.categoryId === categoryId)?.id || '')
+                    setImportDocumentTypeId(myDocumentTypes.find(type => type.categoryId === categoryId)?.id || '')
                   }} className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                    {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+                    {myCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
                   </select>
                 </div>
                 <div>
@@ -561,7 +616,14 @@ export default function TemplatesList({ initialTemplates, categories, documentTy
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {templates.length === 0 ? (
+              {isLoadingData ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin text-emerald-500" />
+                    <p className="text-sm font-medium">กำลังโหลดข้อมูลเทมเพลต...</p>
+                  </td>
+                </tr>
+              ) : templates.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                     <LayoutTemplate className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />

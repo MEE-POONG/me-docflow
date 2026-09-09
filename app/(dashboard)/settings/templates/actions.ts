@@ -14,8 +14,11 @@ async function getDefaultCompanyId() {
   return company.id;
 }
 
-export async function getGlobalCategoriesAndSettings() {
-  const companyId = await getDefaultCompanyId();
+export async function getGlobalCategoriesAndSettings(companyId: string) {
+  // Validate companyId
+  if (!/^[a-fA-F0-9]{24}$/.test(companyId)) {
+    return { categories: [], enabledGlobalCategoryIds: [] };
+  }
   
   const [categories, company] = await Promise.all([
     prisma.documentCategory.findMany({
@@ -36,8 +39,8 @@ export async function getGlobalCategoriesAndSettings() {
   return { categories, enabledGlobalCategoryIds };
 }
 
-export async function updateGlobalCategoriesSettings(enabledIds: string[]) {
-  const companyId = await getDefaultCompanyId();
+export async function updateGlobalCategoriesSettings(companyId: string, enabledIds: string[]) {
+  if (!/^[a-fA-F0-9]{24}$/.test(companyId)) return;
   
   const company = await prisma.company.findUnique({
     where: { id: companyId },

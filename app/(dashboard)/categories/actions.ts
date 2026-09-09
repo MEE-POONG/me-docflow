@@ -3,28 +3,8 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
-async function getDefaultCompanyId() {
-  let company = await prisma.company.findFirst();
-  if (!company) {
-    company = await prisma.company.create({
-      data: { name: 'Default Company', legalName: 'Default Company Ltd.' },
-    });
-  }
-  return company.id;
-}
-
-async function getGlobalCondition(companyId: string) {
-  const company = await prisma.company.findUnique({
-    where: { id: companyId },
-    select: { settings: true }
-  });
-  const settings = (company?.settings as any) || {};
-  const enabledIds = settings.enabledGlobalCategoryIds;
-  
-  if (Array.isArray(enabledIds)) {
-    return { isGlobal: true, id: { in: enabledIds } };
-  }
-  return { isGlobal: true };
+function getValidCompanyId(companyId: string) {
+  return /^[a-fA-F0-9]{24}$/.test(companyId);
 }
 
 export type CategoryWithCount = {
@@ -35,14 +15,22 @@ export type CategoryWithCount = {
   icon: string | null;
   showOrder: number;
   isActive: boolean;
+  isGlobal: boolean;
   _count: { types: number; documents: number };
 };
 
-export async function getCategories(): Promise<CategoryWithCount[]> {
-  const companyId = await getDefaultCompanyId();
-  const globalCond = await getGlobalCondition(companyId);
-  return prisma.documentCategory.findMany({
-    where: { OR: [{ companyId }, globalCond] },
+export async function getCategoriesByCompany(companyId: string): Promise<{ categories: CategoryWithCount[], enabledGlobalCategoryIds: string[] }> {
+  if (!getValidCompanyId(companyId)) return { categories: [], enabledGlobalCategoryIds: [] };
+  
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { settings: true }
+  });
+  const settings = (company?.settings as any) || {};
+  const enabledGlobalCategoryIds = Array.isArray(settings.enabledGlobalCategoryIds) ? settings.enabledGlobalCategoryIds : [];
+
+  const categories = await prisma.documentCategory.findMany({
+    where: { OR: [{ companyId }, { isGlobal: true }] },
     orderBy: { showOrder: 'asc' },
     select: {
       id: true,
@@ -52,12 +40,59 @@ export async function getCategories(): Promise<CategoryWithCount[]> {
       icon: true,
       showOrder: true,
       isActive: true,
+      isGlobal: true,
       _count: { select: { types: true, documents: true } },
     },
   });
+
+  return { categories: categories as CategoryWithCount[], enabledGlobalCategoryIds };
+}
+
+export async function getGlobalCategories(): Promise<CategoryWithCount[]> {
+  const categories = await prisma.documentCategory.findMany({
+    where: { isGlobal: true },
+    orderBy: { showOrder: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      icon: true,
+      showOrder: true,
+      isActive: true,
+      isGlobal: true,
+      _count: { select: { types: true, documents: true } },
+    },
+  });
+  return categories as CategoryWithCount[];
+}
+
+export async function toggleGlobalCategory(companyId: string, categoryId: string, enabled: boolean) {
+  if (!getValidCompanyId(companyId)) return;
+  
+  const company = await prisma.company.findUnique({ where: { id: companyId }, select: { settings: true } });
+  if (!company) return;
+  
+  const settings = (company.settings as any) || {};
+  let enabledIds = Array.isArray(settings.enabledGlobalCategoryIds) ? settings.enabledGlobalCategoryIds : [];
+  
+  if (enabled) {
+    if (!enabledIds.includes(categoryId)) enabledIds.push(categoryId);
+  } else {
+    enabledIds = enabledIds.filter((id: string) => id !== categoryId);
+  }
+  
+  settings.enabledGlobalCategoryIds = enabledIds;
+  
+  await prisma.company.update({
+    where: { id: companyId },
+    data: { settings }
+  });
+  revalidatePath('/categories');
 }
 
 export async function createCategory(data: {
+  companyId: string;
   name: string;
   slug: string;
   description?: string | null;
@@ -65,12 +100,11 @@ export async function createCategory(data: {
   showOrder?: number;
   isActive: boolean;
 }) {
-  const companyId = await getDefaultCompanyId();
+  if (!getValidCompanyId(data.companyId)) throw new Error('Invalid companyId');
   await prisma.documentCategory.create({
-    data: { ...data, companyId, isGlobal: false },
+    data: { ...data, isGlobal: false },
   });
   revalidatePath('/categories');
-  revalidatePath('/documents');
 }
 
 export async function updateCategory(
@@ -84,17 +118,14 @@ export async function updateCategory(
     isActive: boolean;
   }
 ) {
-  const companyId = await getDefaultCompanyId();
   await prisma.documentCategory.update({
     where: { id },
     data,
   });
   revalidatePath('/categories');
-  revalidatePath('/documents');
 }
 
 export async function deleteCategory(id: string) {
   await prisma.documentCategory.delete({ where: { id } });
   revalidatePath('/categories');
-  revalidatePath('/documents');
 }

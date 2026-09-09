@@ -1,4 +1,4 @@
-"use client";
+"use client"; // Trigger rebuild
 
 import { useEffect, useState } from "react";
 import { Building2, Users, FileText, Activity, Server, AlertCircle, ShieldCheck, TriangleAlert, Info } from "lucide-react";

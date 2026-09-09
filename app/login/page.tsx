@@ -145,9 +145,9 @@ export default function LoginPage() {
         } catch (err) { }
       } else {
         allUsers = [
-          { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
-          { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123" },
-          { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123" },
+          { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
+          { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
+          { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123", companyId: "64abc0000000000000000001" },
         ];
         localStorage.setItem("me_docflow_users", JSON.stringify(allUsers));
       }
@@ -262,6 +262,24 @@ export default function LoginPage() {
         ownerEmail: data.user.email,
         isActive: true,
       }]));
+      
+      // Add the new user to all users list so they show up in settings
+      const savedData = localStorage.getItem("me_docflow_users");
+      let allUsers: any[] = [];
+      if (savedData) {
+        try { allUsers = JSON.parse(savedData); } catch (e) {}
+      }
+      const newMockUser = {
+        id: data.user.id || Date.now().toString(),
+        fullName: data.user.fullName || regFullName,
+        email: data.user.email || regEmail,
+        role: data.user.role || regRole,
+        status: "active",
+        password: regPassword,
+        companyId: data.user.companyId
+      };
+      localStorage.setItem("me_docflow_users", JSON.stringify([...allUsers, newMockUser]));
+
       setTimeout(() => { window.dispatchEvent(new Event("activeCompanyChanged")); }, 100);
       router.push("/dashboard");
     } catch (err: any) {
@@ -287,9 +305,9 @@ export default function LoginPage() {
       } catch (err) { }
     } else {
       allUsers = [
-        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
-        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123" },
-        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123" },
+        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
+        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
+        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123", companyId: "64abc0000000000000000001" },
       ];
       localStorage.setItem("me_docflow_users", JSON.stringify(allUsers));
     }
@@ -334,9 +352,9 @@ export default function LoginPage() {
       } catch (err) { }
     } else {
       allUsers = [
-        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
-        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123" },
-        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123" },
+        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
+        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
+        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123", companyId: "64abc0000000000000000001" },
       ];
     }
 

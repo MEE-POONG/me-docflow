@@ -12,6 +12,7 @@ import { InvoicePrintLayout } from '@/components/templates/InvoicePrintLayout'
 import { WithholdingTaxPrintLayout } from '@/components/templates/WithholdingTaxPrintLayout'
 import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import { getPendingDocumentsByCompany, getTemplatesByCompany } from '../actions'
 
 type Document = {
   id: string
@@ -98,10 +99,49 @@ export default function PendingApprovalList({ documents, templates }: Props) {
   const [printTemplateId, setPrintTemplateId] = useState('')
 
   const [myDocuments, setMyDocuments] = useState<Document[]>(documents)
+  const [myTemplates, setMyTemplates] = useState<Template[]>(templates)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    setMyDocuments(documents)
-  }, [documents])
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const userStr = localStorage.getItem("me_docflow_current_user");
+        let userCompanyId = null;
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          userCompanyId = user.companyId;
+        }
+        
+        if (!userCompanyId) {
+          const companiesStr = localStorage.getItem("me_docflow_companies");
+          if (companiesStr) {
+            const comps = JSON.parse(companiesStr);
+            if (comps && comps.length > 0) userCompanyId = comps[0].id;
+          }
+        }
+
+        if (userCompanyId) {
+          const [fetchedDocs, fetchedTemplates] = await Promise.all([
+            getPendingDocumentsByCompany(userCompanyId),
+            getTemplatesByCompany(userCompanyId)
+          ]);
+          setMyDocuments(fetchedDocs as unknown as Document[]);
+          setMyTemplates(fetchedTemplates as unknown as Template[]);
+        } else {
+          setMyDocuments(documents);
+          setMyTemplates(templates);
+        }
+      } catch (e) {
+        console.error("Failed to fetch pending documents", e);
+        setMyDocuments(documents);
+        setMyTemplates(templates);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [documents, templates])
 
   const filteredDocs = myDocuments.filter(doc =>
     doc.documentNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -212,6 +252,12 @@ export default function PendingApprovalList({ documents, templates }: Props) {
         </div>
 
         <div className="overflow-x-auto">
+          {isLoading ? (
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-12 text-center">
+              <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin text-emerald-500" />
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">กำลังโหลดรายการรออนุมัติ...</p>
+            </div>
+          ) : (
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="text-gray-500 dark:text-gray-400 font-medium border-b border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30">
               <tr>
@@ -308,6 +354,7 @@ export default function PendingApprovalList({ documents, templates }: Props) {
               )}
             </tbody>
           </table>
+          )}
         </div>
 
         {/* Reject Modal */}
@@ -423,7 +470,7 @@ export default function PendingApprovalList({ documents, templates }: Props) {
                   className="w-full sm:w-80 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
                 >
                   <option value="">-- รูปแบบมาตรฐาน --</option>
-                  {templates.map(t => (
+                  {myTemplates.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
@@ -431,7 +478,13 @@ export default function PendingApprovalList({ documents, templates }: Props) {
 
               <div className="p-5 overflow-auto flex-1 bg-gray-50 dark:bg-gray-900/40">
                 {(() => {
-                  const selectedTemplate = templates.find(t => t.id === printTemplateId)
+                  const getTemplateContent = (doc: Document) => {
+                    if (!doc.templateId) return null
+                    const template = myTemplates.find(t => t.id === doc.templateId)
+                    if (!template) return null
+                    return template.layoutJson
+                  }
+                  const selectedTemplate = myTemplates.find(t => t.id === printTemplateId)
                   const isPO = printPreviewDoc.documentType?.name?.includes('สั่งซื้อ') || printPreviewDoc.documentType?.name?.toUpperCase().includes('PO') || printPreviewDoc.documentType?.name?.toLowerCase().includes('purchase order')
                   const isInvoice = printPreviewDoc.documentType?.name?.includes('ใบแจ้งหนี้') || printPreviewDoc.documentType?.name?.includes('ใบวางบิล') || printPreviewDoc.documentType?.name?.toLowerCase().includes('invoice') || printPreviewDoc.documentType?.name?.toLowerCase().includes('billing note')
                   

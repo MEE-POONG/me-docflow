@@ -2,7 +2,8 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { CompanyStatus } from '@prisma/client';
+import { CompanyStatus, SystemAdminRole } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 export async function getDashboardStats() {
   try {
@@ -351,5 +352,108 @@ export async function deleteAdminBusinessType(id: string) {
       throw new Error("ไม่พบประเภทธุรกิจนี้ในระบบ หรืออาจถูกลบไปแล้ว");
     }
     throw new Error(error.message || "Failed to delete business type");
+  }
+}
+
+// System Admins Management
+
+export async function getSystemAdmins() {
+  const admins = await prisma.systemAdmin.findMany({
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      role: true,
+      isActive: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+  return admins;
+}
+
+export async function createSystemAdmin(data: { name: string; username: string; email: string; role: SystemAdminRole; password?: string; isActive: boolean }) {
+  try {
+    const password = data.password || 'admin1234';
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const newAdmin = await prisma.systemAdmin.create({
+      data: {
+        name: data.name,
+        username: data.username,
+        email: data.email,
+        role: data.role,
+        isActive: data.isActive,
+        passwordHash,
+      }
+    });
+    
+    revalidatePath('/admin/system-admins');
+    return { success: true, id: newAdmin.id };
+  } catch (error: any) {
+    console.error("Create System Admin Error:", error);
+    if (error.code === 'P2002') {
+      throw new Error("Username หรือ Email นี้มีผู้ใช้งานแล้ว");
+    }
+    throw new Error(error.message || "Failed to create system admin");
+  }
+}
+
+export async function updateSystemAdmin(id: string, data: { name: string; username: string; email: string; role: SystemAdminRole; isActive: boolean }) {
+  try {
+    const updatedAdmin = await prisma.systemAdmin.update({
+      where: { id },
+      data: {
+        name: data.name,
+        username: data.username,
+        email: data.email,
+        role: data.role,
+        isActive: data.isActive,
+      }
+    });
+    revalidatePath('/admin/system-admins');
+    return { success: true, id: updatedAdmin.id };
+  } catch (error: any) {
+    console.error("Update System Admin Error:", error);
+    if (error.code === 'P2002') {
+      throw new Error("Username หรือ Email นี้มีผู้ใช้งานแล้ว");
+    }
+    throw new Error(error.message || "Failed to update system admin");
+  }
+}
+
+export async function changeSystemAdminPassword(id: string, newPassword: string) {
+  try {
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    await prisma.systemAdmin.update({
+      where: { id },
+      data: { passwordHash }
+    });
+    
+    revalidatePath('/admin/system-admins');
+    return { success: true };
+  } catch (error: any) {
+    console.error("Change Password Error:", error);
+    throw new Error(error.message || "Failed to change password");
+  }
+}
+
+export async function deleteSystemAdmin(id: string) {
+  try {
+    await prisma.systemAdmin.delete({
+      where: { id }
+    });
+    revalidatePath('/admin/system-admins');
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete System Admin Error:", error);
+    if (error.code === 'P2025') {
+      throw new Error("ไม่พบแอดมินคนนี้ในระบบ หรืออาจถูกลบไปแล้ว");
+    }
+    throw new Error(error.message || "Failed to delete system admin");
   }
 }

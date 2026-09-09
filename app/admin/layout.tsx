@@ -21,7 +21,8 @@ import {
   ChevronRight,
   Palette,
   Sun,
-  Moon
+  Moon,
+  UserCog
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -249,6 +250,20 @@ export default function AdminLayout({
         >
           <Palette size={18} />
           <span className="text-xs font-semibold">UI Components</span>
+        </Link>
+
+        {/* ผู้ดูแลระบบ */}
+        <Link
+          href="/admin/system-admins"
+          onClick={handleLinkClick}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+            pathname === "/admin/system-admins"
+              ? "bg-[#F3F8F9] dark:bg-[#7AB5BD]/10 text-[#487D86] dark:text-[#6AA7B0] font-bold border-l-4 border-[#7AB5BD] shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
+          }`}
+        >
+          <UserCog size={18} />
+          <span className="text-xs font-semibold">ผู้ดูแลระบบ</span>
         </Link>
 
         {/* ตั้งค่าระบบ */}

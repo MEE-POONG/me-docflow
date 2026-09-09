@@ -2,20 +2,54 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Search, Filter, FileText, Calendar, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import { Plus, Search, Filter, FileText, Calendar, Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { th, enUS } from 'date-fns/locale'
 import DocumentActions from './DocumentActions'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import { getDocumentsByCompany } from './actions'
 
 export default function DocumentsList({ initialDocuments }: { initialDocuments: any[] }) {
   const [documents, setDocuments] = useState<any[]>(initialDocuments)
+  const [isLoading, setIsLoading] = useState(true)
   const { t, language } = useLanguage()
   const dateLocale = language === 'en' ? enUS : th
 
   useEffect(() => {
-    // Use all initial documents without hardcoded email filtering
-    setDocuments(initialDocuments)
+    const fetchDocs = async () => {
+      try {
+        setIsLoading(true);
+        const userStr = localStorage.getItem("me_docflow_current_user");
+        let userCompanyId = null;
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          // Mocks might use 'companyId' or we fallback to default if not found
+          userCompanyId = user.companyId;
+        }
+        
+        // If no user companyId in mock data, use a fallback from cookies/default
+        if (!userCompanyId) {
+          const companiesStr = localStorage.getItem("me_docflow_companies");
+          if (companiesStr) {
+            const comps = JSON.parse(companiesStr);
+            if (comps && comps.length > 0) userCompanyId = comps[0].id;
+          }
+        }
+
+        if (userCompanyId) {
+          const docs = await getDocumentsByCompany(userCompanyId);
+          setDocuments(docs);
+        } else {
+          setDocuments(initialDocuments);
+        }
+      } catch (e) {
+        console.error("Failed to fetch documents", e);
+        setDocuments(initialDocuments);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDocs();
   }, [initialDocuments])
 
   const getStatusBadge = (status: string) => {
@@ -97,7 +131,14 @@ export default function DocumentsList({ initialDocuments }: { initialDocuments: 
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
-              {documents.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin text-emerald-500" />
+                    <p className="text-sm font-medium">กำลังโหลดข้อมูลเอกสาร...</p>
+                  </td>
+                </tr>
+              ) : documents.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                     <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />

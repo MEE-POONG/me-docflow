@@ -85,11 +85,93 @@ export async function getDocuments(): Promise<DocumentWithRelations[]> {
   });
 }
 
+function getValidCompanyId(companyId: string) {
+  return /^[a-fA-F0-9]{24}$/.test(companyId);
+}
+
+export async function getDocumentsByCompany(companyId: string): Promise<DocumentWithRelations[]> {
+  if (!getValidCompanyId(companyId)) return [];
+  return prisma.document.findMany({
+    where: { companyId },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      documentNo: true,
+      title: true,
+      status: true,
+      note: true,
+      createdAt: true,
+      updatedAt: true,
+      category: { select: { id: true, name: true } },
+      documentType: { select: { id: true, name: true } },
+      createdBy: { select: { id: true, name: true } },
+    },
+  });
+}
+
+export async function getPendingDocumentsByCompany(companyId: string) {
+  if (!getValidCompanyId(companyId)) return [];
+  return prisma.document.findMany({
+    where: {
+      companyId,
+      status: {
+        in: ['PENDING', 'APPROVED', 'REJECTED']
+      }
+    },
+    include: {
+      createdBy: true,
+      company: true,
+      template: true,
+      category: true,
+      documentType: true,
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
+}
+
+export async function getTemplatesByCompany(companyId: string) {
+  if (!getValidCompanyId(companyId)) {
+    return prisma.documentTemplate.findMany({
+      where: { isGlobal: true },
+      include: { category: true, documentType: true, createdByUser: true },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+  return prisma.documentTemplate.findMany({
+    where: {
+      OR: [{ companyId }, { isGlobal: true }],
+    },
+    include: {
+      category: true,
+      documentType: true,
+      createdByUser: true
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+}
+
 export async function getDocumentCategories() {
   const companyId = await getDefaultCompanyId();
   const globalCond = await getGlobalCondition(companyId, 'id');
   return prisma.documentCategory.findMany({
     where: { OR: [{ companyId }, globalCond], isActive: true },
+    orderBy: { showOrder: 'asc' },
+    select: { id: true, name: true },
+  });
+}
+
+export async function getCategoriesByCompany(companyId: string) {
+  if (!getValidCompanyId(companyId)) {
+    return prisma.documentCategory.findMany({
+      where: { isGlobal: true, isActive: true },
+      orderBy: { showOrder: 'asc' },
+      select: { id: true, name: true },
+    });
+  }
+  return prisma.documentCategory.findMany({
+    where: { OR: [{ companyId }, { isGlobal: true }], isActive: true },
     orderBy: { showOrder: 'asc' },
     select: { id: true, name: true },
   });
@@ -101,6 +183,25 @@ export async function getDocumentTypes(categoryId?: string) {
   return prisma.documentType.findMany({
     where: {
       OR: [{ companyId }, globalCond],
+      isActive: true,
+      ...(categoryId ? { categoryId } : {}),
+    },
+    orderBy: { showOrder: 'asc' },
+    select: { id: true, name: true, categoryId: true },
+  });
+}
+
+export async function getDocumentTypesByCompany(companyId: string, categoryId?: string) {
+  if (!getValidCompanyId(companyId)) {
+    return prisma.documentType.findMany({
+      where: { isGlobal: true, isActive: true, ...(categoryId ? { categoryId } : {}) },
+      orderBy: { showOrder: 'asc' },
+      select: { id: true, name: true, categoryId: true },
+    });
+  }
+  return prisma.documentType.findMany({
+    where: {
+      OR: [{ companyId }, { isGlobal: true }],
       isActive: true,
       ...(categoryId ? { categoryId } : {}),
     },

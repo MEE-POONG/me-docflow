@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { Plus, Edit2, Trash2, X, Search, Loader2, Tag, ChevronDown } from 'lucide-react';
-import { createCategory, updateCategory, deleteCategory } from './actions';
+import { useState, useTransition, useEffect } from 'react';
+import { Plus, Edit2, Trash2, X, Search, Loader2, Tag, LayoutTemplate } from 'lucide-react';
+import { createCategory, updateCategory, deleteCategory, getCategoriesByCompany } from './actions';
 import type { CategoryWithCount } from './actions';
+import Link from 'next/link';
 
 function slugify(text: string) {
   return text
@@ -17,7 +18,10 @@ export default function CategoriesClient({
 }: {
   initialCategories: CategoryWithCount[];
 }) {
-  const [categories, setCategories] = useState<CategoryWithCount[]>(initialCategories);
+  const [allCategories, setAllCategories] = useState<CategoryWithCount[]>(initialCategories);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -33,11 +37,45 @@ export default function CategoriesClient({
     isActive: true,
   });
 
-  const filtered = categories.filter((c) => {
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoadingData(true);
+        const userStr = localStorage.getItem("me_docflow_current_user");
+        let cid = null;
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          cid = user.companyId;
+        }
+        if (!cid) {
+          const companiesStr = localStorage.getItem("me_docflow_companies");
+          if (companiesStr) {
+            const comps = JSON.parse(companiesStr);
+            if (comps && comps.length > 0) cid = comps[0].id;
+          }
+        }
+
+        setUserCompanyId(cid);
+
+        if (cid) {
+          const res = await getCategoriesByCompany(cid);
+          setAllCategories(res.categories);
+        }
+      } catch (e) {
+        console.error("Failed to fetch categories data", e);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const companyCategories = allCategories.filter(cat => !cat.isGlobal);
+
+  const filtered = companyCategories.filter((c) => {
     const q = searchQuery.toLowerCase();
     const match = c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q);
-    const statusMatch =
-      filterStatus === 'ALL' || (filterStatus === 'ACTIVE' ? c.isActive : !c.isActive);
+    const statusMatch = filterStatus === 'ALL' || (filterStatus === 'ACTIVE' ? c.isActive : !c.isActive);
     return match && statusMatch;
   });
 
@@ -66,6 +104,10 @@ export default function CategoriesClient({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userCompanyId) {
+      alert("ไม่พบรหัสบริษัท กรุณาล็อกอินใหม่");
+      return;
+    }
     startTransition(async () => {
       try {
         const payload = {
@@ -79,9 +121,12 @@ export default function CategoriesClient({
         if (editingId) {
           await updateCategory(editingId, payload);
         } else {
-          await createCategory(payload);
+          await createCategory({ ...payload, companyId: userCompanyId });
         }
-        window.location.reload();
+        
+        const res = await getCategoriesByCompany(userCompanyId);
+        setAllCategories(res.categories);
+        handleCloseModal();
       } catch (error) {
         console.error('Failed to save category', error);
         alert('เกิดข้อผิดพลาด ไม่สามารถบันทึกข้อมูลได้');
@@ -98,7 +143,7 @@ export default function CategoriesClient({
       startTransition(async () => {
         try {
           await deleteCategory(id);
-          setCategories(categories.filter((c) => c.id !== id));
+          setAllCategories(allCategories.filter((c) => c.id !== id));
         } catch {
           alert('เกิดข้อผิดพลาด ไม่สามารถลบหมวดหมู่ได้');
         }
@@ -108,8 +153,7 @@ export default function CategoriesClient({
 
   return (
     <div className="flex flex-col w-full max-w-7xl mx-auto py-8">
-      {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="text-xs font-bold text-emerald-600 dark:text-emerald-500 tracking-wider mb-1 uppercase">
           Company Workspace
         </div>
@@ -121,7 +165,6 @@ export default function CategoriesClient({
         </p>
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <button
           onClick={() => handleOpenModal()}
@@ -153,7 +196,6 @@ export default function CategoriesClient({
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
@@ -169,7 +211,14 @@ export default function CategoriesClient({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
-              {filtered.length === 0 ? (
+              {isLoadingData ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin text-emerald-500" />
+                    <p className="text-sm font-medium">กำลังโหลดข้อมูลหมวดหมู่...</p>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-gray-500">
@@ -251,24 +300,23 @@ export default function CategoriesClient({
             </tbody>
           </table>
         </div>
-        {filtered.length > 0 && (
+        {!isLoadingData && filtered.length > 0 && (
           <div className="px-6 py-3 border-t border-gray-50 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500">
-            แสดง {filtered.length} จาก {categories.length} รายการ
+            แสดง {filtered.length} จาก {companyCategories.length} รายการ
           </div>
         )}
       </div>
 
-      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700">
               <div>
                 <h2 className="text-lg font-bold text-gray-800 dark:text-white">
                   {editingId ? 'แก้ไขหมวดหมู่' : 'เพิ่มหมวดหมู่ใหม่'}
                 </h2>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  {editingId ? 'แก้ไขข้อมูลหมวดหมู่เอกสาร' : 'สร้างหมวดหมู่ใหม่สำหรับจัดกลุ่มเอกสาร'}
+                  {editingId ? 'แก้ไขข้อมูลหมวดหมู่เอกสารของบริษัท' : 'สร้างหมวดหมู่ใหม่สำหรับจัดกลุ่มเอกสารของบริษัท'}
                 </p>
               </div>
               <button
@@ -280,7 +328,6 @@ export default function CategoriesClient({
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {/* Name */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   ชื่อหมวดหมู่ <span className="text-red-500">*</span>
@@ -301,7 +348,6 @@ export default function CategoriesClient({
                 />
               </div>
 
-              {/* Slug */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Slug <span className="text-gray-400 font-normal text-xs">(สร้างอัตโนมัติ)</span>
@@ -315,7 +361,6 @@ export default function CategoriesClient({
                 />
               </div>
 
-              {/* Icon + Order row */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -345,7 +390,6 @@ export default function CategoriesClient({
                 </div>
               </div>
 
-              {/* Description */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   รายละเอียด
@@ -358,7 +402,6 @@ export default function CategoriesClient({
                 />
               </div>
 
-              {/* isActive */}
               <div className="flex items-center gap-3 pt-1">
                 <input
                   type="checkbox"
@@ -375,7 +418,6 @@ export default function CategoriesClient({
                 </label>
               </div>
 
-              {/* Actions */}
               <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-700">
                 <button
                   type="button"

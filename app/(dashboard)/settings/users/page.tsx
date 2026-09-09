@@ -71,9 +71,9 @@ export default function UsersSettingsPage() {
       }
     } else {
       const mockUsers = [
-        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123" },
-        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123" },
-        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123" },
+        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
+        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
+        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123", companyId: "64abc0000000000000000001" },
       ];
       allUsers = mockUsers;
       localStorage.setItem("me_docflow_users", JSON.stringify(mockUsers));
