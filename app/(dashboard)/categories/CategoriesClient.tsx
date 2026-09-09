@@ -19,6 +19,7 @@ export default function CategoriesClient({
   initialCategories: CategoryWithCount[];
 }) {
   const [allCategories, setAllCategories] = useState<CategoryWithCount[]>(initialCategories);
+  const [enabledGlobalCategoryIds, setEnabledGlobalCategoryIds] = useState<string[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [userCompanyId, setUserCompanyId] = useState<string | null>(null);
 
@@ -54,12 +55,18 @@ export default function CategoriesClient({
             if (comps && comps.length > 0) cid = comps[0].id;
           }
         }
+        
+        // Ensure cid is a valid 24-character hex string for MongoDB
+        if (!cid || !/^[a-fA-F0-9]{24}$/.test(cid)) {
+          cid = "64abc0000000000000000001";
+        }
 
         setUserCompanyId(cid);
 
         if (cid) {
           const res = await getCategoriesByCompany(cid);
           setAllCategories(res.categories);
+          setEnabledGlobalCategoryIds(res.enabledGlobalCategoryIds);
         }
       } catch (e) {
         console.error("Failed to fetch categories data", e);
@@ -70,7 +77,7 @@ export default function CategoriesClient({
     fetchData();
   }, []);
 
-  const companyCategories = allCategories.filter(cat => !cat.isGlobal);
+  const companyCategories = allCategories.filter(cat => !cat.isGlobal || enabledGlobalCategoryIds.includes(cat.id));
 
   const filtered = companyCategories.filter((c) => {
     const q = searchQuery.toLowerCase();
@@ -221,15 +228,27 @@ export default function CategoriesClient({
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3 text-gray-400 dark:text-gray-500">
+                    <div className="flex flex-col items-center gap-4 text-gray-400 dark:text-gray-500">
                       <Tag className="w-12 h-12 opacity-30" />
-                      <p className="text-sm">ไม่พบหมวดหมู่</p>
-                      <button
-                        onClick={() => handleOpenModal()}
-                        className="text-sm text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
-                      >
-                        + เพิ่มหมวดหมู่ใหม่
-                      </button>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">ยังไม่มีหมวดหมู่เอกสาร</p>
+                        <p className="text-xs">คุณสามารถเพิ่มหมวดหมู่เอง หรือเปิดใช้งานหมวดหมู่จากระบบกลางได้</p>
+                      </div>
+                      <div className="flex items-center gap-3 mt-2">
+                        <button
+                          onClick={() => handleOpenModal()}
+                          className="px-4 py-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg font-medium transition-colors"
+                        >
+                          + เพิ่มหมวดหมู่ใหม่
+                        </button>
+                        <Link
+                          href="/settings/categories"
+                          className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+                        >
+                          <LayoutTemplate className="w-4 h-4" />
+                          ตั้งค่าจากระบบกลาง
+                        </Link>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -276,16 +295,27 @@ export default function CategoriesClient({
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleOpenModal(cat)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors font-medium"
+                          disabled={cat.isGlobal}
+                          title={cat.isGlobal ? 'หมวดหมู่ส่วนกลาง ไม่สามารถแก้ไขได้ที่นี่ กรุณาไปที่การตั้งค่าระบบ' : ''}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs font-medium transition-colors ${
+                            cat.isGlobal 
+                              ? 'text-gray-400 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60' 
+                              : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30'
+                          }`}
                         >
                           <Edit2 className="w-3 h-3" /> แก้ไข
                         </button>
                         <button
                           onClick={() => handleDelete(cat.id, cat.name, cat._count.documents)}
-                          disabled={isPending}
-                          className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors font-medium disabled:opacity-60"
+                          disabled={isPending || cat.isGlobal}
+                          title={cat.isGlobal ? 'หมวดหมู่ส่วนกลาง ไม่สามารถลบได้ที่นี่ กรุณาไปที่การตั้งค่าระบบ' : ''}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs font-medium transition-colors ${
+                            cat.isGlobal 
+                              ? 'text-gray-400 bg-gray-50 dark:bg-gray-800 cursor-not-allowed opacity-60' 
+                              : 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-60'
+                          }`}
                         >
-                          {isPending ? (
+                          {isPending && !cat.isGlobal ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
                           ) : (
                             <Trash2 className="w-3 h-3" />

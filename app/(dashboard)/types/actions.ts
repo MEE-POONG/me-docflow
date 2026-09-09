@@ -19,12 +19,9 @@ async function getGlobalCondition(companyId: string, idField: 'id' | 'categoryId
     select: { settings: true }
   });
   const settings = (company?.settings as any) || {};
-  const enabledIds = settings.enabledGlobalCategoryIds;
+  const enabledIds = Array.isArray(settings.enabledGlobalCategoryIds) ? settings.enabledGlobalCategoryIds : [];
   
-  if (Array.isArray(enabledIds)) {
-    return { isGlobal: true, [idField]: { in: enabledIds } };
-  }
-  return { isGlobal: true };
+  return { isGlobal: true, [idField]: { in: enabledIds } };
 }
 
 export type DocTypeWithRelations = {
@@ -43,7 +40,10 @@ export async function getDocumentTypes(): Promise<DocTypeWithRelations[]> {
   const companyId = await getDefaultCompanyId();
   const globalCond = await getGlobalCondition(companyId, 'categoryId');
   return prisma.documentType.findMany({
-    where: { OR: [{ companyId }, globalCond] },
+    where: { 
+      OR: [{ companyId }, globalCond],
+      category: { isActive: true }
+    },
     orderBy: [{ category: { showOrder: 'asc' } }, { showOrder: 'asc' }],
     select: {
       id: true,

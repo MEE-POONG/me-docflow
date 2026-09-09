@@ -32,6 +32,11 @@ export default function SettingsCategoriesPage() {
             if (comps && comps.length > 0) cid = comps[0].id;
           }
         }
+        
+        // Ensure cid is a valid 24-character hex string for MongoDB
+        if (!cid || !/^[a-fA-F0-9]{24}$/.test(cid)) {
+          cid = "64abc0000000000000000001";
+        }
 
         setUserCompanyId(cid);
 

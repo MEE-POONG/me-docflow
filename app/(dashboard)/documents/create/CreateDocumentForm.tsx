@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Save, Loader2, Link as LinkIcon, ArrowLeft, ArrowRight, Search, Plus, Trash2, Printer, Download, MoreHorizontal, Share2, FileText, CheckCircle2, Send, Eye, X } from 'lucide-react'
+import { Save, Loader2, Link as LinkIcon, ArrowLeft, ArrowRight, Search, Plus, Trash2, Printer, Download, MoreHorizontal, Share2, FileText, CheckCircle2, Send, Eye, X, Upload } from 'lucide-react'
 import { createDocument, updateDocument, submitDocument } from '@/app/actions/documents'
+import { getCategoriesByCompany } from '@/app/(dashboard)/categories/actions'
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
 import { PurchaseOrderPrintLayout } from '@/components/templates/PurchaseOrderPrintLayout'
 import { InvoicePrintLayout } from '@/components/templates/InvoicePrintLayout'
@@ -53,6 +54,10 @@ export default function CreateDocumentForm({ folders, tags, categories, document
   
   const defaultTitle = documentTypes.find(type => type.id === initialDocumentTypeId)?.name || 'เอกสารใหม่'
 
+  // State for available categories filtered by company settings
+  const [availableCategories, setAvailableCategories] = useState<any[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+
   // Base Document Info (Title, Category, etc.)
   const [docInfo, setDocInfo] = useState({
     title: initialData?.title || defaultTitle,
@@ -60,6 +65,62 @@ export default function CreateDocumentForm({ folders, tags, categories, document
     documentTypeId: initialDocumentTypeId,
     templateId: initialData?.templateId || '',
   })
+
+  useEffect(() => {
+    async function loadCompanyCategories() {
+      let cid = null
+      const userStr = localStorage.getItem("me_docflow_current_user")
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr)
+          cid = user.companyId
+        } catch (e) {}
+      }
+      if (!cid) {
+        const companiesStr = localStorage.getItem("me_docflow_companies")
+        if (companiesStr) {
+          try {
+            const comps = JSON.parse(companiesStr)
+            if (comps && comps.length > 0) cid = comps[0].id
+          } catch (e) {}
+        }
+      }
+      
+      // Ensure cid is a valid 24-character hex string for MongoDB
+      if (!cid || !/^[a-fA-F0-9]{24}$/.test(cid)) {
+        cid = "64abc0000000000000000001";
+      }
+
+      try {
+        const res = await getCategoriesByCompany(cid)
+        const companyCategories = res.categories.filter(
+          (c: any) => !c.isGlobal || res.enabledGlobalCategoryIds.includes(c.id)
+        )
+        setAvailableCategories(companyCategories)
+        
+        // Auto select first category if current is invalid
+        if (companyCategories.length > 0) {
+          const isValidCategory = companyCategories.some((c: any) => c.id === docInfo.categoryId)
+          if (!isValidCategory && !initialData) {
+            const newCat = companyCategories[0].id
+            const typesForCat = documentTypes.filter((t: any) => t.categoryId === newCat)
+            setDocInfo(prev => ({
+              ...prev,
+              categoryId: newCat,
+              documentTypeId: typesForCat[0]?.id || '',
+              title: typesForCat[0]?.name || prev.title
+            }))
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch company categories", error)
+      } finally {
+        setIsLoadingCategories(false)
+      }
+    }
+    loadCompanyCategories()
+  }, [docInfo.categoryId, documentTypes, initialData])
+
 
   // Parse initial dataJson if available
   const parsedData = initialData?.dataJson ? (typeof initialData.dataJson === 'string' ? JSON.parse(initialData.dataJson) : initialData.dataJson) : {}
@@ -216,6 +277,19 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
     if (confirm(`คุณต้องการยื่นขออนุมัติเอกสารนี้ใช่หรือไม่?`)) {
       startTransition(async () => {
+        if (savedDocument && docInfo.templateId !== savedDocument.templateId) {
+           const dataJsonStr = typeof savedDocument.dataJson === 'string' 
+             ? savedDocument.dataJson 
+             : JSON.stringify(savedDocument.dataJson || {});
+           await updateDocument(savedDocument.id, {
+              title: savedDocument.title,
+              categoryId: savedDocument.categoryId,
+              documentTypeId: savedDocument.documentTypeId,
+              templateId: docInfo.templateId,
+              dataJson: dataJsonStr,
+           });
+        }
+        
         const result = await submitDocument(savedId)
         if (result.success) {
           router.push('/documents')
@@ -272,8 +346,15 @@ export default function CreateDocumentForm({ folders, tags, categories, document
               <button
                 type="button"
                 onClick={() => {
-                  setPreviewTemplateId(docInfo.templateId)
-                  setShowPreviewModal(true)
+                  let tid = docInfo.templateId;
+                  if (!tid) {
+                    const availableTemplates = templates.filter(t => t.documentTypeId === docInfo.documentTypeId);
+                    if (availableTemplates.length > 0) {
+                      tid = availableTemplates[0].id;
+                    }
+                  }
+                  setPreviewTemplateId(tid);
+                  setShowPreviewModal(true);
                 }}
                 className="flex items-center gap-2 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors shadow-sm"
               >
@@ -285,7 +366,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                {t.createDocument.saveDocument}
+                บันทึกและดำเนินการต่อ
               </button>
             </>
           )}
@@ -300,10 +381,33 @@ export default function CreateDocumentForm({ folders, tags, categories, document
               </button>
               <button
                 type="button"
-                onClick={() => router.push('/documents')}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium"
+                disabled={isPending}
+                onClick={() => {
+                  if (savedDocument && docInfo.templateId !== savedDocument.templateId) {
+                    startTransition(async () => {
+                      try {
+                        const dataJsonStr = typeof savedDocument.dataJson === 'string' 
+                          ? savedDocument.dataJson 
+                          : JSON.stringify(savedDocument.dataJson || {});
+                        await updateDocument(savedDocument.id, {
+                           title: savedDocument.title,
+                           categoryId: savedDocument.categoryId,
+                           documentTypeId: savedDocument.documentTypeId,
+                           templateId: docInfo.templateId,
+                           dataJson: dataJsonStr,
+                        });
+                        router.push('/documents');
+                      } catch (e) {
+                        router.push('/documents');
+                      }
+                    });
+                  } else {
+                    router.push('/documents');
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm font-medium disabled:opacity-50"
               >
-                <CheckCircle2 className="w-4 h-4" /> {t.createDocument.done}
+                {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} {t.createDocument.done}
               </button>
               {savedDocument?.status !== 'PENDING' && savedDocument?.status !== 'APPROVED' && (
                 <button
@@ -330,24 +434,34 @@ export default function CreateDocumentForm({ folders, tags, categories, document
           <div className="space-y-5">
             <div>
               <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">{t.createDocument.category} <span className="text-red-500">*</span></label>
-              <select
-                value={docInfo.categoryId}
-                onChange={e => {
-                  const newCat = e.target.value
-                  const typesForCat = documentTypes.filter(t => t.categoryId === newCat)
-                  setDocInfo({ 
-                    ...docInfo, 
-                    categoryId: newCat, 
-                    documentTypeId: typesForCat[0]?.id || '', 
-                    templateId: '',
-                    title: typesForCat[0]?.name || docInfo.title
-                  })
-                }}
-                className="w-full text-sm p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-              >
-                <option value="" disabled>{t.createDocument.selectCategory}</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              {isLoadingCategories ? (
+                <div className="w-full text-sm p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-500 flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> กำลังโหลดหมวดหมู่เอกสาร...
+                </div>
+              ) : availableCategories.length === 0 ? (
+                <div className="w-full text-sm p-3 border border-red-200 dark:border-red-900/50 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium text-center">
+                  ยังไม่มีหมวดหมู่เอกสารที่พร้อมใช้งาน
+                </div>
+              ) : (
+                <select
+                  value={docInfo.categoryId}
+                  onChange={e => {
+                    const newCat = e.target.value
+                    const typesForCat = documentTypes.filter(t => t.categoryId === newCat)
+                    setDocInfo({ 
+                      ...docInfo, 
+                      categoryId: newCat, 
+                      documentTypeId: typesForCat[0]?.id || '', 
+                      templateId: '',
+                      title: typesForCat[0]?.name || docInfo.title
+                    })
+                  }}
+                  className="w-full text-sm p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                >
+                  <option value="" disabled>{t.createDocument.selectCategory}</option>
+                  {availableCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              )}
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">{t.createDocument.documentType} <span className="text-red-500">*</span></label>
@@ -2387,17 +2501,31 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                           'ใบรับรองแพทย์',
                           'สำเนาหน้าสมุดบัญชีธนาคาร',
                           'เอกสารรับรองการทำงานจากที่เก่า'
-                        ].map((docName, index) => (
-                          <label key={index} className="flex items-center gap-3 cursor-pointer p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
-                            <input 
-                              type="checkbox" 
-                              checked={documentChecklist.includes(docName)}
-                              onChange={() => handleCheckboxChange(docName)}
-                              className="w-5 h-5 accent-purple-600 rounded border-gray-300 focus:ring-purple-500"
-                            />
-                            <span className="text-gray-700 dark:text-gray-300">{docName}</span>
-                          </label>
-                        ))}
+                        ].map((docName, index) => {
+                          const isChecked = documentChecklist.includes(docName);
+                          return (
+                          <div key={index} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl transition-colors border border-transparent hover:border-gray-100 dark:hover:border-gray-700 flex flex-col justify-center">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                checked={isChecked}
+                                onChange={() => handleCheckboxChange(docName)}
+                                className="w-5 h-5 accent-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                              />
+                              <span className="text-gray-700 dark:text-gray-300">{docName}</span>
+                            </label>
+                            
+                            {isChecked && (
+                              <div className="mt-3 ml-8 animate-in slide-in-from-top-2 fade-in duration-200">
+                                <label className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:text-purple-600 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 cursor-pointer transition-all w-fit">
+                                  <Upload className="w-4 h-4" />
+                                  <span className="font-medium">อัปโหลดไฟล์แนบ</span>
+                                  <input type="file" className="hidden" accept="image/*,.pdf,.doc,.docx" />
+                                </label>
+                              </div>
+                            )}
+                          </div>
+                        )})}
                       </div>
                     </div>
 
