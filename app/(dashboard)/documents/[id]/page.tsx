@@ -1,4 +1,7 @@
-import { PrismaClient } from '@prisma/client'
+import { DocumentSignaturePage } from '@/components/templates/DocumentSignaturePage'
+import { SignDocumentButton } from './SignDocumentButton'
+import { SubmitForApprovalButton } from './SubmitForApprovalButton'
+import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, FileText, User, CheckCircle2, XCircle, Clock, FileCheck } from 'lucide-react'
@@ -7,13 +10,14 @@ import { th } from 'date-fns/locale'
 import { PreviewActions, PrintHelper, PrintActions } from './PrintHelper'
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
 import { PurchaseOrderPrintLayout } from '@/components/templates/PurchaseOrderPrintLayout'
+import { QuotationPrintLayout } from '@/components/templates/QuotationPrintLayout'
 import { InvoicePrintLayout } from '@/components/templates/InvoicePrintLayout'
 import { WithholdingTaxPrintLayout } from '@/components/templates/WithholdingTaxPrintLayout'
 import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 
-const prisma = new PrismaClient()
 
-export default async function DocumentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ print?: string, preview?: string, templateId?: string }> }) {
+
+export default async function DocumentDetailPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ print?: string, preview?: string, templateId?: string, sign?: string }> }) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const documentId = resolvedParams.id;
@@ -37,12 +41,19 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
   }
 
   const templates = await prisma.documentTemplate.findMany({
+    where: { documentTypeId: document.documentTypeId, isActive: true, OR: [{ companyId: document.companyId }, { isGlobal: true }] },
     orderBy: { createdAt: 'desc' }
   });
 
-  const activeTemplate = selectedTemplateId
+  const storedData = typeof document.dataJson === 'string' ? JSON.parse(document.dataJson) : document.dataJson
+  const approvalSubmittedAt = (storedData as any)?.approvalSubmittedAt || null
+  const legacySubmitterSignature = document.isLocked && document.status === 'PENDING' && !(storedData as any)?.submitterSignature
+    && (storedData as any)?.electronicSignature?.userId === document.createdById && !approvalSubmittedAt ? (storedData as any).electronicSignature : null
+  const signature = document.isLocked && !legacySubmitterSignature ? (storedData as any)?.electronicSignature : null
+  const submitterSignature = (storedData as any)?.submitterSignature || legacySubmitterSignature || null
+  const activeTemplate = signature ? (signature.layoutSnapshot ? { ...document.template, id: signature.templateId, name: document.template?.name || document.documentType.name, layoutJson: signature.layoutSnapshot } : null) : selectedTemplateId !== undefined
     ? templates.find(t => t.id === selectedTemplateId)
-    : document.template;
+    : templates.find(t => t.id === document.templateId);
 
   const layoutData = activeTemplate?.layoutJson as { pages?: unknown[], elements?: unknown[] } | null | undefined
   const hasLayout = Boolean(layoutData && ((layoutData.pages?.length ?? 0) > 0 || (layoutData.elements?.length ?? 0) > 0))
@@ -50,54 +61,29 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
   const isPO = document.documentType?.name?.includes('สั่งซื้อ') || document.documentType?.name?.toUpperCase().includes('PO') || document.documentType?.name?.toLowerCase().includes('purchase order')
   const isInvoice = document.documentType?.name?.includes('ใบแจ้งหนี้') || document.documentType?.name?.includes('ใบวางบิล') || document.documentType?.name?.toLowerCase().includes('invoice') || document.documentType?.name?.toLowerCase().includes('billing note')
 
-  if (isPrint || isPreview) {
-    if (isPO && (!activeTemplate || !hasLayout)) {
-      return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
-          {isPrint ? <PrintHelper /> : <PreviewActions />}
-          <div className="print-section mx-auto py-6 print:py-0 flex justify-center">
-            <PurchaseOrderPrintLayout data={mapDocumentToTemplateData(document, document.company, document.createdBy)} />
-          </div>
-        </div>
-      )
-    }
+  const typeName = document.documentType?.name || ''
+  const isQuotation = typeName.includes('ใบเสนอราคา') || typeName.toLowerCase().includes('quotation')
+  const isWithholdingTax = typeName.includes('หัก ณ ที่จ่าย') || typeName.includes('50 ทวิ')
+  const mappedData = mapDocumentToTemplateData(document, document.company, document.createdBy)
+  const documentBody = hasLayout && activeTemplate
+    ? <DocumentPreview layoutJsonString={JSON.stringify(activeTemplate.layoutJson)} dataOverride={mappedData} />
+    : isQuotation ? <QuotationPrintLayout data={mappedData} signature={signature} submitterSignature={submitterSignature} />
+    : isPO ? <PurchaseOrderPrintLayout data={mappedData} />
+    : isInvoice ? <InvoicePrintLayout data={mappedData} />
+    : isWithholdingTax ? <WithholdingTaxPrintLayout data={mappedData} /> : null
 
-    if (isInvoice && (!activeTemplate || !hasLayout)) {
-      return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
-          {isPrint ? <PrintHelper /> : <PreviewActions />}
-          <div className="print-section mx-auto py-6 print:py-0 flex justify-center">
-            <InvoicePrintLayout data={mapDocumentToTemplateData(document, document.company, document.createdBy)} />
-          </div>
-        </div>
-      )
-    }
+  const hasInlineSignatures = isQuotation && !hasLayout
+  const documentView = documentBody ? <>{documentBody}
+    {submitterSignature && !hasInlineSignatures && <DocumentSignaturePage signature={submitterSignature} documentNo={document.documentNo} signerLabel="ผู้ยื่นขออนุมัติ" />}
+    {signature && !hasInlineSignatures && <DocumentSignaturePage signature={signature} documentNo={document.documentNo} signerLabel="ผู้อนุมัติ" />}
+  </> : null
 
-    const isWithholdingTax = document.documentType?.name?.includes('หัก ณ ที่จ่าย') || document.documentType?.name?.includes('50 ทวิ')
-    if (isWithholdingTax && (!activeTemplate || !hasLayout)) {
-      return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
-          {isPrint ? <PrintHelper /> : <PreviewActions />}
-          <div className="print-section mx-auto py-6 print:py-0 flex justify-center">
-            <WithholdingTaxPrintLayout data={mapDocumentToTemplateData(document, document.company, document.createdBy)} />
-          </div>
-        </div>
-      )
-    }
-
-    if (hasLayout && activeTemplate) {
-      return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
-          {isPrint ? <PrintHelper /> : <PreviewActions />}
-          <div className="print-section mx-auto py-6 print:py-0">
-            <DocumentPreview
-              layoutJsonString={JSON.stringify(activeTemplate.layoutJson)}
-              dataOverride={mapDocumentToTemplateData(document, document.company, document.createdBy)}
-            />
-          </div>
-        </div>
-      )
-    }
+  if ((isPrint || isPreview) && documentView) {
+    return <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
+      {isPrint && <PrintHelper />}
+      <PreviewActions />
+      <div className="print-section mx-auto py-6 print:py-0">{documentView}</div>
+    </div>
   }
 
   const getStatusBadge = (status: string) => {
@@ -114,18 +100,36 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
   }
 
   return (
-    <div className={`mx-auto max-w-6xl px-4 pb-14 pt-4 md:px-5 md:pt-5 ${isPrint ? 'print-section' : ''}`}>
+    <div className={`mx-auto max-w-6xl px-4 pb-14 pt-4 md:px-5 md:pt-5 ${isPrint || isPreview ? 'print-section' : ''}`}>
       {isPrint && <PrintHelper />}
+      {isPreview && <PreviewActions />}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 no-print">
         <Link href="/documents" className="inline-flex h-9 items-center gap-2 rounded-md border border-gray-200 bg-white px-3.5 text-sm font-medium text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
           <ArrowLeft className="w-4 h-4" /> กลับหน้ารายการ
         </Link>
 
         <div className="flex items-center gap-2">
-          <Link href={`/documents/${document.id}/edit`} className="inline-flex h-9 items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50">
+          {!document.isLocked && <Link href={`/documents/${document.id}/edit`} className="inline-flex h-9 items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50">
             แก้ไขเอกสาร
-          </Link>
-          <PrintActions templates={templates} currentTemplateId={selectedTemplateId || document.templateId} documentId={document.id} />
+          </Link>}
+          {!document.isLocked && ['DRAFT', 'REJECTED', 'PENDING'].includes(document.status) && !submitterSignature && <SignDocumentButton
+            signatureRole="submitter"
+            autoOpen={resolvedSearchParams.sign === 'submitter'}
+            allowedSignerEmail={document.createdBy?.email}
+            inlineSignature={hasInlineSignatures}
+            documentId={document.id}
+            version={document.updatedAt.toISOString()}
+            templateId={activeTemplate?.id || ''}
+          />}
+          {(!document.isLocked || legacySubmitterSignature) && ['DRAFT', 'REJECTED', 'PENDING'].includes(document.status) && submitterSignature && !approvalSubmittedAt && <SubmitForApprovalButton
+            documentId={document.id}
+            title={document.title}
+            allowedSignerEmail={document.createdBy?.email || ''}
+          />}
+          {!document.isLocked && document.status === 'APPROVED' && <SignDocumentButton inlineSignature={hasInlineSignatures} documentId={document.id} version={document.updatedAt.toISOString()} templateId={activeTemplate?.id || ''} />}
+          {(!document.isLocked || legacySubmitterSignature) && submitterSignature && <span className="text-sm text-emerald-700">ผู้ยื่นลงนามแล้ว</span>}
+          {document.isLocked && !legacySubmitterSignature && <span className="text-sm text-blue-700">ลงนามแล้ว · ล็อกเอกสาร</span>}
+          <PrintActions templates={document.isLocked ? [] : templates} currentTemplateId={activeTemplate?.id || null} documentId={document.id} documentTypeName={typeName} documentNo={document.documentNo} />
         </div>
       </div>
 
@@ -181,7 +185,9 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
             </div>
 
             {/* Document Content */}
-            {document.dataJson ? (
+            {documentView ? (
+              <div className="print-section overflow-x-auto bg-gray-100 p-4 print:p-0">{documentView}</div>
+            ) : document.dataJson ? (
               <div className="overflow-hidden rounded-md border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                 {(() => {
                   try {

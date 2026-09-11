@@ -46,7 +46,7 @@ export function WithholdingTaxPrintLayout({ data }: WithholdingTaxPrintLayoutPro
   const totalTax = whtItems.reduce((acc: number, item: any) => acc + (Number(item.tax) || 0), 0)
 
   return (
-    <div className="w-full bg-white text-black print:p-0 p-8 max-w-[210mm] mx-auto min-h-[297mm] shadow-lg print:shadow-none text-[11px] font-sans relative">
+    <div className="document-print-page w-full bg-white text-black p-8 max-w-[210mm] mx-auto min-h-[297mm] shadow-lg print:shadow-none text-[11px] font-sans relative">
       
       {/* Decorative Top Banner */}
       <div className="bg-[#4b96d1] text-white text-center py-2.5 px-6 rounded-full mx-auto max-w-3xl font-bold text-lg mb-6 shadow-sm print:shadow-none border-[3px] border-white ring-2 ring-[#4b96d1]/20">

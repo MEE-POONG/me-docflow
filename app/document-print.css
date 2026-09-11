@@ -1,0 +1,100 @@
+@page document-sheet {
+  /* Use the sheet selected in the print dialog. Forcing A4 here makes Chrome
+     shrink and centre it on Letter paper, leaving white strips on both sides. */
+  size: auto;
+  margin: 0;
+}
+
+@media print {
+  /* Remove application chrome from the layout, rather than leaving invisible
+     sidebar/toolbar boxes that push the document onto a second sheet. */
+  body:has(.print-section) *:not(.print-section):not(.print-section *):not(:has(.print-section)) {
+    display: none !important;
+  }
+
+  html:has(.print-section),
+  body:has(.print-section),
+  body *:has(.print-section) {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: white !important;
+    transform: none !important;
+  }
+
+  .print-section {
+    page: document-sheet;
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black;
+  }
+
+  .print-section, .print-section * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-section .no-print {
+    display: none !important;
+  }
+
+  .print-section .document-print-page {
+    /* Follow the actual printable sheet width, including browser scaling. */
+    width: 100% !important;
+    box-sizing: border-box;
+    min-height: 100vh !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .print-section tr {
+    break-inside: avoid;
+  }
+
+  .print-section thead {
+    display: table-header-group;
+  }
+
+  .print-section .document-preview-pages {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+  }
+
+  .print-section .document-preview-page {
+    page: var(--print-page-name);
+    width: var(--print-page-width) !important;
+    height: var(--print-page-height) !important;
+    overflow: hidden !important;
+    break-inside: avoid;
+    break-after: page;
+  }
+
+  .print-section .document-preview-page:last-child {
+    break-after: auto;
+  }
+
+  .print-section .document-preview-canvas {
+    transform: none !important;
+    zoom: var(--print-page-zoom);
+    box-shadow: none !important;
+  }
+}

@@ -3,8 +3,9 @@
 import { useTransition } from 'react'
 import { Edit2, Trash2, Loader2, FileText, Send } from 'lucide-react'
 import Link from 'next/link'
-import { deleteDocument, submitDocument } from '@/app/actions/documents'
+import { deleteDocument } from '@/app/actions/documents'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
+import { getDocumentActor } from '@/lib/document-actor'
 
 export default function DocumentActions({ id, title, status }: { id: string, title: string, status?: string }) {
   const [isPending, startTransition] = useTransition()
@@ -13,20 +14,11 @@ export default function DocumentActions({ id, title, status }: { id: string, tit
   const handleDelete = () => {
     if (confirm(`${t.documentsList.confirmDeleteDoc} (${title})`)) {
       startTransition(async () => {
-        const result = await deleteDocument(id)
+        const result = await deleteDocument(id, getDocumentActor())
         if (!result.success) {
           alert(t.documentsList.deleteError)
-        }
-      })
-    }
-  }
-
-  const handleSubmit = () => {
-    if (confirm(`คุณต้องการยื่นขออนุมัติเอกสารนี้ใช่หรือไม่? (${title})`)) {
-      startTransition(async () => {
-        const result = await submitDocument(id)
-        if (!result.success) {
-          alert('เกิดข้อผิดพลาดในการยื่นขออนุมัติ')
+        } else {
+          window.dispatchEvent(new Event('documentsChanged'))
         }
       })
     }
@@ -51,14 +43,13 @@ export default function DocumentActions({ id, title, status }: { id: string, tit
           >
             <Edit2 className="w-4 h-4" />
           </Link>
-          <button
-            onClick={handleSubmit}
-            disabled={isPending}
+          <Link
+            href={`/documents/${id}?sign=submitter`}
             className="inline-flex items-center justify-center p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors disabled:opacity-50"
-            title="ยื่นขออนุมัติ"
+            title="ลงนามก่อนยื่นขออนุมัติ"
           >
-            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          </button>
+            <Send className="w-4 h-4" />
+          </Link>
         </>
       )}
 

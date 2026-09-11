@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getCompanyUsers, saveCompanyUser, deactivateCompanyUser } from './actions';
+import { getDocumentActor } from '@/lib/document-actor';
 import { useRouter } from "next/navigation";
 import { 
   UserPlus, 
@@ -50,69 +52,32 @@ export default function UsersSettingsPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
 
 
 
-  // Load from localStorage or seed mock data
+  async function loadUsers() {
+    setLoadError('');
+    try {
+      const actor = getDocumentActor();
+      const saved = await getCompanyUsers(actor);
+      let legacy: any[] = [];
+      try { legacy = JSON.parse(localStorage.getItem('me_docflow_users') || '[]'); } catch {}
+      const pending = legacy.filter(user => user.companyId === actor.companyId && !saved.some(existing => existing.email.toLowerCase() === user.email?.toLowerCase()));
+      setUsers([...saved, ...pending.map(user => ({ ...user, id: 'local-' + user.id, fullName: user.fullName || user.name }))]);
+    } catch (error) { setUsers([]); setLoadError(error instanceof Error ? error.message : 'โหลดผู้ใช้ไม่สำเร็จ'); }
+  }
   useEffect(() => {
-    const currentUserData = localStorage.getItem("me_docflow_current_user");
-    let currentUser: any = null;
-    if (currentUserData) {
-      try { currentUser = JSON.parse(currentUserData); } catch (e) {}
-    }
-
-    const savedData = localStorage.getItem("me_docflow_users");
-    let allUsers: any[] = [];
-    if (savedData) {
-      try {
-        allUsers = JSON.parse(savedData);
-      } catch (e) {
-        console.error("Error parsing users settings data", e);
-      }
-    } else {
-      const mockUsers = [
-        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
-        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
-        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123", companyId: "64abc0000000000000000001" },
-      ];
-      allUsers = mockUsers;
-      localStorage.setItem("me_docflow_users", JSON.stringify(mockUsers));
-    }
-
-    if (currentUser && currentUser.companyId) {
-      const companyUsers = allUsers.filter((u: any) => u.companyId === currentUser.companyId);
-      setUsers(companyUsers);
-    } else {
-      setUsers(allUsers);
-    }
+    void loadUsers();
+    window.addEventListener('activeCompanyChanged', loadUsers);
+    return () => window.removeEventListener('activeCompanyChanged', loadUsers);
   }, []);
-
-  const saveToLocalStorage = (updatedCompanyUsers: any[]) => {
-    setUsers(updatedCompanyUsers);
-    
-    // Merge back with other companies' users
-    const currentUserData = localStorage.getItem("me_docflow_current_user");
-    let currentUser: any = null;
-    if (currentUserData) {
-      try { currentUser = JSON.parse(currentUserData); } catch (e) {}
-    }
-
-    const savedData = localStorage.getItem("me_docflow_users");
-    let allUsers: any[] = [];
-    if (savedData) {
-      try { allUsers = JSON.parse(savedData); } catch (e) {}
-    }
-
-    if (currentUser && currentUser.companyId) {
-      const otherUsers = allUsers.filter((u: any) => u.companyId !== currentUser.companyId);
-      localStorage.setItem("me_docflow_users", JSON.stringify([...otherUsers, ...updatedCompanyUsers]));
-    } else {
-      localStorage.setItem("me_docflow_users", JSON.stringify(updatedCompanyUsers));
-    }
-  };
 
   const handleOpenAddForm = () => {
     setEditingUser(null);
+    setAdminPassword('');
     setFullName("");
     setEmail("");
     setRole("employee");
@@ -125,63 +90,47 @@ export default function UsersSettingsPage() {
   const handleOpenEditForm = (user: UserItem) => {
     setEditingUser(user);
     setFullName(user.fullName);
+    setAdminPassword('');
     setEmail(user.email);
     setRole(user.role);
     setStatus(user.status);
-    setPassword(user.password || "");
+    setPassword(user.id.startsWith('local-') ? user.password || "" : "");
     setShowPassword(false);
     setIsFormOpen(true);
   };
 
-  const handleDeleteUser = (id: string) => {
-    if (confirm("คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้งานนี้?")) {
-      const updated = users.filter((u) => u.id !== id);
-      saveToLocalStorage(updated);
-    }
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm('ต้องการปิดใช้งานผู้ใช้นี้หรือไม่?')) return;
+    const password = prompt('กรอกรหัสผ่านบัญชีผู้ดูแลเพื่อยืนยัน') || '';
+    if (!password) return;
+    const result = await deactivateCompanyUser(getDocumentActor(), id, password);
+    if (!result.success) { alert(result.error); return; }
+    await loadUsers();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fullName || !email || !password) {
-      alert("กรุณากรอกข้อมูลให้ครบถ้วน");
-      return;
-    }
-
-    if (editingUser) {
-      // Edit mode
-      const updated = users.map((u) =>
-        u.id === editingUser.id ? { ...u, fullName, email, role, status, password } : u
-      );
-      saveToLocalStorage(updated);
-    } else {
-      // Add mode
-      const currentUserData = localStorage.getItem("me_docflow_current_user");
-      let companyId = null;
-      if (currentUserData) {
-        try { companyId = JSON.parse(currentUserData).companyId; } catch (e) {}
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setSaving(true);
+    try {
+      const result = await saveCompanyUser(getDocumentActor(), { id: editingUser?.id, fullName, email, role, status, password, adminPassword });
+      if (!result.success || !result.user) throw new Error(result.error);
+      const actor = getDocumentActor();
+      if (result.user.email.toLowerCase() === actor.userEmail.toLowerCase() || editingUser?.email.toLowerCase() === actor.userEmail.toLowerCase()) {
+        const current = JSON.parse(localStorage.getItem('me_docflow_current_user') || '{}');
+        localStorage.setItem('me_docflow_current_user', JSON.stringify({ ...current, ...result.user }));
       }
-
-      const newUser: any = {
-        id: Date.now().toString(),
-        fullName,
-        email,
-        role,
-        status,
-        password,
-        companyId: companyId
-      };
-      saveToLocalStorage([...users, newUser]);
-    }
-
-    setIsFormOpen(false);
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+      // Remove the browser-only copy after the authorized database save succeeds.
+      const localUsers = JSON.parse(localStorage.getItem('me_docflow_users') || '[]');
+      localStorage.setItem('me_docflow_users', JSON.stringify(localUsers.filter((user: any) => !(user.companyId === actor.companyId && user.email?.toLowerCase() === result.user!.email.toLowerCase()))));
+      setIsFormOpen(false); setAdminPassword(''); setPassword(''); setIsSaved(true);
+      await loadUsers();
+    } catch (error) { alert(error instanceof Error ? error.message : 'บันทึกไม่สำเร็จ'); }
+    finally { setSaving(false); }
   };
-
-
 
   return (
     <div className="space-y-6">
+      {loadError && <div role="alert" className="rounded bg-red-50 p-4 text-red-700">{loadError} <a href="/login" className="underline">เข้าสู่ระบบผู้ดูแล</a></div>}
+      {users.some(user => user.id.startsWith('local-')) && <p className="rounded bg-amber-50 p-4 text-amber-800">พบผู้ใช้เดิมที่ยังอยู่เฉพาะในเบราว์เซอร์ กดแก้ไขและบันทึกแต่ละบัญชีเพื่อเพิ่มลงบริษัทจริง</p>}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -225,6 +174,8 @@ export default function UsersSettingsPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="block text-sm font-semibold">รหัสผ่านบัญชีผู้ดูแลเพื่อยืนยันการบันทึก<input required autoComplete="current-password" type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="mt-1 w-full rounded border p-2" /></label>
+
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase mb-1">ชื่อ-สกุล</label>
               <input
@@ -250,11 +201,11 @@ export default function UsersSettingsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">รหัสผ่านสำหรับเข้าใช้งาน</label>
+              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">รหัสผ่านสำหรับเข้าใช้งาน (แก้ไขผู้ใช้เดิม: เว้นว่างเพื่อใช้รหัสเดิม)</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  required
+                  required={!editingUser || editingUser.id.startsWith('local-')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
@@ -322,7 +273,7 @@ export default function UsersSettingsPage() {
                 ยกเลิก
               </button>
               <button
-                type="submit"
+                type="submit" disabled={saving}
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors cursor-pointer"
               >
                 บันทึกผู้ใช้งาน

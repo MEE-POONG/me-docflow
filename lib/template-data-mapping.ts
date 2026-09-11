@@ -68,7 +68,13 @@ export function mapDocumentToTemplateData(
       name: createdBy?.name || "",
       position: createdBy?.role || "",
     },
-    items: Array.isArray(data.items) ? data.items : [],
+    items: Array.isArray(data.items) ? data.items.map((item: Record<string, any>) => data.pv_tableVersion ? {
+      ...item,
+      description: item.name,
+      amount: Number(item.qty) * Number(item.unitPrice),
+      date: data.pv_date || data.date || "",
+      documentNo: data.pv_refNo || document.documentNo || "",
+    } : item) : [],
 
     // Flat snake_case convention (as used by templates seeded outside the designer)
     customer_name: data.partnerName || "",
@@ -82,11 +88,24 @@ export function mapDocumentToTemplateData(
     doc_date: data.date || data.po_date || "",
     expire_date: data.dueDate || data.po_dueDate || "",
     credit_term: data.creditDays || data.po_paymentTerms || "",
+    payment_terms: data.quotation_paymentTerms || data.po_paymentTerms || "",
     remarks: data.remarks || "",
     subtotal: money(data.subtotal || data.po_subTotal),
     discount: money(data.discountAmount),
+    after_discount: money(data.afterDiscount ?? data.subtotal ?? data.quotation_subTotal),
+    price_type: data.priceType || 'exclude_vat',
+    quotation_ref_no: data.quotation_refNo || '',
     vat: money(data.vatAmount || data.po_vat),
     total_amount: money(total || data.po_grandTotal),
+
+    // Payment voucher fields use the same saved rows and computed net total.
+    payee_name: data.pv_payeeName || "",
+    payee_address: data.pv_payeeAddress || "",
+    payment_method: data.pv_paymentMethod || "",
+    bank_ref: data.pv_bankRef || "",
+    withholding_tax: money(data.pv_taxAmount),
+    withholding_percent: data.subtotal ? Number(data.pv_taxAmount || 0) / Number(data.subtotal) * 100 : 0,
+    net_amount: money(data.pv_grandTotal ?? total),
 
     // PO Specific Fields
     po_vendor_name: data.po_vendorName || "",

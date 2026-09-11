@@ -1,4 +1,5 @@
 'use client'
+import { getDocumentActor } from '@/lib/document-actor'
 
 import { useState, useEffect, useTransition } from 'react'
 import { CheckCircle2, XCircle, Eye, Search, Filter, Loader2, AlertCircle, Printer, X } from 'lucide-react'
@@ -101,46 +102,41 @@ export default function PendingApprovalList({ documents, templates }: Props) {
   const [myDocuments, setMyDocuments] = useState<Document[]>(documents)
   const [myTemplates, setMyTemplates] = useState<Template[]>(templates)
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
+    let requestId = 0;
     const fetchData = async () => {
+      const currentRequest = ++requestId;
+      setIsLoading(true);
+      setLoadError('');
       try {
-        setIsLoading(true);
-        const userStr = localStorage.getItem("me_docflow_current_user");
-        let userCompanyId = null;
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          userCompanyId = user.companyId;
-        }
-        
-        if (!userCompanyId) {
-          const companiesStr = localStorage.getItem("me_docflow_companies");
-          if (companiesStr) {
-            const comps = JSON.parse(companiesStr);
-            if (comps && comps.length > 0) userCompanyId = comps[0].id;
-          }
-        }
-
-        if (userCompanyId) {
-          const [fetchedDocs, fetchedTemplates] = await Promise.all([
-            getPendingDocumentsByCompany(userCompanyId),
-            getTemplatesByCompany(userCompanyId)
-          ]);
+        const { companyId } = getDocumentActor();
+        const [fetchedDocs, fetchedTemplates] = companyId ? await Promise.all([
+          getPendingDocumentsByCompany(companyId), getTemplatesByCompany(companyId),
+        ]) : [[], []];
+        if (currentRequest === requestId) {
           setMyDocuments(fetchedDocs as unknown as Document[]);
           setMyTemplates(fetchedTemplates as unknown as Template[]);
-        } else {
-          setMyDocuments(documents);
-          setMyTemplates(templates);
         }
       } catch (e) {
-        console.error("Failed to fetch pending documents", e);
-        setMyDocuments(documents);
-        setMyTemplates(templates);
+        console.error('Failed to fetch pending documents', e);
+        if (currentRequest === requestId) {
+          setMyDocuments([]);
+          setLoadError('โหลดรายการรออนุมัติไม่สำเร็จ กรุณารีเฟรชหน้าเพื่อลองใหม่');
+        }
       } finally {
-        setIsLoading(false);
+        if (currentRequest === requestId) setIsLoading(false);
       }
     };
     fetchData();
+    window.addEventListener('documentsChanged', fetchData);
+    window.addEventListener('activeCompanyChanged', fetchData);
+    return () => {
+      requestId++;
+      window.removeEventListener('documentsChanged', fetchData);
+      window.removeEventListener('activeCompanyChanged', fetchData);
+    };
   }, [documents, templates])
 
   const filteredDocs = myDocuments.filter(doc =>
@@ -169,6 +165,7 @@ export default function PendingApprovalList({ documents, templates }: Props) {
     setProcessingId(id)
     startTransition(async () => {
       await approveDocument(id)
+      window.dispatchEvent(new Event('documentsChanged'))
       setProcessingId(null)
     })
   }
@@ -201,6 +198,7 @@ export default function PendingApprovalList({ documents, templates }: Props) {
     setProcessingId(id)
     startTransition(async () => {
       await rejectDocument(id, completeReason)
+      window.dispatchEvent(new Event('documentsChanged'))
       setProcessingId(null)
       setShowRejectModal(null)
       setRejectReason('')
@@ -218,6 +216,7 @@ export default function PendingApprovalList({ documents, templates }: Props) {
 
   return (
     <>
+      {loadError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{loadError}</p>}
       <div className="mb-8">
         <div className="text-xs font-bold text-emerald-600 dark:text-emerald-500 tracking-wider mb-1 uppercase">
           {t.common.companyWorkspace}

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { CSSProperties } from 'react'
+import { getPrintPageMetrics } from '@/lib/print-page'
 import { 
   type DesignerElement, 
   type DesignerPage,
@@ -154,14 +155,27 @@ export function DocumentPreview({ layoutJsonString, dataOverride, scale = 1 }: D
   }
 
   return (
-    <div className={`flex flex-col items-center py-4 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-auto p-4 border border-gray-200 dark:border-gray-800 ${scale < 1 ? 'gap-4' : 'gap-8'}`}>
-      {pages.map((page, pageIndex) => (
+    <div className={`document-preview-pages flex flex-col items-center py-4 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-auto p-4 border border-gray-200 dark:border-gray-800 ${scale < 1 ? 'gap-4' : 'gap-8'}`}>
+      <style>{pages.map((page, index) => {
+        const { widthMm, heightMm } = getPrintPageMetrics(page.width, page.height)
+        return `@page document-template-${index} { size: ${widthMm}mm ${heightMm}mm; margin: 0; }`
+      }).join('\n')}</style>
+      {pages.map((page, pageIndex) => {
+        const metrics = getPrintPageMetrics(page.width, page.height)
+        return (
         <div
           key={page.id}
-          style={{ width: page.width * scale, height: page.height * scale }}
+          className="document-preview-page"
+          style={{
+            width: page.width * scale, height: page.height * scale,
+            '--print-page-name': `document-template-${pageIndex}`,
+            '--print-page-width': `${metrics.widthMm}mm`,
+            '--print-page-height': `${metrics.heightMm}mm`,
+            '--print-page-zoom': metrics.zoom,
+          } as CSSProperties}
         >
           <div
-            className="relative bg-white shadow-md overflow-hidden"
+            className="document-preview-canvas relative bg-white shadow-md overflow-hidden"
             style={{
               width: `${page.width}px`,
               height: `${page.height}px`,
@@ -175,7 +189,7 @@ export function DocumentPreview({ layoutJsonString, dataOverride, scale = 1 }: D
             ))}
           </div>
         </div>
-      ))}
+      )})}
     </div>
   )
 }

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./document-print.css";
 
 /* Keep legacy form controls on the same emerald accent as the dashboard UI. */
 .create-document-form input:focus,

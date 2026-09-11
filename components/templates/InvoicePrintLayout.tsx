@@ -6,7 +6,7 @@ type InvoicePrintLayoutProps = {
 
 export function InvoicePrintLayout({ data }: InvoicePrintLayoutProps) {
   return (
-    <div className="w-full bg-white text-black print:p-0 p-8 max-w-[210mm] mx-auto min-h-[297mm] shadow-lg print:shadow-none text-[13px] leading-relaxed font-sans relative">
+    <div className="document-print-page w-full bg-white text-black p-8 max-w-[210mm] mx-auto min-h-[297mm] shadow-lg print:shadow-none text-[13px] leading-relaxed font-sans relative">
       {/* Decorative right top corner - triangle with number 1 */}
       <div className="absolute top-0 right-0 w-32 h-32 overflow-hidden print:hidden">
         <div className="absolute -top-16 -right-16 w-32 h-32 bg-[#714b9c] transform rotate-45 flex items-end justify-center pb-2">
@@ -23,21 +23,16 @@ export function InvoicePrintLayout({ data }: InvoicePrintLayoutProps) {
         {/* Top Left: Logo & Company */}
         <div className="w-[55%] pr-4">
           <div className="flex items-center gap-2 mb-4">
-            {/* Mock Flowaccount Logo */}
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-              ✓
-            </div>
-            <span className="text-2xl font-light text-blue-500 tracking-wide">FLOWACCOUNT<span className="font-bold text-gray-800">.COM</span></span>
-          </div>
-          <div className="font-bold text-[13px]">{data.company_name || 'Tanai Digital Platform'}</div>
-          <div className="text-gray-800 mt-1">
-            {data.company_address || '141 ชั้น 11 ยูนิต 12B อาคารชุด สกุลไทย สุรวงศ์ ทาวเวอร์\nถนนสุรวงศ์ แขวงสุริยวงศ์ เขตบางรัก กรุงเทพมหานคร 10500'}
+            <span className="text-2xl font-bold text-blue-500 break-words">{data.company_name || 'ชื่อบริษัท'}</span>
           </div>
           <div className="text-gray-800 mt-1">
-            เลขประจำตัวผู้เสียภาษี {data.company_taxid || '1234567890123'}
+            {data.company_address || '-'}
+          </div>
+          <div className="text-gray-800 mt-1">
+            เลขประจำตัวผู้เสียภาษี {data.company_taxid || '-'}
           </div>
           <div className="text-gray-800">
-            เบอร์มือถือ {data.company_phone || '0989549416'}
+            เบอร์มือถือ {data.company_phone || '-'}
           </div>
         </div>
 
@@ -76,9 +71,9 @@ export function InvoicePrintLayout({ data }: InvoicePrintLayoutProps) {
         {/* Middle Left: Customer Info */}
         <div className="w-[60%] pr-4">
           <div className="text-[#714b9c] font-normal mb-1">ลูกค้า</div>
-          <div className="font-bold">{data.inv_customer_name || data.customer_name || 'บริษัท โฟลว์แอคเคาท์ จำกัด (สำนักงานใหญ่ 00000)'}</div>
+          <div className="font-bold">{data.inv_customer_name || data.customer_name || '-'}</div>
           <div className="text-gray-800 mt-1 whitespace-pre-wrap">{data.inv_customer_address || data.customer_address || '141/12 ชั้น 11 ยูนิต 12B อาคารชุดสกุลไทย สุรวงศ์ ทาวเวอร์ ถนนสุรวงศ์ แขวงสุริยวงศ์ เขตบางรัก กรุงเทพมหานคร 10500'}</div>
-          <div className="text-gray-800 mt-1">เลขประจำตัวผู้เสียภาษี {data.inv_customer_taxid || data.customer_taxid || '0105558096348'}</div>
+          <div className="text-gray-800 mt-1">เลขประจำตัวผู้เสียภาษี {data.inv_customer_taxid || data.customer_taxid || '-'}</div>
         </div>
       </div>
 
@@ -173,7 +168,7 @@ export function InvoicePrintLayout({ data }: InvoicePrintLayoutProps) {
       {/* Signatures */}
       <div className="absolute bottom-12 left-8 right-8 flex justify-between items-end">
         <div className="w-[30%] text-center">
-          <div className="text-left mb-16 text-sm text-gray-800">ในนาม {data.inv_customer_name || data.customer_name || 'บริษัท โฟลว์แอคเคาท์ จำกัด'}</div>
+          <div className="text-left mb-16 text-sm text-gray-800">ในนาม {data.inv_customer_name || data.customer_name || '-'}</div>
           <div className="border-b border-gray-300 w-full mb-2"></div>
           <div className="flex justify-between text-sm text-gray-800 px-4">
             <span>ผู้รับวางบิล</span>
@@ -192,9 +187,9 @@ export function InvoicePrintLayout({ data }: InvoicePrintLayoutProps) {
         </div>
 
         <div className="w-[30%] text-center">
-          <div className="text-right mb-16 text-sm text-gray-800">ในนาม {data.company_name || 'Tanai Digital Platform'}</div>
+          <div className="text-right mb-16 text-sm text-gray-800">ในนาม {data.company_name || '-'}</div>
           <div className="flex justify-between items-end mb-2 px-2">
-            <div className="text-[#3b82f6] text-sm italic pr-2 w-1/2 text-left">{data.inv_seller || data.employee?.name || 'Tanai Nopakoon'}</div>
+            <div className="text-[#3b82f6] text-sm italic pr-2 w-1/2 text-left">{data.inv_seller || data.employee?.name || '-'}</div>
             <div className="text-sm text-gray-800 w-1/2 text-right">{data.doc_date || '11/06/2020'}</div>
           </div>
           <div className="border-b border-gray-300 w-full mb-2"></div>

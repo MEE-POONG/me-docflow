@@ -6,31 +6,31 @@ type PurchaseOrderPrintLayoutProps = {
 
 export function PurchaseOrderPrintLayout({ data }: PurchaseOrderPrintLayoutProps) {
   return (
-    <div className="w-full bg-white text-black print:p-0 p-8 max-w-[210mm] mx-auto min-h-[297mm] shadow-lg print:shadow-none text-[13px] leading-relaxed font-sans relative">
+    <div className="document-print-page w-full bg-white text-black p-8 max-w-[210mm] mx-auto min-h-[297mm] shadow-lg print:shadow-none text-[13px] leading-relaxed font-sans relative">
       {/* Decorative right top corner */}
-      <div className="absolute top-0 right-0 w-32 h-32 overflow-hidden print:hidden">
-        <div className="absolute -top-16 -right-16 w-32 h-32 bg-pink-500 transform rotate-45"></div>
-      </div>
+      <svg
+        aria-hidden="true"
+        className="absolute top-0 right-0 block w-24 h-24 text-pink-500 pointer-events-none"
+        viewBox="0 0 100 100"
+        fill="currentColor"
+      >
+        <path d="M0 0H100V100Z" />
+      </svg>
 
       <div className="flex justify-between items-start mb-8">
         {/* Top Left: Logo & Company */}
         <div className="w-1/2 pr-4">
           <div className="flex items-center gap-2 mb-4">
-            {/* Mock Flowaccount Logo */}
-            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
-              ✓
-            </div>
-            <span className="text-2xl font-bold text-blue-500 tracking-wide">FLOWACCOUNT</span>
-          </div>
-          <div className="font-bold text-[14px]">{data.company_name || 'บริษัท โฟลว์แอคเคาท์ จำกัด (สำนักงานใหญ่)'}</div>
-          <div className="text-gray-700 mt-1">
-            {data.company_address || '141/12 ชั้น 11 ยูนิต 12B อาคารชุด สกุลไทย สุรวงศ์ ทาวเวอร์ ถนนสุรวงศ์\nแขวงสุริยวงศ์ เขตบางรัก กรุงเทพมหานคร 10500'}
+            <span className="text-2xl font-bold text-blue-500 break-words">{data.company_name || 'ชื่อบริษัท'}</span>
           </div>
           <div className="text-gray-700 mt-1">
-            เลขประจำตัวผู้เสียภาษี {data.company_taxid || '0105558096348'}
+            {data.company_address || '-'}
+          </div>
+          <div className="text-gray-700 mt-1">
+            เลขประจำตัวผู้เสียภาษี {data.company_taxid || '-'}
           </div>
           <div className="text-gray-700">
-            โทร. {data.company_phone || '020268989'}
+            โทร. {data.company_phone || '-'}
           </div>
         </div>
 
@@ -203,7 +203,7 @@ export function PurchaseOrderPrintLayout({ data }: PurchaseOrderPrintLayoutProps
         </div>
 
         <div className="w-[30%] text-center">
-          <div className="text-right mb-16 text-xs">ในนาม {data.company_name || 'บริษัท โฟลว์แอคเคาท์ จำกัด'}</div>
+          <div className="text-right mb-16 text-xs">ในนาม {data.company_name || '-'}</div>
           <div className="border-b border-gray-300 w-full mb-2"></div>
           <div className="flex justify-between text-xs text-gray-600">
             <span>ผู้อนุมัติ</span>

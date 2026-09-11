@@ -33,7 +33,7 @@ export default async function EditDocumentPage({ params }: { params: Promise<{ i
     prisma.documentCategory.findMany({ orderBy: { showOrder: 'asc' } }),
     prisma.documentType.findMany({ orderBy: { showOrder: 'asc' } }),
     prisma.documentTemplate.findMany({ orderBy: { createdAt: 'desc' } }),
-    prisma.company.findFirst()
+    prisma.company.findUnique({ where: { id: document.companyId } })
   ])
 
   return (

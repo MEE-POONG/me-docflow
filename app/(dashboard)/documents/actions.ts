@@ -1,4 +1,5 @@
 'use server';
+import { signaturePayload } from '@/lib/document-signature';
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
@@ -255,7 +256,7 @@ export async function createDocument(data: {
       title: data.title,
       status: data.status || 'DRAFT',
       note: data.note || null,
-      dataJson: data.dataJson ? (typeof data.dataJson === 'string' ? JSON.parse(data.dataJson) : data.dataJson) : {},
+      dataJson: signaturePayload(data.dataJson),
       subtotalSatang: data.subtotalSatang || null,
       vatSatang: data.vatSatang || null,
       totalSatang: data.totalSatang || null,
@@ -282,7 +283,7 @@ export async function updateDocument(
 ) {
   const companyId = await getDefaultCompanyId();
   const document = await prisma.document.update({
-    where: { id, companyId },
+    where: { id, companyId, isLocked: false },
     data: {
       title: data.title,
       categoryId: data.categoryId,
@@ -290,7 +291,7 @@ export async function updateDocument(
       templateId: data.templateId || null,
       ...(data.status ? { status: data.status } : {}),
       note: data.note || null,
-      ...(data.dataJson ? { dataJson: typeof data.dataJson === 'string' ? JSON.parse(data.dataJson) : data.dataJson } : {}),
+      ...(data.dataJson ? { dataJson: signaturePayload(data.dataJson) } : {}),
       ...(data.subtotalSatang !== undefined ? { subtotalSatang: data.subtotalSatang } : {}),
       ...(data.vatSatang !== undefined ? { vatSatang: data.vatSatang } : {}),
       ...(data.totalSatang !== undefined ? { totalSatang: data.totalSatang } : {}),
@@ -303,7 +304,7 @@ export async function updateDocument(
 export async function updateDocumentStatus(id: string, status: DocumentStatus) {
   const companyId = await getDefaultCompanyId();
   await prisma.document.update({
-    where: { id, companyId },
+    where: { id, companyId, isLocked: false },
     data: { status },
   });
   revalidatePath('/documents');
@@ -311,9 +312,11 @@ export async function updateDocumentStatus(id: string, status: DocumentStatus) {
 
 export async function deleteDocument(id: string) {
   const companyId = await getDefaultCompanyId();
+  const locked = await prisma.document.findFirst({ where: { id, companyId, isLocked: true }, select: { id: true } });
+  if (locked) throw new Error('เอกสารลงนามแล้ว ไม่สามารถลบได้');
   // Delete related files and approvals first
   await prisma.documentFile.deleteMany({ where: { documentId: id, companyId } });
   await prisma.documentApproval.deleteMany({ where: { documentId: id, companyId } });
-  await prisma.document.delete({ where: { id, companyId } });
+  await prisma.document.delete({ where: { id, companyId, isLocked: false } });
   revalidatePath('/documents');
 }

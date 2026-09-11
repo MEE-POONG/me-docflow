@@ -8,48 +8,43 @@ import { th, enUS } from 'date-fns/locale'
 import DocumentActions from './DocumentActions'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import { getDocumentsByCompany } from './actions'
+import { getDocumentActor } from '@/lib/document-actor'
 
 export default function DocumentsList({ initialDocuments }: { initialDocuments: any[] }) {
   const [documents, setDocuments] = useState<any[]>(initialDocuments)
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const { t, language } = useLanguage()
   const dateLocale = language === 'en' ? enUS : th
 
   useEffect(() => {
+    let requestId = 0;
     const fetchDocs = async () => {
+      const currentRequest = ++requestId;
+      setIsLoading(true);
+      setLoadError('');
       try {
-        setIsLoading(true);
-        const userStr = localStorage.getItem("me_docflow_current_user");
-        let userCompanyId = null;
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          // Mocks might use 'companyId' or we fallback to default if not found
-          userCompanyId = user.companyId;
-        }
-        
-        // If no user companyId in mock data, use a fallback from cookies/default
-        if (!userCompanyId) {
-          const companiesStr = localStorage.getItem("me_docflow_companies");
-          if (companiesStr) {
-            const comps = JSON.parse(companiesStr);
-            if (comps && comps.length > 0) userCompanyId = comps[0].id;
-          }
-        }
-
-        if (userCompanyId) {
-          const docs = await getDocumentsByCompany(userCompanyId);
-          setDocuments(docs);
-        } else {
-          setDocuments(initialDocuments);
-        }
+        const { companyId } = getDocumentActor();
+        const docs = companyId ? await getDocumentsByCompany(companyId) : [];
+        if (currentRequest === requestId) setDocuments(docs);
       } catch (e) {
-        console.error("Failed to fetch documents", e);
-        setDocuments(initialDocuments);
+        console.error('Failed to fetch documents', e);
+        if (currentRequest === requestId) {
+          setDocuments([]);
+          setLoadError('โหลดประวัติเอกสารไม่สำเร็จ กรุณารีเฟรชหน้าเพื่อลองใหม่');
+        }
       } finally {
-        setIsLoading(false);
+        if (currentRequest === requestId) setIsLoading(false);
       }
     };
     fetchDocs();
+    window.addEventListener('documentsChanged', fetchDocs);
+    window.addEventListener('activeCompanyChanged', fetchDocs);
+    return () => {
+      requestId++;
+      window.removeEventListener('documentsChanged', fetchDocs);
+      window.removeEventListener('activeCompanyChanged', fetchDocs);
+    };
   }, [initialDocuments])
 
   const getStatusBadge = (status: string) => {
@@ -90,6 +85,7 @@ export default function DocumentsList({ initialDocuments }: { initialDocuments: 
         </Link>
       </div>
 
+      {loadError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-red-700">{loadError}</p>}
       {/* Main Content */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
         {/* Filters Bar */}

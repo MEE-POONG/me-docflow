@@ -76,6 +76,9 @@ export default function Navbar() {
       isActive: c.id === companyId
     }));
     localStorage.setItem("me_docflow_companies", JSON.stringify(updatedCompanies));
+    const selectedCompany = updatedCompanies.find(c => c.id === companyId);
+    const storedUser = JSON.parse(localStorage.getItem("me_docflow_current_user") || '{}');
+    localStorage.setItem("me_docflow_current_user", JSON.stringify({ ...storedUser, companyId, companyName: selectedCompany?.companyName || selectedCompany?.name || '' }));
     setIsCompanyMenuOpen(false);
     window.dispatchEvent(new Event("activeCompanyChanged"));
     window.location.reload();

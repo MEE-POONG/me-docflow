@@ -27,7 +27,7 @@ export async function getCategoriesByCompany(companyId: string): Promise<{ categ
     select: { settings: true }
   });
   const settings = (company?.settings as any) || {};
-  const enabledGlobalCategoryIds = Array.isArray(settings.enabledGlobalCategoryIds) ? settings.enabledGlobalCategoryIds : [];
+  const configuredCategoryIds = Array.isArray(settings.enabledGlobalCategoryIds) ? settings.enabledGlobalCategoryIds : null;
 
   const categories = await prisma.documentCategory.findMany({
     where: { OR: [{ companyId }, { isGlobal: true }] },
@@ -45,7 +45,8 @@ export async function getCategoriesByCompany(companyId: string): Promise<{ categ
     },
   });
 
-  return { categories: categories as CategoryWithCount[], enabledGlobalCategoryIds };
+  const enabledGlobalCategoryIds = configuredCategoryIds ?? categories.filter(c => c.isGlobal && c.isActive).map(c => c.id);
+  return { categories: company ? categories as CategoryWithCount[] : [], enabledGlobalCategoryIds: company ? enabledGlobalCategoryIds : [] };
 }
 
 export async function getGlobalCategories(): Promise<CategoryWithCount[]> {
@@ -88,7 +89,7 @@ export async function toggleGlobalCategory(companyId: string, categoryId: string
   }
   
   const settings = (company.settings as any) || {};
-  let enabledIds = Array.isArray(settings.enabledGlobalCategoryIds) ? settings.enabledGlobalCategoryIds : [];
+  let enabledIds = Array.isArray(settings.enabledGlobalCategoryIds) ? settings.enabledGlobalCategoryIds : (await prisma.documentCategory.findMany({ where: { isGlobal: true, isActive: true }, select: { id: true } })).map(c => c.id);
   
   if (enabled) {
     if (!enabledIds.includes(categoryId)) enabledIds.push(categoryId);

@@ -3,10 +3,12 @@
 import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, Loader2, Link as LinkIcon, ArrowLeft, ArrowRight, Search, Plus, Trash2, Printer, Download, MoreHorizontal, Share2, FileText, CheckCircle2, Send, Eye, X, Upload } from 'lucide-react'
-import { createDocument, updateDocument, submitDocument } from '@/app/actions/documents'
-import { getCategoriesByCompany } from '@/app/(dashboard)/categories/actions'
+import { createDocument, updateDocument, getDocumentFormOptions } from '@/app/actions/documents'
+import { getDocumentActor } from '@/lib/document-actor'
+import { validateDocumentFields } from '@/lib/document-form-validation'
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
 import { PurchaseOrderPrintLayout } from '@/components/templates/PurchaseOrderPrintLayout'
+import { QuotationPrintLayout } from '@/components/templates/QuotationPrintLayout'
 import { InvoicePrintLayout } from '@/components/templates/InvoicePrintLayout'
 import { WithholdingTaxPrintLayout } from '@/components/templates/WithholdingTaxPrintLayout'
 import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
@@ -33,13 +35,18 @@ function getCurrentUser(): { name?: string; email?: string } {
   const userStr = localStorage.getItem('me_docflow_current_user')
   if (!userStr) return {}
   try {
-    return JSON.parse(userStr)
+    const user = JSON.parse(userStr)
+    return { ...user, name: user.fullName || user.name }
   } catch {
     return {}
   }
 }
 
-export default function CreateDocumentForm({ folders, tags, categories, documentTypes, templates, company, initialData }: CreateDocumentFormProps) {
+export default function CreateDocumentForm({ folders, tags, categories, documentTypes: initialDocumentTypes, templates: initialTemplates, company: initialCompany, initialData }: CreateDocumentFormProps) {
+  const [company, setCompany] = useState(initialCompany)
+  const [documentTypes, setDocumentTypes] = useState(initialDocumentTypes)
+  const [templates, setTemplates] = useState(initialTemplates)
+  const [optionsError, setOptionsError] = useState('')
   const router = useRouter()
   const { t } = useLanguage()
   const [isPending, startTransition] = useTransition()
@@ -67,64 +74,55 @@ export default function CreateDocumentForm({ folders, tags, categories, document
   })
 
   useEffect(() => {
-    async function loadCompanyCategories() {
-      let cid = null
-      const userStr = localStorage.getItem("me_docflow_current_user")
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr)
-          cid = user.companyId
-        } catch (e) {}
-      }
-      if (!cid) {
-        const companiesStr = localStorage.getItem("me_docflow_companies")
-        if (companiesStr) {
-          try {
-            const comps = JSON.parse(companiesStr)
-            if (comps && comps.length > 0) cid = comps[0].id
-          } catch (e) {}
-        }
-      }
-      
-      // Ensure cid is a valid 24-character hex string for MongoDB
-      if (!cid || !/^[a-fA-F0-9]{24}$/.test(cid)) {
-        cid = "64abc0000000000000000001";
-      }
-
+    let active = true
+    let request = 0
+    async function loadCompanyOptions() {
+      const token = ++request
+      setIsLoadingCategories(true)
+      setOptionsError('')
+      setAvailableCategories([])
+      setDocumentTypes([])
+      setTemplates([])
       try {
-        const res = await getCategoriesByCompany(cid)
-        const companyCategories = res.categories.filter(
-          (c: any) => !c.isGlobal || res.enabledGlobalCategoryIds.includes(c.id)
-        )
-        setAvailableCategories(companyCategories)
-        
-        // Auto select first category if current is invalid
-        if (companyCategories.length > 0) {
-          const isValidCategory = companyCategories.some((c: any) => c.id === docInfo.categoryId)
-          if (!isValidCategory && !initialData) {
-            const newCat = companyCategories[0].id
-            const typesForCat = documentTypes.filter((t: any) => t.categoryId === newCat)
-            setDocInfo(prev => ({
-              ...prev,
-              categoryId: newCat,
-              documentTypeId: typesForCat[0]?.id || '',
-              title: typesForCat[0]?.name || prev.title
-            }))
-          }
-        }
+        const options = await getDocumentFormOptions(getDocumentActor())
+        if (!active || token !== request) return
+        setCompany(options.company)
+        setAvailableCategories(options.categories)
+        setDocumentTypes(options.documentTypes)
+        setTemplates(options.templates)
+        setDocInfo(previous => {
+          const categoryId = options.categories.some(c => c.id === previous.categoryId) ? previous.categoryId : options.categories[0]?.id || ''
+          const types = options.documentTypes.filter(t => t.categoryId === categoryId)
+          const type = types.find(t => t.id === previous.documentTypeId) || types[0]
+          return { ...previous, categoryId, documentTypeId: type?.id || '',
+            title: type?.name || previous.title,
+            templateId: options.templates.some(t => t.id === previous.templateId && t.documentTypeId === type?.id) ? previous.templateId : '' }
+        })
       } catch (error) {
-        console.error("Failed to fetch company categories", error)
-      } finally {
-        setIsLoadingCategories(false)
-      }
+        if (!active || token !== request) return
+        setOptionsError(error instanceof Error ? error.message : 'โหลดข้อมูลบริษัทไม่สำเร็จ')
+        setDocInfo(previous => ({ ...previous, categoryId: '', documentTypeId: '', templateId: '' }))
+      } finally { if (active && token === request) setIsLoadingCategories(false) }
     }
-    loadCompanyCategories()
-  }, [docInfo.categoryId, documentTypes, initialData])
-
+    void loadCompanyOptions()
+    const reload = () => { setStep(1); void loadCompanyOptions() }
+    window.addEventListener('activeCompanyChanged', reload)
+    return () => { active = false; window.removeEventListener('activeCompanyChanged', reload) }
+  }, [])
 
   // Parse initial dataJson if available
   const parsedData = initialData?.dataJson ? (typeof initialData.dataJson === 'string' ? JSON.parse(initialData.dataJson) : initialData.dataJson) : {}
-  const initialItems = parsedData.items?.length > 0 ? parsedData.items : [{ id: 1, name: '', qty: 1, unit: 'ชิ้น', unitPrice: 0 }]
+  const activeTypeName = documentTypes.find(t => t.id === docInfo.documentTypeId)?.name || ''
+  const isPaymentDocument = activeTypeName.includes('ใบสำคัญจ่าย') || activeTypeName.toLowerCase().includes('payment voucher') || activeTypeName.toUpperCase().includes('PV')
+  const isQuotationDocument = activeTypeName.includes('ใบเสนอราคา') || activeTypeName.toLowerCase().includes('quotation')
+  const hasSavedQuotationItems = Array.isArray(parsedData.items) && parsedData.items.some((item: any) => item.name || Number(item.unitPrice) > 0)
+  const hasLegacyQuotation = isQuotationDocument && !parsedData.quotation_tableVersion && !hasSavedQuotationItems && (parsedData.quotation_itemsText || parsedData.quotation_subTotal)
+  const hasLegacyPayment = isPaymentDocument && !parsedData.pv_tableVersion && (parsedData.pv_itemsText || parsedData.pv_subTotal)
+  const initialItems = hasLegacyQuotation
+    ? [{ id: 1, name: parsedData.quotation_itemsText || '', qty: 1, unit: 'รายการ', unitPrice: '' }]
+    : hasLegacyPayment
+    ? [{ id: 1, name: parsedData.pv_itemsText || '', qty: 1, unit: 'รายการ', unitPrice: parsedData.pv_subTotal || '' }]
+    : parsedData.items?.length > 0 ? parsedData.items : [{ id: 1, name: '', qty: 1, unit: 'ชิ้น', unitPrice: '' }]
 
   const [customData, setCustomData] = useState<Record<string, any>>(parsedData || {})
 
@@ -153,7 +151,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
     remarks: parsedData.remarks || '',
     internalNotes: parsedData.internalNotes || '',
     hasSignature: parsedData.hasSignature ?? true,
-    hasVat: parsedData.hasVat ?? true,
+    hasVat: hasLegacyQuotation ? Number(parsedData.quotation_vat || 0) > 0 : hasLegacyPayment ? false : (parsedData.hasVat ?? true),
     hasWht: parsedData.hasWht || false,
     
     discountPercent: parsedData.discountPercent || 0,
@@ -171,11 +169,31 @@ export default function CreateDocumentForm({ folders, tags, categories, document
   const discountAmount = subtotal * (Number(formData.discountPercent) / 100)
   const afterDiscount = subtotal - discountAmount
   const vatAmount = formData.hasVat ? (formData.priceType === 'exclude_vat' ? afterDiscount * 0.07 : afterDiscount - (afterDiscount / 1.07)) : 0
-  const grandTotal = formData.priceType === 'exclude_vat' ? afterDiscount + vatAmount : afterDiscount
+  const totalBeforeWht = formData.priceType === 'exclude_vat' ? afterDiscount + vatAmount : afterDiscount
+  const paymentWht = isPaymentDocument ? Number(customData.pv_taxAmount || 0) : 0
+  const grandTotal = totalBeforeWht - paymentWht
+  const paymentData = isPaymentDocument ? {
+    pv_tableVersion: 1,
+    pv_itemsText: formData.items.map((item: any, index: number) => `${index + 1} | ${item.name} | ${Number(item.qty) * Number(item.unitPrice)}`).join('\n'),
+    pv_subTotal: subtotal,
+    pv_taxAmount: paymentWht,
+    pv_grandTotal: grandTotal,
+  } : {}
+
+  const quotationData = isQuotationDocument ? {
+    quotation_tableVersion: 1,
+    quotation_subTotal: subtotal,
+    quotation_vat: vatAmount,
+    quotation_grandTotal: grandTotal,
+    partnerName: customData.quotation_customerName || '',
+    address: customData.quotation_customerAddress || '',
+    date: customData.quotation_date || formData.date,
+    dueDate: customData.quotation_validUntil || formData.dueDate,
+    quotation_itemsText: formData.items.map((item: any, index: number) => [index + 1, item.name, item.qty, item.unit, item.unitPrice, Number(item.qty) * Number(item.unitPrice)].join(' | ')).join('\n'),
+  } : {}
 
   const selectedTemplate = templates.find(t => t.id === docInfo.templateId)
   const matchingTemplates = templates.filter(t => t.documentTypeId === docInfo.documentTypeId)
-  const otherTemplates = templates.filter(t => t.documentTypeId !== docInfo.documentTypeId)
   const formType = selectedTemplate?.formType || 'STANDARD'
   const rawFormSchema = selectedTemplate?.formSchema
     ? (typeof selectedTemplate.formSchema === 'string' ? JSON.parse(selectedTemplate.formSchema) : selectedTemplate.formSchema)
@@ -190,15 +208,11 @@ export default function CreateDocumentForm({ folders, tags, categories, document
       return
     }
 
-    const template = templates.find(t => t.id === templateId)
+    const template = matchingTemplates.find(t => t.id === templateId)
     if (!template) return
 
-    // A template owns its category/type relationship. Keep the document aligned
-    // when a user chooses a template from another document form.
     setDocInfo({
       ...docInfo,
-      categoryId: template.categoryId,
-      documentTypeId: template.documentTypeId,
       templateId: template.id,
     })
   }
@@ -212,7 +226,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { id: Date.now(), name: '', qty: 1, unit: 'ชิ้น', unitPrice: 0 }]
+      items: [...formData.items, { id: Date.now(), name: '', qty: 1, unit: 'ชิ้น', unitPrice: '' }]
     })
   }
 
@@ -224,6 +238,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!validateDocumentFields(e.currentTarget as HTMLFormElement)) return
 
     // The standard document form is always the primary data source. Template
     // fields extend it instead of replacing the user's original form.
@@ -235,14 +250,15 @@ export default function CreateDocumentForm({ folders, tags, categories, document
       afterDiscount,
       vatAmount,
       grandTotal,
+      ...paymentData,
+      ...quotationData,
     })
 
     startTransition(async () => {
       let result
 
-      const currentUserEmail = getCurrentUser().email
-
       const payload = {
+        ...getDocumentActor(),
         title: formData.partnerName ? `${docInfo.title} - ${formData.partnerName}` : docInfo.title,
         categoryId: docInfo.categoryId,
         documentTypeId: docInfo.documentTypeId,
@@ -251,7 +267,6 @@ export default function CreateDocumentForm({ folders, tags, categories, document
         subtotalSatang: Math.round(subtotal * 100),
         vatSatang: Math.round(vatAmount * 100),
         totalSatang: Math.round(grandTotal * 100),
-        userEmail: currentUserEmail
       }
 
       const savedId = savedDocument?.id || initialData?.id
@@ -271,38 +286,41 @@ export default function CreateDocumentForm({ folders, tags, categories, document
     })
   }
 
-  const handleSubmitForApproval = () => {
+  const handleSignBeforeSubmission = () => {
     const savedId = savedDocument?.id || initialData?.id;
     if (!savedId) return;
 
-    if (confirm(`คุณต้องการยื่นขออนุมัติเอกสารนี้ใช่หรือไม่?`)) {
+    if (confirm(`คุณต้องการไปยังหน้าลงนามผู้ขออนุมัติใช่หรือไม่?`)) {
       startTransition(async () => {
         if (savedDocument && docInfo.templateId !== savedDocument.templateId) {
            const dataJsonStr = typeof savedDocument.dataJson === 'string' 
              ? savedDocument.dataJson 
              : JSON.stringify(savedDocument.dataJson || {});
-           await updateDocument(savedDocument.id, {
+           const saved = await updateDocument(savedDocument.id, {
+              ...getDocumentActor(),
               title: savedDocument.title,
-              categoryId: savedDocument.categoryId,
-              documentTypeId: savedDocument.documentTypeId,
+              categoryId: docInfo.categoryId,
+              documentTypeId: docInfo.documentTypeId,
               templateId: docInfo.templateId,
               dataJson: dataJsonStr,
+              subtotalSatang: savedDocument.subtotalSatang,
+              vatSatang: savedDocument.vatSatang,
+              totalSatang: savedDocument.totalSatang,
            });
+           if (!saved.success) { alert(saved.error); return }
         }
         
-        const result = await submitDocument(savedId)
-        if (result.success) {
-          router.push('/documents')
-          router.refresh()
-        } else {
-          alert('เกิดข้อผิดพลาดในการยื่นขออนุมัติ')
-        }
+        router.push(`/documents/${savedId}?sign=submitter`)
       })
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="create-document-form max-w-[1400px] mx-auto pb-20 p-2 md:p-6">
+    <form noValidate onSubmit={handleSubmit} onInputCapture={event => {
+      const field = event.target as HTMLInputElement
+      if (typeof field.setCustomValidity === 'function') field.setCustomValidity('')
+    }} className="create-document-form max-w-[1400px] mx-auto pb-20 p-2 md:p-6">
+      {optionsError && <p role="alert" className="mb-4 rounded bg-red-50 p-4 text-red-700">{optionsError}</p>}
       {/* Top Action Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
@@ -327,7 +345,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
           {step === 1 && (
             <button
               type="button"
-              disabled={!docInfo.categoryId || !docInfo.documentTypeId}
+              disabled={isLoadingCategories || !availableCategories.some(c => c.id === docInfo.categoryId) || !docInfo.documentTypeId}
               onClick={() => setStep(2)}
               className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -389,16 +407,21 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                         const dataJsonStr = typeof savedDocument.dataJson === 'string' 
                           ? savedDocument.dataJson 
                           : JSON.stringify(savedDocument.dataJson || {});
-                        await updateDocument(savedDocument.id, {
+                        const saved = await updateDocument(savedDocument.id, {
+                           ...getDocumentActor(),
                            title: savedDocument.title,
-                           categoryId: savedDocument.categoryId,
-                           documentTypeId: savedDocument.documentTypeId,
+                           categoryId: docInfo.categoryId,
+                           documentTypeId: docInfo.documentTypeId,
                            templateId: docInfo.templateId,
                            dataJson: dataJsonStr,
+                           subtotalSatang: savedDocument.subtotalSatang,
+                           vatSatang: savedDocument.vatSatang,
+                           totalSatang: savedDocument.totalSatang,
                         });
+                        if (!saved.success) { alert(saved.error); return }
                         router.push('/documents');
                       } catch (e) {
-                        router.push('/documents');
+                        alert('บันทึกเทมเพลตไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
                       }
                     });
                   } else {
@@ -412,12 +435,12 @@ export default function CreateDocumentForm({ folders, tags, categories, document
               {savedDocument?.status !== 'PENDING' && savedDocument?.status !== 'APPROVED' && (
                 <button
                   type="button"
-                  onClick={handleSubmitForApproval}
+                  onClick={handleSignBeforeSubmission}
                   disabled={isPending}
                   className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
                 >
                   {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                  ยื่นขออนุมัติ
+                  ลงนามผู้ขออนุมัติ
                 </button>
               )}
             </>
@@ -477,7 +500,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                     title: docTypeObj?.name || docInfo.title
                   })
                 }}
-                disabled={!docInfo.categoryId}
+                disabled={isLoadingCategories || !availableCategories.some(c => c.id === docInfo.categoryId)}
                 className="w-full text-sm p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-50"
               >
                 <option value="" disabled>{t.createDocument.selectDocumentType}</option>
@@ -491,11 +514,13 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
         {step === 2 && (
         <>
+        <p className="px-6 py-3 text-sm text-gray-600 dark:text-gray-300">กรุณากรอกข้อมูลทุกช่องก่อนบันทึก ยกเว้นหมายเหตุและเงื่อนไขการชำระเงินที่เว้นว่างได้ ช่องข้อความอื่นที่ไม่มีข้อมูลให้ใส่ “-” และช่องตัวเลขให้ใส่ 0</p>
+        {optionsError && <p role="alert" className="p-4 text-red-600">{optionsError}</p>}
         {/* Document Setting Summary */}
         <div className="bg-gray-50 dark:bg-gray-800/50 p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
             <span className="px-2.5 py-1 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 font-medium">
-              {categories.find(c => c.id === docInfo.categoryId)?.name || '-'}
+              {availableCategories.find(c => c.id === docInfo.categoryId)?.name || '-'}
             </span>
             <span className="px-2.5 py-1 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 font-medium">
               {documentTypes.find(t => t.id === docInfo.documentTypeId)?.name || '-'}
@@ -700,7 +725,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 {/* Remarks */}
                 <div className="mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5] dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5] dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -891,7 +916,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 {/* Remarks */}
                 <div className="mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5] dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5] dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -939,7 +964,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 {/* Remarks */}
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -1078,7 +1103,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 {/* Remarks */}
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -1136,7 +1161,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 {/* Remarks */}
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -1173,7 +1198,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 {/* Remarks */}
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -1259,7 +1284,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5]/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5]/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -1377,7 +1402,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5]/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5]/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -1385,7 +1410,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
           if (isTaxInvoice) {
             const invoiceItems = customData.invoice_items || [{
-              id: 1, description: '', quantity: 1, unitPrice: 0, amount: 0
+              id: 1, description: '', quantity: 1, unitPrice: '', amount: 0
             }]
 
             const updateInvoiceItem = (index: number, field: string, value: any) => {
@@ -1416,7 +1441,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
               setCustomData({
                 ...customData,
                 invoice_items: [...invoiceItems, {
-                  id: invoiceItems.length + 1, description: '', quantity: 1, unitPrice: 0, amount: 0
+                  id: invoiceItems.length + 1, description: '', quantity: 1, unitPrice: '', amount: 0
                 }]
               })
             }
@@ -1518,7 +1543,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                                 <input type="number" min="0" value={item.quantity} onChange={e => updateInvoiceItem(index, 'quantity', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-sky-400 rounded outline-none bg-transparent focus:bg-white dark:focus:bg-gray-800 transition-all text-right" />
                               </td>
                               <td className="px-3 py-3">
-                                <input type="number" min="0" step="0.01" value={item.unitPrice} onChange={e => updateInvoiceItem(index, 'unitPrice', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-sky-400 rounded outline-none bg-transparent focus:bg-white dark:focus:bg-gray-800 transition-all text-right" />
+                                <input type="number" min="0" step="0.01" placeholder="0" value={item.unitPrice} onChange={e => updateInvoiceItem(index, 'unitPrice', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-sky-400 rounded outline-none bg-transparent focus:bg-white dark:focus:bg-gray-800 transition-all text-right" />
                               </td>
                               <td className="px-3 py-3 text-right text-gray-700 dark:text-gray-300 font-mono">
                                 {Number(item.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
@@ -1564,7 +1589,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5]/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5]/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -1649,7 +1674,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-amber-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-amber-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -1696,7 +1721,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5]/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5]/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -1758,7 +1783,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5]/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5]/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -1891,7 +1916,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -1996,7 +2021,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ข้อมูลสำหรับติดต่อกรณีเร่งด่วน (Emergency Contact Info)</label>
-                  <textarea rows={2} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-rose-500/50 dark:bg-gray-800" placeholder="เบอร์โทรศัพท์, ที่อยู่, หรือผู้ติดต่อฉุกเฉิน" />
+                  <textarea rows={2} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-rose-500/50 dark:bg-gray-800" placeholder="เบอร์โทรศัพท์, ที่อยู่, หรือผู้ติดต่อฉุกเฉิน" />
                 </div>
               </div>
             )
@@ -2176,7 +2201,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-orange-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-orange-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -2287,7 +2312,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-sky-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-sky-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -2373,7 +2398,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-teal-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-teal-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -2534,7 +2559,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-purple-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-purple-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -2605,7 +2630,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -2677,7 +2702,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-orange-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-orange-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -2755,7 +2780,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                       </div>
                       <div className="md:col-span-2">
                         <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เงื่อนไขการชำระเงิน (Payment Terms)</label>
-                        <textarea rows={3} value={customData.vendorContract_paymentTerms || ''} onChange={e => setCustomData({...customData, vendorContract_paymentTerms: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-blue-500/50 dark:bg-gray-700" placeholder="เช่น แบ่งจ่าย 3 งวด, งวดละ 30%..." />
+                        <textarea rows={3} data-optional="true" value={customData.vendorContract_paymentTerms || ''} onChange={e => setCustomData({...customData, vendorContract_paymentTerms: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-blue-500/50 dark:bg-gray-700" placeholder="เช่น แบ่งจ่าย 3 งวด, งวดละ 30%..." />
                       </div>
                     </div>
                   </div>
@@ -2763,7 +2788,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-blue-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-blue-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -2835,7 +2860,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-fuchsia-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-fuchsia-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -2906,7 +2931,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -2984,7 +3009,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-rose-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-rose-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -3075,7 +3100,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                         </div>
                         <div className="md:col-span-2">
                           <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">กำหนดชำระเงิน (Payment Schedule)</label>
-                          <textarea rows={2} value={customData.lease_paymentTerms || ''} onChange={e => setCustomData({...customData, lease_paymentTerms: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-amber-500/50 dark:bg-gray-700" placeholder="เช่น ภายในวันที่ 5 ของทุกเดือน..." />
+                          <textarea rows={2} data-optional="true" value={customData.lease_paymentTerms || ''} onChange={e => setCustomData({...customData, lease_paymentTerms: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-amber-500/50 dark:bg-gray-700" placeholder="เช่น ภายในวันที่ 5 ของทุกเดือน..." />
                         </div>
                       </div>
                     </div>
@@ -3084,7 +3109,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-amber-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-amber-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -3148,7 +3173,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-cyan-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-cyan-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -3212,7 +3237,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -3282,7 +3307,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-slate-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-slate-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -3296,14 +3321,14 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">ใบเสนอราคา (Quotation)</h2>
                     <p className="text-gray-500 mt-2">เอกสารเสนอราคาสินค้าหรือบริการให้แก่ลูกค้า</p>
                   </div>
-                  
+
                   <div className="space-y-8">
                     {/* ข้อมูลลูกค้าและเอกสาร */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-white dark:bg-gray-800 rounded-lg border border-sky-100 dark:border-sky-800/50">
                       <div className="md:col-span-2 border-b border-sky-100 dark:border-sky-800/50 pb-2 mb-2 flex justify-between items-end">
                         <h3 className="font-bold text-sky-700 dark:text-sky-500">1. ข้อมูลลูกค้า (Customer Info)</h3>
                       </div>
-                      
+
                       <div className="md:col-span-2">
                         <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ชื่อลูกค้า / บริษัท (Customer Name)</label>
                         <input type="text" value={customData.quotation_customerName || ''} onChange={e => setCustomData({...customData, quotation_customerName: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="ระบุชื่อลูกค้า หรือ นิติบุคคล..." />
@@ -3312,7 +3337,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                         <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ที่อยู่ลูกค้า (Customer Address)</label>
                         <textarea rows={2} value={customData.quotation_customerAddress || ''} onChange={e => setCustomData({...customData, quotation_customerAddress: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="ที่อยู่สำหรับออกใบเสนอราคา/ใบกำกับภาษี..." />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">วันที่เสนอราคา (Date)</label>
                         <input type="date" value={customData.quotation_date || ''} onChange={e => setCustomData({...customData, quotation_date: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" />
@@ -3327,48 +3352,127 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                       </div>
                     </div>
 
-                    {/* รายการสินค้า/บริการและราคารวม */}
+                    {/* รายการสินค้าและราคารวม */}
                     <div className="grid grid-cols-1 gap-6 p-5 bg-white dark:bg-gray-800 rounded-lg border border-sky-100 dark:border-sky-800/50">
-                      <div className="border-b border-sky-100 dark:border-sky-800/50 pb-2 mb-2">
+                      <div className="border-b border-sky-100 dark:border-sky-800/50 pb-2 mb-2 flex justify-between items-center">
                         <h3 className="font-bold text-sky-700 dark:text-sky-500">2. รายการสินค้า / บริการ (Items)</h3>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">รายละเอียดรายการ (Item Details)</label>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono bg-gray-50 dark:bg-gray-900 p-2 rounded">
-                          รูปแบบแนะนำ: ลำดับ | รายการสินค้า | จำนวน | หน่วย | ราคาต่อหน่วย | ราคารวม<br/>
-                          เช่น: 1 | บริการออกแบบเว็บไซต์ | 1 | งาน | 50,000 | 50,000
-                        </div>
-                        <textarea rows={6} value={customData.quotation_itemsText || ''} onChange={e => setCustomData({...customData, quotation_itemsText: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700 font-mono text-sm leading-relaxed" placeholder="1. ...\n2. ..." />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-gray-100 dark:border-gray-700 mt-2">
-                        <div>
-                          <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">รวมเป็นเงิน (Sub Total)</label>
-                          <div className="flex items-center gap-2">
-                            <input type="number" min="0" value={customData.quotation_subTotal || ''} onChange={e => setCustomData({...customData, quotation_subTotal: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="0.00" />
-                            <span className="text-gray-600 dark:text-gray-400">บาท</span>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ภาษีมูลค่าเพิ่ม 7% (VAT)</label>
-                          <div className="flex items-center gap-2">
-                            <input type="number" min="0" value={customData.quotation_vat || ''} onChange={e => setCustomData({...customData, quotation_vat: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="0.00" />
-                            <span className="text-gray-600 dark:text-gray-400">บาท</span>
-                          </div>
-                        </div>
-                        <div className="md:col-span-2 lg:col-span-1">
-                          <label className="block text-sm font-bold text-gray-900 dark:text-white mb-1">ยอดสุทธิ (Grand Total)</label>
-                          <div className="flex items-center gap-2">
-                            <input type="number" min="0" value={customData.quotation_grandTotal || ''} onChange={e => setCustomData({...customData, quotation_grandTotal: e.target.value})} className="w-full p-2.5 border-2 border-sky-300 dark:border-sky-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 bg-sky-50 dark:bg-sky-900/30 text-lg font-bold text-sky-900 dark:text-sky-300" placeholder="0.00" />
-                            <span className="font-bold text-gray-900 dark:text-white">บาท</span>
-                          </div>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                            <input type="radio" name="quotation_priceType" checked={formData.priceType === 'exclude_vat'} onChange={() => setFormData({...formData, priceType: 'exclude_vat'})} className="accent-sky-600" /> ราคาแยกภาษี
+                          </label>
+                          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                            <input type="radio" name="quotation_priceType" checked={formData.priceType === 'include_vat'} onChange={() => setFormData({...formData, priceType: 'include_vat'})} className="accent-sky-600" /> ราคารวมภาษี
+                          </label>
                         </div>
                       </div>
 
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-400">
+                              <th className="py-2 px-2 w-10 text-center">#</th>
+                              <th className="py-2 px-2">รายละเอียด</th>
+                              <th className="py-2 px-2 w-24 text-right">จำนวน</th>
+                              <th className="py-2 px-2 w-24">หน่วย</th>
+                              <th className="py-2 px-2 w-32 text-right">ราคาต่อหน่วย</th>
+                              <th className="py-2 px-2 w-32 text-right">มูลค่า</th>
+                              <th className="py-2 px-2 w-10"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {formData.items.map((item: any, index: number) => {
+                              const itemAmount = (Number(item.qty) * Number(item.unitPrice));
+                              return (
+                              <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                                <td className="py-2 px-2 text-center text-gray-500">{index + 1}</td>
+                                <td className="py-2 px-2">
+                                  <input type="text" value={item.name} onChange={e => handleItemChange(index, 'name', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-sky-500 rounded bg-transparent outline-none dark:text-white" placeholder="ชื่อสินค้า..." />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="number" min="0" step="any" placeholder="0" value={item.qty} onChange={e => handleItemChange(index, 'qty', e.target.value)} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-sky-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="text" value={item.unit} onChange={e => handleItemChange(index, 'unit', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-sky-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="number" min="0" step="0.01" placeholder="0" value={item.unitPrice} onChange={e => handleItemChange(index, 'unitPrice', e.target.value)} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-sky-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2 text-right text-gray-700 dark:text-gray-300 font-medium">
+                                  {itemAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </td>
+                                <td className="py-2 px-2 text-center">
+                                  <button type="button" aria-label={`ลบรายการที่ ${index + 1}`} onClick={() => removeItem(index)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            )})}
+                          </tbody>
+                        </table>
+                        <div className="mt-3">
+                          <button type="button" onClick={addItem} className="flex items-center gap-1 text-sm font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400">
+                            <Plus className="w-4 h-4" /> เพิ่มรายการ
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 mt-2">
+                        <div>
+                          {/* Empty space for layout balance, or can put remarks here */}
+                        </div>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600 dark:text-gray-400 font-medium">รวมเป็นเงิน</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm">
+                            <div className="flex items-center gap-2">
+                              <label className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 font-medium cursor-pointer">
+                                <input type="checkbox" checked={formData.discountPercent > 0} onChange={e => setFormData({...formData, discountPercent: e.target.checked ? 10 : 0})} className="w-3.5 h-3.5 accent-sky-600"/>
+                                ส่วนลด
+                              </label>
+                              {formData.discountPercent > 0 && (
+                                <div className="flex items-center gap-1 border-b border-gray-300 dark:border-gray-600">
+                                  <input type="number" value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: Number(e.target.value)})} className="w-10 text-center bg-transparent outline-none text-gray-700 dark:text-gray-300" />
+                                  <span className="text-gray-500">%</span>
+                                </div>
+                              )}
+                            </div>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">
+                              {formData.discountPercent > 0 ? '-' : ''}{discountAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600 dark:text-gray-400 font-medium">ราคาหลังหักส่วนลด</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{afterDiscount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm">
+                            <label className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 font-medium cursor-pointer">
+                              <input type="checkbox" checked={formData.hasVat} onChange={e => setFormData({...formData, hasVat: e.target.checked})} className="w-3.5 h-3.5 accent-sky-600"/>
+                              ภาษีมูลค่าเพิ่ม 7%
+                            </label>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{vatAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+
+                          {formData.hasVat && formData.priceType === 'include_vat' && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-600 dark:text-gray-400 font-medium">ราคาไม่รวมภาษีมูลค่าเพิ่ม</span>
+                              <span className="font-medium text-gray-800 dark:text-gray-200">{(afterDiscount - vatAmount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                            </div>
+                          )}
+
+                          <div className="flex justify-between items-center text-base pt-3 border-t border-gray-200 dark:border-gray-700">
+                            <span className="text-sky-700 dark:text-sky-500 font-bold">จำนวนเงินรวมทั้งสิ้น</span>
+                            <span className="font-bold text-gray-900 dark:text-white text-lg">{grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+                        </div>
+                      </div>
                       <div className="pt-4 border-t border-gray-100 dark:border-gray-700 mt-2">
                         <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เงื่อนไขการชำระเงิน (Payment Terms)</label>
-                        <textarea rows={3} value={customData.quotation_paymentTerms || ''} onChange={e => setCustomData({...customData, quotation_paymentTerms: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="เช่น ชำระมัดจำ 50% และส่วนที่เหลือชำระภายใน 30 วันหลังส่งมอบงาน..." />
+                        <textarea rows={3} data-optional="true" value={customData.quotation_paymentTerms || ''} onChange={e => setCustomData({...customData, quotation_paymentTerms: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-sky-500/50 dark:bg-gray-700" placeholder="เช่น ชำระมัดจำ 50% และส่วนที่เหลือชำระภายใน 30 วันหลังส่งมอบงาน..." />
                       </div>
                     </div>
                   </div>
@@ -3376,7 +3480,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-sky-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-sky-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -3462,7 +3566,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-emerald-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -3547,7 +3651,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-purple-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-purple-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -3612,7 +3716,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-orange-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-orange-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -3727,7 +3831,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                                   <input type="text" value={item.unit} onChange={e => handleItemChange(index, 'unit', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-teal-500 rounded bg-transparent outline-none dark:text-white" />
                                 </td>
                                 <td className="py-2 px-2">
-                                  <input type="number" min="0" value={item.unitPrice} onChange={e => handleItemChange(index, 'unitPrice', Number(e.target.value))} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-teal-500 rounded bg-transparent outline-none dark:text-white" />
+                                  <input type="number" min="0" step="0.01" placeholder="0" value={item.unitPrice} onChange={e => handleItemChange(index, 'unitPrice', e.target.value)} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-teal-500 rounded bg-transparent outline-none dark:text-white" />
                                 </td>
                                 <td className="py-2 px-2 text-right text-gray-700 dark:text-gray-300 font-medium">
                                   {itemAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
@@ -3808,7 +3912,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-800" placeholder="เช่น ส่งสินค้าที่ชั้น 12..." />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-teal-500/50 dark:bg-gray-800" placeholder="เช่น ส่งสินค้าที่ชั้น 12..." />
                 </div>
               </div>
             )
@@ -3909,7 +4013,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                                   <input type="text" value={item.unit} onChange={e => handleItemChange(index, 'unit', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-purple-500 rounded bg-transparent outline-none dark:text-white" />
                                 </td>
                                 <td className="py-2 px-2">
-                                  <input type="number" min="0" value={item.unitPrice} onChange={e => handleItemChange(index, 'unitPrice', Number(e.target.value))} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-purple-500 rounded bg-transparent outline-none dark:text-white" />
+                                  <input type="number" min="0" step="0.01" placeholder="0" value={item.unitPrice} onChange={e => handleItemChange(index, 'unitPrice', e.target.value)} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-purple-500 rounded bg-transparent outline-none dark:text-white" />
                                 </td>
                                 <td className="py-2 px-2 text-right text-gray-700 dark:text-gray-300 font-medium">
                                   {itemAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
@@ -3989,7 +4093,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-purple-500/50 dark:bg-gray-800" placeholder="เช่น บัญชีธนาคาร 1234567890..." />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-purple-500/50 dark:bg-gray-800" placeholder="เช่น บัญชีธนาคาร 1234567890..." />
                 </div>
               </div>
             )
@@ -4212,7 +4316,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -4226,14 +4330,14 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">ใบสำคัญจ่าย (Payment Voucher - PV)</h2>
                     <p className="text-gray-500 mt-2">เอกสารหลักฐานประกอบการจ่ายเงินของบริษัท</p>
                   </div>
-                  
+
                   <div className="space-y-8">
                     {/* ข้อมูลผู้รับเงินและเอกสาร */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-white dark:bg-gray-800 rounded-lg border border-rose-100 dark:border-rose-800/50">
                       <div className="md:col-span-2 border-b border-rose-100 dark:border-rose-800/50 pb-2 mb-2">
                         <h3 className="font-bold text-rose-700 dark:text-rose-500">1. ข้อมูลการจ่ายเงิน (Payment Details)</h3>
                       </div>
-                      
+
                       <div className="md:col-span-2">
                         <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">จ่ายให้ (Payee Name)</label>
                         <input type="text" value={customData.pv_payeeName || ''} onChange={e => setCustomData({...customData, pv_payeeName: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" placeholder="ชื่อบุคคล หรือ นิติบุคคลที่รับเงิน..." />
@@ -4242,7 +4346,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                         <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ที่อยู่ (Address)</label>
                         <textarea rows={2} value={customData.pv_payeeAddress || ''} onChange={e => setCustomData({...customData, pv_payeeAddress: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" placeholder="ที่อยู่ผู้รับเงิน..." />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">วันที่ (Date)</label>
                         <input type="date" value={customData.pv_date || ''} onChange={e => setCustomData({...customData, pv_date: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
@@ -4251,7 +4355,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                         <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">เลขที่ใบสำคัญ (Voucher No.)</label>
                         <input type="text" value={customData.pv_refNo || ''} onChange={e => setCustomData({...customData, pv_refNo: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" placeholder="เช่น PV-20231001..." />
                       </div>
-                      
+
                       <div>
                         <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ชำระโดย (Paid By)</label>
                         <select value={customData.pv_paymentMethod || ''} onChange={e => setCustomData({...customData, pv_paymentMethod: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700">
@@ -4267,41 +4371,129 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                       </div>
                     </div>
 
-                    {/* รายการชำระเงินและภาษี */}
+                    {/* รายการสินค้าและราคารวม */}
                     <div className="grid grid-cols-1 gap-6 p-5 bg-white dark:bg-gray-800 rounded-lg border border-rose-100 dark:border-rose-800/50">
-                      <div className="border-b border-rose-100 dark:border-rose-800/50 pb-2 mb-2">
+                      <div className="border-b border-rose-100 dark:border-rose-800/50 pb-2 mb-2 flex justify-between items-center">
                         <h3 className="font-bold text-rose-700 dark:text-rose-500">2. รายการชำระเงิน (Payment Items & Tax)</h3>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">รายละเอียดรายการชำระ (Payment Description)</label>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono bg-gray-50 dark:bg-gray-900 p-2 rounded">
-                          รูปแบบแนะนำ: ลำดับ | รายการ/คำอธิบาย | จำนวนเงิน<br/>
-                          เช่น: 1 | ค่าจ้างทำความสะอาดสำนักงานประจำเดือน | 5,000
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                            <input type="radio" name="pv_priceType" checked={formData.priceType === 'exclude_vat'} onChange={() => setFormData({...formData, priceType: 'exclude_vat'})} className="accent-rose-600" /> ราคาแยกภาษี
+                          </label>
+                          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                            <input type="radio" name="pv_priceType" checked={formData.priceType === 'include_vat'} onChange={() => setFormData({...formData, priceType: 'include_vat'})} className="accent-rose-600" /> ราคารวมภาษี
+                          </label>
                         </div>
-                        <textarea rows={5} value={customData.pv_itemsText || ''} onChange={e => setCustomData({...customData, pv_itemsText: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700 font-mono text-sm leading-relaxed" placeholder="1. ...\n2. ..." />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4 border-t border-gray-100 dark:border-gray-700 mt-2">
-                        <div>
-                          <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">จำนวนเงิน (Amount)</label>
-                          <div className="flex items-center gap-2">
-                            <input type="number" min="0" value={customData.pv_subTotal || ''} onChange={e => setCustomData({...customData, pv_subTotal: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" placeholder="0.00" />
-                            <span className="text-gray-600 dark:text-gray-400">บาท</span>
-                          </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-400">
+                              <th className="py-2 px-2 w-10 text-center">#</th>
+                              <th className="py-2 px-2">รายละเอียด</th>
+                              <th className="py-2 px-2 w-24 text-right">จำนวน</th>
+                              <th className="py-2 px-2 w-24">หน่วย</th>
+                              <th className="py-2 px-2 w-32 text-right">ราคาต่อหน่วย</th>
+                              <th className="py-2 px-2 w-32 text-right">มูลค่า</th>
+                              <th className="py-2 px-2 w-10"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {formData.items.map((item: any, index: number) => {
+                              const itemAmount = (Number(item.qty) * Number(item.unitPrice));
+                              return (
+                              <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                                <td className="py-2 px-2 text-center text-gray-500">{index + 1}</td>
+                                <td className="py-2 px-2">
+                                  <input type="text" value={item.name} onChange={e => handleItemChange(index, 'name', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-rose-500 rounded bg-transparent outline-none dark:text-white" placeholder="รายละเอียดการชำระเงิน..." />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="number" min="0" step="any" placeholder="0" value={item.qty} onChange={e => handleItemChange(index, 'qty', e.target.value)} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-rose-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="text" value={item.unit} onChange={e => handleItemChange(index, 'unit', e.target.value)} className="w-full p-1.5 border border-transparent hover:border-gray-300 focus:border-rose-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2">
+                                  <input type="number" min="0" step="0.01" placeholder="0" value={item.unitPrice} onChange={e => handleItemChange(index, 'unitPrice', e.target.value)} className="w-full p-1.5 text-right border border-transparent hover:border-gray-300 focus:border-rose-500 rounded bg-transparent outline-none dark:text-white" />
+                                </td>
+                                <td className="py-2 px-2 text-right text-gray-700 dark:text-gray-300 font-medium">
+                                  {itemAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                </td>
+                                <td className="py-2 px-2 text-center">
+                                  <button type="button" aria-label={`ลบรายการที่ ${index + 1}`} onClick={() => removeItem(index)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            )})}
+                          </tbody>
+                        </table>
+                        <div className="mt-3">
+                          <button type="button" onClick={addItem} className="flex items-center gap-1 text-sm font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400">
+                            <Plus className="w-4 h-4" /> เพิ่มรายการ
+                          </button>
                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 mt-2">
                         <div>
-                          <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หักภาษี ณ ที่จ่าย (WHT - ถ้ามี)</label>
-                          <div className="flex items-center gap-2">
-                            <input type="number" min="0" value={customData.pv_taxAmount || ''} onChange={e => setCustomData({...customData, pv_taxAmount: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" placeholder="0.00" />
-                            <span className="text-gray-600 dark:text-gray-400">บาท</span>
-                          </div>
+                          {/* Empty space for layout balance, or can put remarks here */}
                         </div>
-                        <div className="md:col-span-2 lg:col-span-1">
-                          <label className="block text-sm font-bold text-gray-900 dark:text-white mb-1">ยอดสุทธิ (Net Amount)</label>
-                          <div className="flex items-center gap-2">
-                            <input type="number" min="0" value={customData.pv_grandTotal || ''} onChange={e => setCustomData({...customData, pv_grandTotal: e.target.value})} className="w-full p-2.5 border-2 border-rose-300 dark:border-rose-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 bg-rose-50 dark:bg-rose-900/30 text-lg font-bold text-rose-900 dark:text-rose-300" placeholder="0.00" />
-                            <span className="font-bold text-gray-900 dark:text-white">บาท</span>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600 dark:text-gray-400 font-medium">รวมเป็นเงิน</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm">
+                            <div className="flex items-center gap-2">
+                              <label className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 font-medium cursor-pointer">
+                                <input type="checkbox" checked={formData.discountPercent > 0} onChange={e => setFormData({...formData, discountPercent: e.target.checked ? 10 : 0})} className="w-3.5 h-3.5 accent-rose-600"/>
+                                ส่วนลด
+                              </label>
+                              {formData.discountPercent > 0 && (
+                                <div className="flex items-center gap-1 border-b border-gray-300 dark:border-gray-600">
+                                  <input type="number" value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: Number(e.target.value)})} className="w-10 text-center bg-transparent outline-none text-gray-700 dark:text-gray-300" />
+                                  <span className="text-gray-500">%</span>
+                                </div>
+                              )}
+                            </div>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">
+                              {formData.discountPercent > 0 ? '-' : ''}{discountAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท
+                            </span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600 dark:text-gray-400 font-medium">ราคาหลังหักส่วนลด</span>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{afterDiscount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-sm">
+                            <label className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400 font-medium cursor-pointer">
+                              <input type="checkbox" checked={formData.hasVat} onChange={e => setFormData({...formData, hasVat: e.target.checked})} className="w-3.5 h-3.5 accent-rose-600"/>
+                              ภาษีมูลค่าเพิ่ม 7%
+                            </label>
+                            <span className="font-medium text-gray-800 dark:text-gray-200">{vatAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                          </div>
+
+                          {formData.hasVat && formData.priceType === 'include_vat' && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-600 dark:text-gray-400 font-medium">ราคาไม่รวมภาษีมูลค่าเพิ่ม</span>
+                              <span className="font-medium text-gray-800 dark:text-gray-200">{(afterDiscount - vatAmount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
+                            </div>
+                          )}
+
+                          <div className="flex justify-between items-center gap-3 text-sm">
+                            <label htmlFor="pv-tax-amount" className="text-gray-600 dark:text-gray-400 font-medium">หักภาษี ณ ที่จ่าย (ถ้ามี)</label>
+                            <div className="flex items-center gap-2">
+                              <input id="pv-tax-amount" data-optional="true" type="number" min="0" max={totalBeforeWht} step="0.01" placeholder="0" value={customData.pv_taxAmount ?? ''} onChange={e => setCustomData({...customData, pv_taxAmount: e.target.value})} className="w-28 p-1.5 text-right border border-gray-300 dark:border-gray-600 rounded bg-transparent outline-none focus:border-rose-500" />
+                              <span>บาท</span>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-center text-base pt-3 border-t border-gray-200 dark:border-gray-700">
+                            <span className="text-rose-700 dark:text-rose-500 font-bold">ยอดสุทธิ</span>
+                            <span className="font-bold text-gray-900 dark:text-white text-lg">{grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} บาท</span>
                           </div>
                         </div>
                       </div>
@@ -4311,7 +4503,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-rose-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-rose-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -4410,7 +4602,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-lime-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-lime-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -4493,7 +4685,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุ / คำอธิบายเพิ่มเติม (Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-amber-500/50 dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-amber-500/50 dark:bg-gray-800" />
                 </div>
               </div>
             )
@@ -4603,7 +4795,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-sky-500/50 dark:bg-gray-800" placeholder="คำอธิบายเพิ่มเติมสำหรับการนำส่ง Statement..." />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-sky-500/50 dark:bg-gray-800" placeholder="คำอธิบายเพิ่มเติมสำหรับการนำส่ง Statement..." />
                 </div>
               </div>
             )
@@ -4721,7 +4913,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-purple-500/50 dark:bg-gray-800" placeholder="เช่น บันทึกการย้ายแผนก หรือ การซ่อมบำรุง..." />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-purple-500/50 dark:bg-gray-800" placeholder="เช่น บันทึกการย้ายแผนก หรือ การซ่อมบำรุง..." />
                 </div>
               </div>
             )
@@ -4842,7 +5034,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุประกอบงบการเงิน (Notes to Financial Statements)</label>
-                  <textarea rows={4} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-fuchsia-500/50 dark:bg-gray-800" placeholder="คำอธิบายเพิ่มเติมเกี่ยวกับนโยบายบัญชี หรือรายการที่สำคัญ..." />
+                  <textarea rows={4} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-fuchsia-500/50 dark:bg-gray-800" placeholder="คำอธิบายเพิ่มเติมเกี่ยวกับนโยบายบัญชี หรือรายการที่สำคัญ..." />
                 </div>
               </div>
             )
@@ -4944,9 +5136,9 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                                 </td>
                                 <td className="px-4 py-4">
                                   <input 
-                                    type="number" 
-                                    value={item.unitPrice} 
-                                    onChange={e => handleItemChange(index, 'unitPrice', Number(e.target.value))} 
+                                    type="number" min="0" step="0.01"
+                                    placeholder="0" value={item.unitPrice}
+                                    onChange={e => handleItemChange(index, 'unitPrice', e.target.value)}
                                     className="w-full p-2 text-right border border-transparent focus:border-indigo-300 dark:focus:border-indigo-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-transparent"
                                   />
                                 </td>
@@ -5037,7 +5229,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
                 <div className="max-w-4xl mx-auto mt-8">
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">หมายเหตุเอกสาร (Document Remarks)</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800" placeholder="เช่น เงื่อนไขการชำระเงิน หรือ ข้อมูลบัญชีธนาคารโอนเงิน..." />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-indigo-500/50 dark:bg-gray-800" placeholder="เช่น เงื่อนไขการชำระเงิน หรือ ข้อมูลบัญชีธนาคารโอนเงิน..." />
                 </div>
               </div>
             )
@@ -5185,9 +5377,9 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                     </td>
                     <td className="px-4 py-4">
                       <input 
-                        type="number" 
-                        value={item.unitPrice} 
-                        onChange={e => handleItemChange(index, 'unitPrice', Number(e.target.value))} 
+                        type="number" min="0" step="0.01"
+                        placeholder="0" value={item.unitPrice}
+                        onChange={e => handleItemChange(index, 'unitPrice', e.target.value)}
                         className="w-full p-2 text-right border border-transparent focus:border-gray-300 dark:focus:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5] dark:bg-transparent"
                       />
                     </td>
@@ -5226,11 +5418,11 @@ export default function CreateDocumentForm({ folders, tags, categories, document
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">{t.createDocument.remarksLabel}</label>
-                  <textarea rows={3} value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5] dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5] dark:bg-gray-800" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">{t.createDocument.internalNotesLabel}</label>
-                  <textarea rows={3} value={formData.internalNotes} onChange={e => setFormData({...formData, internalNotes: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5] dark:bg-gray-800" />
+                  <textarea rows={3} data-optional="true" value={formData.internalNotes} onChange={e => setFormData({...formData, internalNotes: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-1 focus:ring-[#38A1C5] dark:bg-gray-800" />
                 </div>
               </div>
             </div>
@@ -5377,29 +5569,24 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                     onChange={e => handleTemplateChange(e.target.value)}
                     className="w-full md:w-96 text-sm p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                   >
-                    <option value="">{t.createDocument.noTemplate}</option>
+                    <option value="">{activeTypeName} — แบบฟอร์มมาตรฐาน</option>
                     {matchingTemplates.length > 0 && (
-                      <optgroup label={t.createDocument.templatesForSelectedType}>
+                      <optgroup label={`แบบฟอร์ม${activeTypeName}`}>
                         {matchingTemplates.map(template => (
                           <option key={template.id} value={template.id}>
-                            {template.name}
+                            {activeTypeName} — {template.name}
                           </option>
                         ))}
                       </optgroup>
                     )}
-                    {otherTemplates.length > 0 && (
-                      <optgroup label={t.createDocument.otherFormTemplates}>
-                        {otherTemplates.map(template => (
-                          <option key={template.id} value={template.id}>
-                            {template.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
+
                   </select>
                 </div>
               </div>
-              
+
+              {savedDocument && savedDocument.status === 'DRAFT' && (
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">บันทึกในประวัติเอกสารแล้ว ตรวจทานตัวอย่างและลงนามผู้ขออนุมัติก่อนยื่นเอกสาร</p>
+              )}
               {savedDocument && (
                 <div className="flex items-center gap-3">
                   <div className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center gap-2">
@@ -5418,12 +5605,12 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                   {savedDocument.status !== 'PENDING' && savedDocument.status !== 'APPROVED' && (
                     <button
                       type="button"
-                      onClick={handleSubmitForApproval}
+                      onClick={handleSignBeforeSubmission}
                       disabled={isPending}
                       className="flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
                     >
                       {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                      ขอยื่นอนุมัติ
+                      ลงนามผู้ขออนุมัติ
                     </button>
                   )}
                 </div>
@@ -5455,6 +5642,10 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                     </div>
                   </div>
                 )
+              }
+
+              if (isQuotationDocument && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
+                return <QuotationPrintLayout data={mapDocumentToTemplateData(savedDocument, company, { name: getCurrentUser().name })} />
               }
 
               if (isInvoice && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
@@ -5530,9 +5721,9 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 onChange={e => setPreviewTemplateId(e.target.value)}
                 className="w-full md:w-80 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
               >
-                <option value="">รูปแบบมาตรฐาน (Standard)</option>
+                <option value="">{activeTypeName} — แบบฟอร์มมาตรฐาน</option>
                 {templates.filter(t => t.documentTypeId === docInfo.documentTypeId).map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
+                  <option key={t.id} value={t.id}>{activeTypeName} — {t.name}</option>
                 ))}
               </select>
             </div>
@@ -5554,6 +5745,8 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                     afterDiscount,
                     vatAmount,
                     grandTotal,
+                    ...paymentData,
+                    ...quotationData,
                   },
                   createdAt: new Date(),
                   createdBy: { name: getCurrentUser().name || 'ผู้ใช้งาน' },
@@ -5574,6 +5767,10 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                   );
                 }
                 
+                if (isQuotationDocument && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
+                  return <QuotationPrintLayout data={mapDocumentToTemplateData(dummyDocument, company, dummyDocument.createdBy)} />
+                }
+
                 if (isInvoice && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
                   return (
                     <div className="bg-white mx-auto shadow-sm" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>

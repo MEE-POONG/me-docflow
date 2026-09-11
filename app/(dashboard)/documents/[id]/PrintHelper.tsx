@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { getDocumentActor } from '@/lib/document-actor'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, Eye, Printer } from 'lucide-react'
 
 type PrintTemplate = {
@@ -8,20 +10,40 @@ type PrintTemplate = {
   name: string
 }
 
-export function PrintActions({ templates, currentTemplateId, documentId }: { templates: PrintTemplate[], currentTemplateId: string | null, documentId: string }) {
+export function PrintActions({ templates, currentTemplateId, documentId, documentTypeName = 'เอกสาร', documentNo = 'document' }: { templates: PrintTemplate[], currentTemplateId: string | null, documentId: string, documentTypeName?: string, documentNo?: string }) {
   const [selected, setSelected] = useState(currentTemplateId || '')
+  const router = useRouter()
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
+      <button type="button" disabled={exporting} className="h-9 rounded-md bg-red-600 px-4 text-sm font-medium text-white disabled:opacity-50" onClick={async () => {
+        setExporting(true); setExportError('')
+        try {
+          const response = await fetch('/api/documents/' + documentId + '/pdf', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...getDocumentActor(), templateId: selected }) })
+          if (!response.ok) throw new Error((await response.json()).error || 'ส่งออก PDF ไม่สำเร็จ')
+          const url = URL.createObjectURL(await response.blob())
+          const link = document.createElement('a'); link.href = url; link.download = documentNo + '.pdf'; link.click()
+          setTimeout(() => URL.revokeObjectURL(url), 60000)
+        } catch (error) { setExportError(error instanceof Error ? error.message : 'ส่งออก PDF ไม่สำเร็จ') }
+        finally { setExporting(false) }
+      }}>{exporting ? 'กำลังสร้าง PDF...' : 'ดาวน์โหลด PDF'}</button>
+      {exportError && <p role="alert" className="text-sm text-red-600">{exportError}</p>}
       {templates.length > 0 && (
         <select 
           value={selected} 
-          onChange={e => setSelected(e.target.value)}
+          onChange={e => {
+            setSelected(e.target.value)
+            const url = new URL(`/documents/${documentId}`, window.location.origin)
+            url.searchParams.set('templateId', e.target.value)
+            router.replace(url.pathname + url.search, { scroll: false })
+          }}
           className="h-9 min-w-52 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/15 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
         >
-          <option value="">-- รูปแบบมาตรฐาน --</option>
+          <option value="">{documentTypeName} — แบบฟอร์มมาตรฐาน</option>
           {templates.map(t => (
-            <option key={t.id} value={t.id}>{t.name}</option>
+            <option key={t.id} value={t.id}>{documentTypeName} — {t.name}</option>
           ))}
         </select>
       )}
@@ -29,7 +51,7 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
         type="button"
         onClick={() => {
           const url = new URL(`/documents/${documentId}`, window.location.origin)
-          if (selected) url.searchParams.set('templateId', selected)
+          url.searchParams.set('templateId', selected)
           url.searchParams.set('preview', 'true')
           window.open(url.toString(), '_blank', 'noopener,noreferrer')
         }}
@@ -44,7 +66,7 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
           if (selected) {
             url.searchParams.set('templateId', selected);
           } else {
-            url.searchParams.delete('templateId');
+            url.searchParams.set('templateId', '');
           }
           url.searchParams.set('print', 'true');
           window.location.href = url.toString();
@@ -57,7 +79,15 @@ export function PrintActions({ templates, currentTemplateId, documentId }: { tem
   )
 }
 
+async function waitForPrintContent() {
+  await document.fonts.ready
+  const images = Array.from(document.querySelectorAll<HTMLImageElement>('.print-section img'))
+  await Promise.allSettled(images.map(image => image.decode()))
+  await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+}
+
 export function PreviewActions() {
+  const [preparing, setPreparing] = useState(false)
   return (
     <div className="no-print sticky top-0 z-50 flex items-center justify-between gap-4 border-b border-gray-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur dark:border-gray-800 dark:bg-gray-950/95">
       <button
@@ -73,60 +103,35 @@ export function PreviewActions() {
       </div>
       <button
         type="button"
-        onClick={() => window.print()}
+        onClick={async () => {
+          setPreparing(true)
+          try {
+            await waitForPrintContent()
+            window.print()
+          } finally {
+            setPreparing(false)
+          }
+        }}
+        disabled={preparing}
         className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600"
       >
-        <Printer className="h-4 w-4" /> พิมพ์เอกสาร
+        <Printer className="h-4 w-4" /> {preparing ? 'กำลังเตรียมเอกสาร...' : 'พิมพ์เอกสาร'}
       </button>
     </div>
   )
 }
 
 export function PrintHelper() {
+  const printed = useRef(false)
   useEffect(() => {
-    // Wait for a short moment to ensure everything is rendered, then trigger print
-    const timer = setTimeout(() => {
-      window.print()
-    }, 500)
-    
-    return () => clearTimeout(timer)
-  }, [])
-  
-  return (
-    <style dangerouslySetInnerHTML={{__html: `
-      @media print {
-        body, html, main, div {
-          height: auto !important;
-          overflow: visible !important;
-        }
-        body * {
-          visibility: hidden;
-        }
-        .print-section, .print-section * {
-          visibility: visible;
-        }
-        .print-section {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100%;
-          margin: 0 !important;
-          padding: 0 !important;
-          box-shadow: none !important;
-          border: none !important;
-          background: white !important;
-        }
-        .print-section > div {
-          background: transparent !important;
-          padding: 0 !important;
-          border: none !important;
-          border-radius: 0 !important;
-          gap: 0 !important;
-        }
-        .no-print {
-          display: none !important;
-        }
+    let cancelled = false
+    waitForPrintContent().then(() => {
+      if (!cancelled && !printed.current) {
+        printed.current = true
+        window.print()
       }
-    `}} />
-  )
+    })
+    return () => { cancelled = true }
+  }, [])
+  return null
 }

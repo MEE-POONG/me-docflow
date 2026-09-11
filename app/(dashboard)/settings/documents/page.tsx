@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Eye, Hash, Plus, Save, Trash2, X } from "lucide-react";
+import { CheckCircle2, Eye, Hash, Save, Trash2 } from "lucide-react";
+import { getDocumentNumberSettings, saveDocumentNumberSettings } from '@/app/actions/documents';
+import { getDocumentActor } from '@/lib/document-actor';
+import { formatDocumentNumber, type NumberSettingsRow } from '@/lib/document-numbering';
 
 interface DocConfig {
   prefix: string;
@@ -10,19 +13,7 @@ interface DocConfig {
   startNumber: number;
 }
 
-interface CustomDocConfig {
-  id: string;
-  title: string;
-  description: string;
-  config: DocConfig;
-}
-
-function generatePreview(config: DocConfig) {
-  const dateStr = config.useDate ? "202607" : "";
-  const separator = config.useDate ? "-" : "";
-  const numStr = String(config.startNumber).padStart(config.digits, "0");
-  return `${config.prefix}${separator}${dateStr}${separator}${numStr}`;
-}
+function generatePreview(config: DocConfig) { return formatDocumentNumber(config); }
 
 function DocumentConfigRow({ title, description, config, onChange, onDelete }: {
   title: string;
@@ -92,148 +83,109 @@ function DocumentConfigRow({ title, description, config, onChange, onDelete }: {
 }
 
 export default function DocumentNumberSettingsPage() {
-  const [qtConfig, setQtConfig] = useState<DocConfig>({ prefix: "QT", useDate: true, digits: 4, startNumber: 1 });
-  const [invConfig, setInvConfig] = useState<DocConfig>({ prefix: "INV", useDate: true, digits: 4, startNumber: 1 });
-  const [reConfig, setReConfig] = useState<DocConfig>({ prefix: "RE", useDate: true, digits: 4, startNumber: 1 });
-  const [customConfigs, setCustomConfigs] = useState<CustomDocConfig[]>([]);
+  const [rows, setRows] = useState<NumberSettingsRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [newPrefix, setNewPrefix] = useState("");
+  const [error, setError] = useState('');
+  const [legacyNotice, setLegacyNotice] = useState(false);
+  const [loadedCompanyId, setLoadedCompanyId] = useState('');
 
   useEffect(() => {
-    queueMicrotask(() => {
+    let active = true;
+    let request = 0;
+    async function load() {
+      const currentRequest = ++request;
+      setLoading(true);
+      setIsSaved(false);
+      setError('');
+      setRows([]);
+      setLegacyNotice(false);
       try {
-        const savedData = localStorage.getItem("me_docflow_document_numbers");
-        if (!savedData) return;
-        const parsed = JSON.parse(savedData);
-        if (parsed.qt) setQtConfig(parsed.qt);
-        if (parsed.inv) setInvConfig(parsed.inv);
-        if (parsed.re) setReConfig(parsed.re);
-        if (Array.isArray(parsed.custom)) setCustomConfigs(parsed.custom);
-      } catch (error) {
-        console.error("Error parsing document numbers settings", error);
+        const actor = getDocumentActor();
+        const settings = await getDocumentNumberSettings(actor);
+        if (!active || request !== currentRequest) return;
+        // Old browser-only settings are shown for review; the company database wins.
+        let legacy: any = {};
+        try { legacy = JSON.parse(localStorage.getItem('me_docflow_document_numbers') || '{}'); } catch {}
+        let imported = false;
+        const restored = settings.map(row => {
+          if (row.saved) return row;
+          const normalName = (name: string) => name.split('(')[0].trim().toLowerCase();
+          const custom = Array.isArray(legacy.custom) ? legacy.custom.filter((item: any) => typeof item.title === 'string' && normalName(item.title) === normalName(row.title)) : [];
+          const oldConfig = custom.length === 1 ? custom[0].config : legacy[row.prefix.toLowerCase()];
+          if (!oldConfig) return row;
+          imported = true;
+          return { ...row, prefix: oldConfig.prefix ?? row.prefix, useDate: oldConfig.useDate ?? row.useDate,
+            digits: oldConfig.digits ?? row.digits, startNumber: oldConfig.startNumber ?? row.startNumber };
+        });
+        setRows(restored);
+        setLegacyNotice(imported);
+        setLoadedCompanyId(actor.companyId);
+      } catch (err) {
+        if (active && request === currentRequest) setError(err instanceof Error ? err.message : 'โหลดการตั้งค่าไม่สำเร็จ');
+      } finally {
+        if (active && request === currentRequest) setLoading(false);
       }
-    });
+    }
+    void load();
+    window.addEventListener('activeCompanyChanged', load);
+    return () => { active = false; window.removeEventListener('activeCompanyChanged', load); };
   }, []);
 
-  const handleSave = (event: React.FormEvent) => {
+  async function handleSave(event: React.FormEvent) {
     event.preventDefault();
-    localStorage.setItem("me_docflow_document_numbers", JSON.stringify({ qt: qtConfig, inv: invConfig, re: reConfig, custom: customConfigs }));
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
-  };
-
-  const addCustomConfig = (event: React.FormEvent) => {
-    event.preventDefault();
-    const title = newTitle.trim();
-    const prefix = newPrefix.trim().toUpperCase();
-    if (!title || !prefix) return;
-    setCustomConfigs((items) => [...items, {
-      id: `custom-${Date.now()}`,
-      title,
-      description: newDescription.trim() || `กำหนดเลขรันสำหรับ${title}`,
-      config: { prefix, useDate: true, digits: 4, startNumber: 1 },
-    }]);
-    setNewTitle("");
-    setNewDescription("");
-    setNewPrefix("");
-    setShowAddForm(false);
-  };
+    setSaving(true);
+    setError('');
+    setIsSaved(false);
+    try {
+      const actor = getDocumentActor();
+      if (actor.companyId !== loadedCompanyId) throw new Error('บริษัทมีการเปลี่ยนแปลง กรุณาโหลดหน้าตั้งค่าใหม่');
+      const result = await saveDocumentNumberSettings(actor, rows);
+      if (!result.success) throw new Error(result.error);
+      const savedRows = await getDocumentNumberSettings(actor);
+      if (getDocumentActor().companyId !== actor.companyId) return;
+      setRows(savedRows);
+      setIsSaved(true);
+      setLegacyNotice(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'บันทึกการตั้งค่าไม่สำเร็จ');
+    } finally { setSaving(false); }
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-1">การตั้งค่าระบบ</p>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 font-sans">ตั้งค่าเลขรันเอกสาร</h1>
+        <p className="text-[11px] font-bold text-emerald-600 mb-1">การตั้งค่าระบบ</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">ตั้งค่าเลขรันเอกสาร</h1>
         <p className="text-sm text-gray-500">กำหนดคำขึ้นต้น รูปแบบวันที่ และลำดับเลขเอกสารสำหรับเอกสารแต่ละประเภท</p>
       </div>
-
-      {isSaved && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold">บันทึกรูปแบบเลขเอกสารสำเร็จ</p>
-            <p className="text-xs text-emerald-700">เอกสารที่สร้างใหม่จะใช้รูปแบบเลขที่บันทึกไว้</p>
-          </div>
-        </div>
-      )}
-
+      {error && <p role="alert" className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl">{error}</p>}
+      {legacyNotice && <p className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl">นำการตั้งค่าเดิมในเบราว์เซอร์มาแสดงแล้ว กรุณาตรวจสอบและกดบันทึกเพื่อใช้กับบริษัทนี้</p>}
+      {isSaved && <div role="status" className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl flex items-center gap-3">
+        <CheckCircle2 className="w-5 h-5" /> บันทึกสำเร็จ เอกสารใหม่จะใช้เลขรันตามประเภทที่ตั้งไว้
+      </div>}
       <form onSubmit={handleSave} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-200 bg-gray-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="bg-emerald-50 border border-emerald-100 p-2 rounded-lg text-emerald-700">
-              <Hash className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-gray-900">รูปแบบเลขที่เอกสาร</h2>
-              <p className="text-xs text-gray-500 mt-0.5">การเปลี่ยนแปลงจะมีผลกับเอกสารใหม่หลังจากบันทึกการตั้งค่า</p>
-            </div>
+        <div className="px-6 py-5 border-b border-gray-200 bg-gray-50/40 flex items-center gap-3">
+          <Hash className="w-6 h-6 text-emerald-700" />
+          <div>
+            <h2 className="font-semibold text-gray-900">รูปแบบเลขที่เอกสาร</h2>
+            <p className="text-xs text-gray-500 mt-1">การเปลี่ยนแปลงมีผลกับเอกสารใหม่หลังบันทึก เลขที่ออกแล้วจะคงเดิมและไม่รันซ้ำ</p>
+            <p className="text-xs text-gray-500 mt-1">รวมปีและเดือน: เริ่มเลขรันใหม่ทุกเดือน • ไม่รวมวันที่: รันต่อเนื่อง</p>
           </div>
-          <button type="button" onClick={() => setShowAddForm(true)} className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors">
-            <Plus className="w-4 h-4" />
-            เพิ่มหมวดหมู่เลขรัน
-          </button>
         </div>
-
-        <div className="divide-y divide-gray-200">
-          <DocumentConfigRow title="ใบเสนอราคา (Quotation)" description="กำหนดเลขรันสำหรับเอกสารใบเสนอราคา" config={qtConfig} onChange={setQtConfig} />
-          <DocumentConfigRow title="ใบกำกับภาษี (Tax Invoice)" description="กำหนดเลขรันสำหรับเอกสารใบกำกับภาษีและใบเสร็จ" config={invConfig} onChange={setInvConfig} />
-          <DocumentConfigRow title="ใบเสร็จรับเงิน (Receipt)" description="กำหนดเลขรันสำหรับเอกสารใบเสร็จรับเงิน" config={reConfig} onChange={setReConfig} />
-          {customConfigs.map((item) => (
-            <DocumentConfigRow
-              key={item.id}
-              title={item.title}
-              description={item.description}
-              config={item.config}
-              onChange={(config) => setCustomConfigs((items) => items.map((entry) => entry.id === item.id ? { ...entry, config } : entry))}
-              onDelete={() => setCustomConfigs((items) => items.filter((entry) => entry.id !== item.id))}
-            />
+        <fieldset disabled={loading || saving} className="divide-y divide-gray-200">
+          {loading ? <p className="p-6 text-gray-500">กำลังโหลดการตั้งค่า...</p> : rows.length === 0 ? <p className="p-6 text-gray-500">ไม่พบประเภทเอกสารที่ตั้งค่าได้</p> : rows.map(row => (
+            <DocumentConfigRow key={row.documentTypeId} title={row.title} description={'กำหนดเลขรันสำหรับ' + row.title} config={row}
+              onChange={config => { setIsSaved(false); setRows(current => current.map(item => item.documentTypeId === row.documentTypeId ? { ...item, ...config } : item)); }} />
           ))}
-        </div>
-
+        </fieldset>
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/40 flex justify-end">
-          <button type="submit" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2.5 px-5 rounded-lg shadow-sm transition-colors">
-            <Save className="w-4 h-4" />
-            บันทึกการตั้งค่าเลขเอกสาร
+          <button type="submit" disabled={loading || saving || !rows.length} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold py-2.5 px-5 rounded-lg">
+            <Save className="w-4 h-4" /> {saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่าเลขเอกสาร'}
           </button>
         </div>
       </form>
-
-      {showAddForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-sm">
-          <form onSubmit={addCustomConfig} className="w-full max-w-lg bg-white rounded-xl border border-gray-200 shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold text-gray-900">เพิ่มหมวดหมู่เลขรันเอกสาร</h2>
-                <p className="text-xs text-gray-500 mt-0.5">สร้างรูปแบบเลขที่สำหรับเอกสารประเภทอื่น</p>
-              </div>
-              <button type="button" onClick={() => setShowAddForm(false)} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="px-6 py-5 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">ชื่อหมวดหมู่ <span className="text-red-500">*</span></label>
-                <input required value={newTitle} onChange={(event) => setNewTitle(event.target.value)} placeholder="เช่น ใบส่งสินค้า" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">คำขึ้นต้น (Prefix) <span className="text-red-500">*</span></label>
-                <input required value={newPrefix} onChange={(event) => setNewPrefix(event.target.value)} placeholder="เช่น DN" maxLength={12} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">คำอธิบาย</label>
-                <textarea value={newDescription} onChange={(event) => setNewDescription(event.target.value)} rows={3} placeholder="อธิบายการใช้งานเลขรันหมวดหมู่นี้" className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600" />
-              </div>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
-              <button type="button" onClick={() => setShowAddForm(false)} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 bg-white rounded-lg hover:bg-gray-50">ยกเลิก</button>
-              <button type="submit" className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700">เพิ่มหมวดหมู่</button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 }

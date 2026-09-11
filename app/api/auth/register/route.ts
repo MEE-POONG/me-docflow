@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { CompanyUserRole, CompanyStatus, UserStatus } from '@prisma/client';
+import { CompanyUserRole, CompanyStatus, UserStatus, Prisma } from '@prisma/client';
 
 export async function POST(request: Request) {
   try {
@@ -107,8 +107,29 @@ export async function POST(request: Request) {
       { status: 201 }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Registration Error:', error);
+    // MongoDB connection failures can surface as P2010 raw-query errors.
+    const databaseUnavailable =
+      (error instanceof Prisma.PrismaClientInitializationError &&
+        ['P1001', 'P1002', 'P1011', 'P1017'].includes(error.errorCode ?? '')) ||
+      (error instanceof Prisma.PrismaClientKnownRequestError &&
+        (['P1001', 'P1002', 'P1011', 'P1017'].includes(error.code) ||
+          (error.code === 'P2010' &&
+            /server selection timeout|no available servers|connection refused|connection reset|TLS handshake/i.test(
+              String(error.meta?.message ?? error.message)
+            ))));
+
+    if (databaseUnavailable) {
+      return NextResponse.json(
+        {
+          code: 'DATABASE_UNAVAILABLE',
+          error: 'ขณะนี้ระบบเชื่อมต่อฐานข้อมูลไม่ได้ กรุณาติดต่อผู้ดูแลระบบเพื่อตรวจสอบการเชื่อมต่อ MongoDB Atlas แล้วลองลงทะเบียนอีกครั้ง',
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการลงทะเบียน กรุณาลองใหม่อีกครั้ง' },
       { status: 500 }

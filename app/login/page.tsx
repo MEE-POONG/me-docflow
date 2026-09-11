@@ -72,6 +72,13 @@ export default function LoginPage() {
   const [regConfirmPassword, setRegConfirmPassword] = useState("");
 
   const [regOtp, setRegOtp] = useState("");
+  const [otpResendSeconds, setOtpResendSeconds] = useState(0);
+
+  useEffect(() => {
+    if (otpResendSeconds <= 0) return;
+    const timer = setTimeout(() => setOtpResendSeconds(value => value - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [otpResendSeconds]);
 
   const [regFullName, setRegFullName] = useState("");
   const [regRole, setRegRole] = useState<string>("");
@@ -112,11 +119,13 @@ export default function LoginPage() {
   }, []);
 
   const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationError, setRegistrationError] = useState("");
 
   // Forgot Password State
   const [forgotIdentifier, setForgotIdentifier] = useState("");
   const [forgotStep, setForgotStep] = useState<1 | 2>(1);
   const [forgotUser, setForgotUser] = useState<any>(null);
+  const [forgotOtp, setForgotOtp] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState("");
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
 
@@ -127,47 +136,22 @@ export default function LoginPage() {
   const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
   const [showForgotConfirmPassword, setShowForgotConfirmPassword] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginIdentifier && loginPassword) {
-      if (loginIdentifier === "admin" && loginPassword === "password") {
-        localStorage.setItem("me_docflow_admin_logged_in", "true");
-        router.push("/admin/dashboard");
-        return;
-      }
-
-      // Load users
-      const savedData = localStorage.getItem("me_docflow_users");
-      let allUsers: any[] = [];
-      if (savedData) {
-        try {
-          allUsers = JSON.parse(savedData);
-        } catch (err) { }
-      } else {
-        allUsers = [
-          { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
-          { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
-          { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123", companyId: "64abc0000000000000000001" },
-        ];
-        localStorage.setItem("me_docflow_users", JSON.stringify(allUsers));
-      }
-
-      // Find user
-      const matched = allUsers.find(
-        (u: any) =>
-          (u.email.toLowerCase() === loginIdentifier.toLowerCase() || u.phone === loginIdentifier) &&
-          u.password === loginPassword
-      );
-
-      if (matched) {
-        localStorage.setItem("me_docflow_current_user", JSON.stringify(matched));
-        localStorage.setItem("me_docflow_user_session", "true");
-        window.dispatchEvent(new Event("activeCompanyChanged"));
-        router.push("/dashboard");
-      } else {
-        alert("อีเมล/เบอร์โทรศัพท์ หรือรหัสผ่านไม่ถูกต้อง");
-      }
+    if (loginIdentifier === 'admin' && loginPassword === 'password') {
+      localStorage.setItem('me_docflow_admin_logged_in', 'true'); router.push('/admin/dashboard'); return;
     }
+    try {
+      const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: loginIdentifier, password: loginPassword }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      localStorage.setItem('me_docflow_current_user', JSON.stringify(data.user));
+      localStorage.setItem('me_docflow_user_session', 'true');
+      const companies = JSON.parse(localStorage.getItem('me_docflow_companies') || '[]').filter((c: any) => c.id !== data.user.companyId).map((c: any) => ({ ...c, isActive: false }));
+      localStorage.setItem('me_docflow_companies', JSON.stringify([...companies, { id: data.user.companyId, companyName: data.user.companyName, ownerEmail: data.user.email, isActive: true }]));
+      window.dispatchEvent(new Event('activeCompanyChanged'));
+      router.push('/dashboard');
+    } catch (error) { alert(error instanceof Error ? error.message : 'เข้าสู่ระบบไม่สำเร็จ'); }
   };
 
   const handleRegisterStep1 = async (e: React.FormEvent) => {
@@ -195,7 +179,8 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "เกิดข้อผิดพลาดในการขอ OTP");
 
-      alert(`[จำลองระบบ] OTP ของคุณคือ: ${data.mockOtp}`);
+      setRegOtp("");
+      setOtpResendSeconds(60);
       setRegStep(2);
     } catch (err: any) {
       alert(err.message);
@@ -230,6 +215,7 @@ export default function LoginPage() {
 
   const handleRegisterFinal = async (e: React.FormEvent) => {
     e.preventDefault();
+    setRegistrationError("");
     if (!regFullName || !regRole || !regBusinessName || !regBusinessType) {
       alert("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
@@ -245,7 +231,7 @@ export default function LoginPage() {
           email: regEmail,
           phone: regPhone,
           password: regPassword,
-          role: regRole,
+            role: regRole,
           businessName: regBusinessName,
           businessPhone: regBusinessPhone,
           businessType: regBusinessType
@@ -275,106 +261,37 @@ export default function LoginPage() {
         email: data.user.email || regEmail,
         role: data.user.role || regRole,
         status: "active",
-        password: regPassword,
         companyId: data.user.companyId
       };
       localStorage.setItem("me_docflow_users", JSON.stringify([...allUsers, newMockUser]));
 
       setTimeout(() => { window.dispatchEvent(new Event("activeCompanyChanged")); }, 100);
       router.push("/dashboard");
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      setRegistrationError(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการลงทะเบียน กรุณาลองใหม่อีกครั้ง");
     } finally {
       setIsRegistering(false);
     }
   };
 
-  const handleFindForgotAccount = (e: React.FormEvent) => {
+  const handleFindForgotAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!forgotIdentifier) {
-      alert("กรุณากรอกอีเมลหรือเบอร์โทรศัพท์");
-      return;
-    }
-
-    // Load users
-    const savedData = localStorage.getItem("me_docflow_users");
-    let allUsers: any[] = [];
-    if (savedData) {
-      try {
-        allUsers = JSON.parse(savedData);
-      } catch (err) { }
-    } else {
-      allUsers = [
-        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
-        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
-        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123", companyId: "64abc0000000000000000001" },
-      ];
-      localStorage.setItem("me_docflow_users", JSON.stringify(allUsers));
-    }
-
-    const matched = allUsers.find(
-      (u: any) =>
-        u.email.toLowerCase() === forgotIdentifier.toLowerCase() ||
-        u.phone === forgotIdentifier
-    );
-
-    if (matched) {
-      setForgotUser(matched);
-      setForgotStep(2);
-    } else {
-      alert("ไม่พบอีเมลหรือเบอร์โทรศัพท์นี้ในระบบ");
-    }
+    try {
+      const response = await fetch('/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: forgotIdentifier }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setForgotUser({ email: data.email }); setForgotOtp(''); setForgotStep(2);
+    } catch (error) { alert(error instanceof Error ? error.message : 'ส่ง OTP ไม่สำเร็จ'); }
   };
-
-  const handleResetPassword = (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!forgotNewPassword || !forgotConfirmPassword) {
-      alert("กรุณากรอกรหัสผ่านใหม่ให้ครบถ้วน");
-      return;
-    }
-
-    if (forgotNewPassword.length < 6) {
-      alert("รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร");
-      return;
-    }
-
-    if (forgotNewPassword !== forgotConfirmPassword) {
-      alert("รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน");
-      return;
-    }
-
-    // Load users
-    const savedData = localStorage.getItem("me_docflow_users");
-    let allUsers: any[] = [];
-    if (savedData) {
-      try {
-        allUsers = JSON.parse(savedData);
-      } catch (err) { }
-    } else {
-      allUsers = [
-        { id: "1", fullName: "Melisara Chaimongkol", email: "melisara@siamretail.co.th", role: "owner", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
-        { id: "2", fullName: "สมชาย ใจดี", email: "somchai@siamretail.co.th", role: "accountant", status: "active", password: "password123", companyId: "64abc0000000000000000001" },
-        { id: "3", fullName: "สมศรี สุขใจ", email: "somsri@siamretail.co.th", role: "employee", status: "inactive", password: "password123", companyId: "64abc0000000000000000001" },
-      ];
-    }
-
-    const updatedUsers = allUsers.map((u: any) => {
-      if (u.id === forgotUser.id) {
-        return { ...u, password: forgotNewPassword };
-      }
-      return u;
-    });
-
-    localStorage.setItem("me_docflow_users", JSON.stringify(updatedUsers));
-    alert("เปลี่ยนรหัสผ่านสำเร็จแล้ว! กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่");
-
-    // Reset states and go back to login tab
-    setForgotIdentifier("");
-    setForgotStep(1);
-    setForgotUser(null);
-    setForgotNewPassword("");
-    setForgotConfirmPassword("");
-    setActiveTab("login");
+    if (forgotNewPassword !== forgotConfirmPassword) { alert('รหัสผ่านใหม่ไม่ตรงกัน'); return; }
+    try {
+      const response = await fetch('/api/auth/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: forgotUser.email, otp: forgotOtp, password: forgotNewPassword }) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.error);
+      setForgotNewPassword(''); setForgotConfirmPassword(''); setForgotOtp(''); setForgotStep(1); setActiveTab('login');
+      alert('เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่');
+    } catch (error) { alert(error instanceof Error ? error.message : 'เปลี่ยนรหัสผ่านไม่สำเร็จ'); }
   };
 
   return (
@@ -606,9 +523,10 @@ export default function LoginPage() {
                 <form onSubmit={handleRegisterStep2} className="space-y-5 animate-in fade-in zoom-in-95 duration-300">
                   <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl mb-4 text-center">
                     <p className="text-sm text-emerald-800">
-                      กรุณากรอกรหัส OTP 6 หลักที่ถูกส่งไปยัง<br />
+                      กรุณากรอกรหัส OTP 6 หลักที่ส่งไปยังอีเมล (มีอายุ 5 นาที)<br />
                       <strong>{regEmail}</strong>
                     </p>
+                    <p className="mt-2 text-xs text-emerald-700">หากไม่พบอีเมล กรุณาตรวจสอบโฟลเดอร์สแปมหรือจดหมายขยะ</p>
                   </div>
 
                   <div>
@@ -617,12 +535,23 @@ export default function LoginPage() {
                       type="text"
                       required
                       maxLength={6}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
                       value={regOtp}
                       onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, ''))}
                       className="appearance-none block w-full text-center text-2xl tracking-[0.5em] py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 transition-all"
                       placeholder="000000"
                     />
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={handleRegisterStep1}
+                    disabled={isRegistering || otpResendSeconds > 0}
+                    className="w-full text-sm font-medium text-emerald-700 disabled:text-gray-400 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {otpResendSeconds > 0 ? `ขอรหัสใหม่ได้ใน ${otpResendSeconds} วินาที` : "ส่งรหัส OTP ใหม่"}
+                  </button>
 
                   <div className="pt-4 flex gap-3">
                     <button
@@ -759,6 +688,11 @@ export default function LoginPage() {
                       {isRegistering ? "กำลังสร้างบัญชี..." : "เสร็จสิ้น และเริ่มใช้งาน"}
                       {!isRegistering && <ArrowRight className="ml-2 h-4 w-4" />}
                     </button>
+                    {registrationError && (
+                      <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                        {registrationError}
+                      </p>
+                    )}
                   </div>
                 </form>
               )}
@@ -810,7 +744,7 @@ export default function LoginPage() {
                   </div>
                 </form>
               ) : (
-                <form onSubmit={handleResetPassword} className="space-y-5">
+                <form onSubmit={handleResetPassword} className="space-y-5"><label className="block text-sm">รหัส OTP ที่ส่งไปยังอีเมล<input required inputMode="numeric" pattern="[0-9]{6}" value={forgotOtp} onChange={e => setForgotOtp(e.target.value)} className="mt-2 w-full rounded border p-3" /></label>
                   <div className="bg-emerald-50 border border-emerald-100 p-3.5 rounded-xl">
                     <p className="text-xs text-emerald-800">
                       <strong>พบบัญชีผู้ใช้:</strong> {forgotUser?.fullName} ({forgotUser?.email})

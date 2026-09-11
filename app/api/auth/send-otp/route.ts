@@ -1,40 +1,31 @@
 import { NextResponse } from 'next/server';
+import { issueOtp, normalizeOtpEmail, OtpError } from '@/lib/otp';
+import { MailConfigurationError, sendOtpEmail } from '@/lib/mail';
 
-// In a real app, this would use a database to store OTPs.
-// For prototype/testing, we store them in a global variable.
-const globalOtpStore = global as any;
-globalOtpStore.otps = globalOtpStore.otps || {};
+export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json();
-
-    if (!email) {
-      return NextResponse.json({ error: 'กรุณาระบุอีเมล' }, { status: 400 });
+    const body = await request.json();
+    const email = normalizeOtpEmail(body?.email);
+    await issueOtp(email, sendOtpEmail);
+    return NextResponse.json({ message: 'รหัส OTP ถูกส่งไปยังอีเมลของคุณแล้ว' });
+  } catch (error: unknown) {
+    if (error instanceof OtpError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
-
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Store it in memory with 5 minutes expiration
-    globalOtpStore.otps[email] = {
-      code: otp,
-      expiresAt: Date.now() + 5 * 60 * 1000
-    };
-
-    console.log(`[Mock Email] Sending OTP ${otp} to ${email}`);
-
-    // Return the OTP in the response for easy testing during prototyping
-    // IN PRODUCTION: DO NOT return the OTP to the client!
-    return NextResponse.json({ 
-      message: 'รหัส OTP ถูกส่งไปยังอีเมลของคุณแล้ว',
-      mockOtp: otp // Included for testing alert
-    }, { status: 200 });
-
-  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: 'ข้อมูลคำขอไม่ถูกต้อง' }, { status: 400 });
+    }
+    // Do not log credentials, the OTP, or SMTP response bodies.
+    const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : 'UNKNOWN';
+    console.error('OTP email delivery failed:', code);
+    const configurationError = error instanceof MailConfigurationError || code === 'EAUTH';
     return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการส่ง OTP' },
-      { status: 500 }
+      { error: configurationError
+        ? 'ระบบส่งอีเมลยังไม่พร้อม กรุณาให้ผู้ดูแลตรวจสอบ MAIL_USER และ Gmail App Password ใน MAIL_PASS'
+        : 'ส่งอีเมล OTP ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' },
+      { status: 503 }
     );
   }
 }
