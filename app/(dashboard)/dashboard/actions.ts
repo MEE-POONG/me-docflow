@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { dashboardErrorMessage } from '@/lib/dashboard-error';
 
 async function resolveCompanyId(email: string, companyId?: string) {
   if (companyId) {
@@ -21,9 +22,9 @@ async function resolveCompanyId(email: string, companyId?: string) {
 
 export async function getDashboardData(email: string, companyId?: string) {
   try {
-    if (!email) return null;
+    if (!email) return { error: 'ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่' };
     const resolvedCompanyId = await resolveCompanyId(email, companyId);
-    if (!resolvedCompanyId) return null;
+    if (!resolvedCompanyId) return { error: 'ไม่พบบริษัทสำหรับผู้ใช้งานนี้ กรุณาเข้าสู่ระบบใหม่หรือติดต่อผู้ดูแลระบบ' };
   const accessibleResourceWhere = { OR: [{ companyId: resolvedCompanyId }, { isGlobal: true }] };
 
   // 1. Summary Cards
@@ -158,6 +159,6 @@ export async function getDashboardData(email: string, companyId?: string) {
   };
   } catch (error) {
     console.error("Failed to fetch user dashboard data:", error);
-    return null;
+    return { error: dashboardErrorMessage(error) };
   }
 }

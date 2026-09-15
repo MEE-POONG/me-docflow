@@ -4,36 +4,49 @@ import { useEffect, useState } from "react";
 import { BarChart, Bar, ResponsiveContainer, XAxis, Tooltip } from "recharts";
 import { Loader2 } from "lucide-react";
 import { getDashboardData } from "./actions";
+import { dashboardErrorMessage } from "@/lib/dashboard-error";
 
-type DashboardData = NonNullable<Awaited<ReturnType<typeof getDashboardData>>>;
+type DashboardData = Exclude<Awaited<ReturnType<typeof getDashboardData>>, { error: string }>;
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchData() {
-      const userStr = localStorage.getItem("me_docflow_current_user");
-      let email = "melisara@siamretail.co.th";
+      let email = "";
       let companyId: string | undefined;
-      if (userStr) {
-        try {
-          const u = JSON.parse(userStr);
-          if (u.email) email = u.email;
-          if (u.companyId) companyId = u.companyId;
-        } catch {}
-      }
       try {
+        const userStr = localStorage.getItem("me_docflow_current_user");
+        if (userStr) {
+          try {
+            const u = JSON.parse(userStr);
+            if (typeof u?.email === 'string') email = u.email;
+            if (typeof u?.companyId === 'string') companyId = u.companyId;
+          } catch {}
+        }
         const res = await getDashboardData(email, companyId);
-        setData(res);
+        if (cancelled) return;
+        if (res.error !== undefined) {
+          setError(res.error);
+          setData(null);
+        } else {
+          setData(res);
+          setError(null);
+        }
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
+        if (!cancelled) setError(dashboardErrorMessage(null));
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
     fetchData();
-  }, []);
+    return () => { cancelled = true; };
+  }, [attempt]);
 
   if (isLoading) {
     return (
@@ -47,10 +60,20 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center h-96 space-y-4">
         <div className="text-rose-500 font-bold text-xl">ไม่สามารถโหลดข้อมูลแดชบอร์ดได้</div>
-        <p className="text-gray-500 text-sm max-w-md text-center">
-          ระบบไม่สามารถเชื่อมต่อกับฐานข้อมูลได้ (อาจเกิดจากปัญหา Network หรือยังไม่ได้เปิด IP Whitelist ใน MongoDB Atlas) 
-          กรุณาตรวจสอบการตั้งค่าฐานข้อมูลแล้วรีเฟรชหน้าใหม่อีกครั้ง
+        <p role="alert" className="text-gray-500 text-sm max-w-md text-center">
+          {error ?? dashboardErrorMessage(null)}
         </p>
+        <button
+          type="button"
+          onClick={() => {
+            setIsLoading(true);
+            setError(null);
+            setAttempt(value => value + 1);
+          }}
+          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+        >
+          ลองใหม่
+        </button>
       </div>
     );
   }
