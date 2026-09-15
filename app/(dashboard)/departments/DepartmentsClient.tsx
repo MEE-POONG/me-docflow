@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useRef } from 'react';
 import { Plus, Edit2, Trash2, X, Search, Loader2 } from 'lucide-react';
 import { createDepartment, updateDepartment, deleteDepartment, getDepartments } from './actions';
+import { getDocumentActor } from '@/lib/document-actor';
+import { companyUserPositions } from '@/lib/company-user-positions';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 type Department = {
@@ -10,6 +12,7 @@ type Department = {
   name: string;
   description: string | null;
   isActive: boolean;
+  positions: string[];
 };
 
 export default function DepartmentsClient({ initialDepartments }: { initialDepartments: Department[] }) {
@@ -21,30 +24,32 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
   const [filterStatus, setFilterStatus] = useState('ALL');
   const { t } = useLanguage();
   
+  const [loadError, setLoadError] = useState('');
+  const requestId = useRef(0);
   useEffect(() => {
     const fetchMyDepartments = async () => {
-      const userStr = localStorage.getItem("me_docflow_current_user");
-      let currentEmail = "melisara@siamretail.co.th";
-      if (userStr) {
-        try {
-          const u = JSON.parse(userStr);
-          if (u.email) currentEmail = u.email;
-        } catch (e) {}
-      }
+      const request = ++requestId.current;
+      const actor = getDocumentActor();
+      setDepartments([]);
+      setIsModalOpen(false);
+      setLoadError('');
       try {
-        const myDepts = await getDepartments(currentEmail);
-        setDepartments(myDepts as any);
-      } catch (err) {
-        setDepartments(initialDepartments);
+        const rows = await getDepartments(actor);
+        if (request === requestId.current) setDepartments(rows);
+      } catch (error) {
+        if (request === requestId.current) setLoadError(error instanceof Error ? error.message : 'โหลดแผนกไม่สำเร็จ');
       }
     };
-    fetchMyDepartments();
-  }, [initialDepartments]);
+    void fetchMyDepartments();
+    window.addEventListener('activeCompanyChanged', fetchMyDepartments);
+    return () => { ++requestId.current; window.removeEventListener('activeCompanyChanged', fetchMyDepartments); };
+  }, []);
 
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     isActive: true,
+    positions: [] as string[],
   });
 
   const filteredDepartments = departments.filter(d => {
@@ -61,6 +66,7 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
         name: dept.name,
         description: dept.description || '',
         isActive: dept.isActive,
+        positions: dept.positions || [],
       });
     } else {
       setEditingId(null);
@@ -68,6 +74,7 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
         name: '',
         description: '',
         isActive: true,
+        positions: [],
       });
     }
     setIsModalOpen(true);
@@ -80,36 +87,32 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoadError('');
+    if (formData.positions.length === 0) { setLoadError('กรุณาเลือกตำแหน่งในแผนกอย่างน้อย 1 ตำแหน่ง'); return; }
     startTransition(async () => {
       try {
         const payload = {
           name: formData.name,
           description: formData.description || null,
           isActive: formData.isActive,
+          positions: formData.positions,
         };
 
-        const userStr = localStorage.getItem("me_docflow_current_user");
-        let currentEmail = "melisara@siamretail.co.th";
-        if (userStr) {
-          try {
-            const u = JSON.parse(userStr);
-            if (u.email) currentEmail = u.email;
-          } catch (e) {}
-        }
+        const actor = getDocumentActor();
 
         if (editingId) {
-          await updateDepartment(editingId, currentEmail, payload);
+          await updateDepartment(editingId, actor, payload);
         } else {
-          await createDepartment(currentEmail, payload);
+          await createDepartment(actor, payload);
         }
         
         // Refetch departments after mutation to update the list locally
-        const myDepts = await getDepartments(currentEmail);
-        setDepartments(myDepts as any);
+        const myDepts = await getDepartments(actor);
+        if (getDocumentActor().companyId === actor.companyId) setDepartments(myDepts);
         
         setIsModalOpen(false);
       } catch (error) {
-        console.error('Failed to save department', error);
+        setLoadError(error instanceof Error ? error.message : 'บันทึกแผนกไม่สำเร็จ');
       }
     });
   };
@@ -118,18 +121,11 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
     if (confirm(t.departments.confirmDelete)) {
       startTransition(async () => {
         try {
-          const userStr = localStorage.getItem("me_docflow_current_user");
-          let currentEmail = "melisara@siamretail.co.th";
-          if (userStr) {
-            try {
-              const u = JSON.parse(userStr);
-              if (u.email) currentEmail = u.email;
-            } catch (e) {}
-          }
-          await deleteDepartment(id, currentEmail);
+          const actor = getDocumentActor();
+          await deleteDepartment(id, actor);
           
-          const myDepts = await getDepartments(currentEmail);
-          setDepartments(myDepts as any);
+          const myDepts = await getDepartments(actor);
+          if (getDocumentActor().companyId === actor.companyId) setDepartments(myDepts);
         } catch (error) {
           console.error('Failed to delete department', error);
           alert(t.departments.deleteError);
@@ -141,6 +137,7 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
   return (
     <div className="flex flex-col w-full max-w-7xl mx-auto py-8">
       
+      {loadError && <p role="alert" className="mb-4 rounded bg-red-50 p-3 text-red-700">{loadError}</p>}
       {/* Header */}
       <div className="mb-8">
         <div className="text-xs font-bold text-emerald-600 dark:text-emerald-500 tracking-wider mb-1 uppercase">
@@ -211,7 +208,7 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
                 filteredDepartments.map((dept) => (
                   <tr key={dept.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{dept.name}</td>
-                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-normal min-w-[300px]">{dept.description || '-'}</td>
+                    <td className="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-normal min-w-[300px]">{dept.description || '-'}<p className="mt-1 text-xs text-teal-700">ตำแหน่ง: {dept.positions?.length ? dept.positions.join(', ') : 'ยังไม่ได้กำหนด'}</p></td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
                         dept.isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
@@ -246,7 +243,7 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
       {/* Modal Form */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 transition-colors">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 transition-colors">
             <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
               <h2 className="text-lg font-bold text-gray-800 dark:text-white">
                 {editingId ? t.departments.modalEditTitle : t.departments.modalAddTitle}
@@ -260,6 +257,7 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              {loadError && <p role="alert" className="text-sm text-red-600">{loadError}</p>}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.departments.formName}</label>
                 <input
@@ -279,6 +277,19 @@ export default function DepartmentsClient({ initialDepartments }: { initialDepar
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 transition-colors text-sm text-gray-700 dark:text-gray-200 resize-none h-24"
                 />
               </div>
+
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium text-gray-700 dark:text-gray-300">ตำแหน่งในแผนก *</legend>
+                <p className="text-xs text-gray-500">เลือกได้หลายตำแหน่ง รายการนี้จะใช้ในหน้าเพิ่มผู้ใช้งาน</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {companyUserPositions.map(position => <label key={position} className="flex items-center gap-2 rounded-lg border border-gray-200 p-3 text-sm dark:border-gray-600">
+                    <input type="checkbox" checked={formData.positions.includes(position)} onChange={event => {
+                      const checked = event.target.checked;
+                      setFormData(previous => ({ ...previous, positions: checked ? [...previous.positions, position] : previous.positions.filter(item => item !== position) }));
+                    }} className="accent-teal-600" />{position}
+                  </label>)}
+                </div>
+              </fieldset>
 
               <div className="flex items-center gap-3 pt-2">
                 <input

@@ -32,7 +32,7 @@ export function SignDocumentButton({ documentId, version, templateId, inlineSign
   if (!canSign) return null
   const isSubmitter = signatureRole === 'submitter'
   return <>
-    <button type="button" onClick={() => setOpen(true)} className="h-9 rounded-md bg-blue-600 px-4 text-sm font-medium text-white">{isSubmitter ? 'ลงนามผู้ยื่น' : 'ลงนามผู้อนุมัติ'}</button>
+    <button type="button" onClick={() => setOpen(true)} className="h-9 rounded-md bg-blue-600 px-4 text-sm font-medium text-white">{isSubmitter ? 'ลงนามผู้ยื่น' : 'เซ็นอนุมัติ'}</button>
     {open && <div role="dialog" aria-modal="true" aria-labelledby="sign-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 no-print">
       <form className="w-full max-w-xl space-y-4 rounded-xl bg-white p-6 text-gray-900 shadow-xl" onSubmit={async event => {
         event.preventDefault()
@@ -43,13 +43,14 @@ export function SignDocumentButton({ documentId, version, templateId, inlineSign
           if (!result.success) { setError(result.error || 'ลงนามไม่สำเร็จ'); return }
           setOpen(false); setPassword('')
           if (isSubmitter) router.replace(`/documents/${documentId}`)
+          window.dispatchEvent(new Event('documentsChanged'))
           router.refresh()
         } catch { setError('เชื่อมต่อไม่สำเร็จ กรุณาลองอีกครั้ง') } finally { setBusy(false) }
       }}>
-        <h2 id="sign-title" className="text-xl font-bold">{isSubmitter ? 'ลงนามผู้ยื่นขออนุมัติ' : 'ลงนามผู้อนุมัติเอกสาร'}</h2>
+        <h2 id="sign-title" className="text-xl font-bold">{isSubmitter ? 'ลงนามผู้ยื่นขออนุมัติ' : 'เซ็นอนุมัติเอกสาร'}</h2>
         <p className="text-sm text-gray-600">{isSubmitter
           ? `วาดลายเซ็นในช่องด้านล่าง ${inlineSignature ? 'ลายเซ็นจะแสดงเหนือช่องผู้เสนอราคาในเอกสารหน้าเดียวกัน' : 'บันทึกการลงนามจะแสดงในเอกสารและ PDF'}`
-          : `${inlineSignature ? 'ลายเซ็นจะแสดงเหนือช่องผู้อนุมัติสั่งซื้อบนเอกสารหน้าเดียวกัน' : 'บันทึกการลงนามจะอยู่หน้าท้ายของ PDF'} เอกสารจะล็อกการแก้ไขหลังลงนาม`}</p>
+          : `${inlineSignature ? 'ลายเซ็นจะแสดงในช่องผู้อนุมัติบนเอกสาร' : 'บันทึกการลงนามจะอยู่หน้าท้ายของ PDF'} เมื่อยืนยัน ระบบจะอนุมัติเอกสารและล็อกการแก้ไข`}</p>
         <canvas ref={canvas} width={800} height={320} aria-label="ช่องวาดลายเซ็น" className="w-full touch-none rounded-lg border-2 border-gray-300 bg-white" onPointerDown={event => {
           if (busy) return
           drawing.current = true; event.currentTarget.setPointerCapture(event.pointerId)
@@ -64,7 +65,7 @@ export function SignDocumentButton({ documentId, version, templateId, inlineSign
         <label className="block text-sm">รหัสผ่านบัญชีเพื่อยืนยันผู้ลงนาม<input required type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} className="mt-1 w-full rounded border p-2" /></label>
         <label className="flex items-start gap-2 text-sm"><input required type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} />ฉันได้ตรวจเอกสารและยืนยันลงนามด้วยลายเซ็นนี้</label>
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-        <div className="flex justify-end gap-3"><button type="button" disabled={busy} onClick={() => { setOpen(false); setPassword(''); setInk(false); setConsent(false) }}>ยกเลิก</button><button disabled={busy || !ink} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50">{busy ? 'กำลังลงนาม...' : 'ยืนยันลงนาม'}</button></div>
+        <div className="flex justify-end gap-3"><button type="button" disabled={busy} onClick={() => { setOpen(false); setPassword(''); setInk(false); setConsent(false) }}>ยกเลิก</button><button disabled={busy || !ink} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50">{busy ? 'กำลังลงนาม...' : isSubmitter ? 'ยืนยันลงนาม' : 'ยืนยันเซ็นอนุมัติ'}</button></div>
       </form>
     </div>}
   </>

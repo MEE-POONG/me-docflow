@@ -1,9 +1,11 @@
 'use server';
 
+import { requireDocumentUser, documentVisibilityWhere } from '@/lib/document-access';
 import { prisma } from '@/lib/prisma';
 
 export async function getReportsData(email: string, period: '30d' | 'year' | 'all' = 'year') {
-  const company = await prisma.company.findFirst({ where: { email } });
+  const user = await requireDocumentUser();
+  const company = user.company;
   if (!company) return null;
 
   const now = new Date();
@@ -12,7 +14,7 @@ export async function getReportsData(email: string, period: '30d' | 'year' | 'al
     : period === 'year'
       ? new Date(now.getFullYear(), 0, 1)
       : undefined;
-  const where = { companyId: company.id, ...(dateFrom ? { createdAt: { gte: dateFrom } } : {}) };
+  const where = { ...documentVisibilityWhere(user), ...(dateFrom ? { createdAt: { gte: dateFrom } } : {}) };
 
   const documents = await prisma.document.findMany({
     where,

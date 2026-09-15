@@ -1,23 +1,13 @@
 'use server';
 
+import { requireDocumentUser, documentVisibilityWhere } from '@/lib/document-access';
 import { prisma } from '@/lib/prisma';
 import { dashboardErrorMessage } from '@/lib/dashboard-error';
 
 async function resolveCompanyId(email: string, companyId?: string) {
-  if (companyId) {
-    const company = await prisma.company.findUnique({ where: { id: companyId }, select: { id: true } });
-    if (company) return company.id;
-  }
-
-  const companyUser = await prisma.companyUser.findFirst({
-    where: { email },
-    select: { companyId: true },
-    orderBy: { createdAt: 'asc' },
-  });
-  if (companyUser) return companyUser.companyId;
-
-  const company = await prisma.company.findFirst({ where: { email }, select: { id: true } });
-  return company?.id ?? null;
+  const user = await requireDocumentUser();
+  if (companyId && companyId !== user.companyId) throw new Error('บริษัทไม่ถูกต้อง');
+  return user.companyId;
 }
 
 export async function getDashboardData(email: string, companyId?: string) {
@@ -25,6 +15,7 @@ export async function getDashboardData(email: string, companyId?: string) {
     if (!email) return { error: 'ไม่พบข้อมูลผู้ใช้งาน กรุณาเข้าสู่ระบบใหม่' };
     const resolvedCompanyId = await resolveCompanyId(email, companyId);
     if (!resolvedCompanyId) return { error: 'ไม่พบบริษัทสำหรับผู้ใช้งานนี้ กรุณาเข้าสู่ระบบใหม่หรือติดต่อผู้ดูแลระบบ' };
+  const documentScope = documentVisibilityWhere(await requireDocumentUser());
   const accessibleResourceWhere = { OR: [{ companyId: resolvedCompanyId }, { isGlobal: true }] };
 
   // 1. Summary Cards
@@ -36,10 +27,10 @@ export async function getDashboardData(email: string, companyId?: string) {
     customers,
     employees
   ] = await Promise.all([
-    prisma.document.count({ where: { companyId: resolvedCompanyId } }),
-    prisma.document.count({ where: { companyId: resolvedCompanyId, status: 'DRAFT' } }),
-    prisma.document.count({ where: { companyId: resolvedCompanyId, status: 'PENDING' } }),
-    prisma.document.count({ where: { companyId: resolvedCompanyId, status: 'APPROVED' } }),
+    prisma.document.count({ where: { ...documentScope } }),
+    prisma.document.count({ where: { ...documentScope, status: 'DRAFT' } }),
+    prisma.document.count({ where: { ...documentScope, status: 'PENDING' } }),
+    prisma.document.count({ where: { ...documentScope, status: 'APPROVED' } }),
     prisma.businessPartner.count({ where: { companyId: resolvedCompanyId } }),
     prisma.employee.count({ where: { companyId: resolvedCompanyId } })
   ]);
@@ -60,7 +51,7 @@ export async function getDashboardData(email: string, companyId?: string) {
   const startOfYear = new Date(currentYear, 0, 1);
   
   const docsThisYear = await prisma.document.findMany({
-    where: { companyId: resolvedCompanyId, createdAt: { gte: startOfYear } },
+    where: { ...documentScope, createdAt: { gte: startOfYear } },
     select: { createdAt: true }
   });
   
@@ -83,7 +74,7 @@ export async function getDashboardData(email: string, companyId?: string) {
   // 3. Category Progress Bars
   const categoryGroups = await prisma.document.groupBy({
     by: ['categoryId'],
-    where: { companyId: resolvedCompanyId },
+    where: { ...documentScope },
     _count: { id: true }
   });
   
@@ -121,7 +112,7 @@ export async function getDashboardData(email: string, companyId?: string) {
 
   // 4. Tables
   const recentDocs = await prisma.document.findMany({
-    where: { companyId: resolvedCompanyId },
+    where: { ...documentScope },
     orderBy: { createdAt: 'desc' },
     take: 5,
     include: {
@@ -131,7 +122,7 @@ export async function getDashboardData(email: string, companyId?: string) {
   });
   
   const pendingDocs = await prisma.document.findMany({
-    where: { companyId: resolvedCompanyId, status: 'PENDING' },
+    where: { ...documentScope, status: 'PENDING' },
     orderBy: { createdAt: 'desc' },
     take: 5,
     include: {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition, useEffect } from 'react';
+import { canApproveDocuments } from '@/app/actions/approval';
 import {
   Plus, Edit2, Trash2, X, Search, Loader2,
   FileText, Clock, CheckCircle, XCircle, Archive, Ban, ChevronDown
@@ -86,6 +87,8 @@ export default function DocumentsClient({
   docTypes: initialDocTypes,
   initialTemplates = [],
 }: Props) {
+  const [canApprove, setCanApprove] = useState(false);
+  useEffect(() => { canApproveDocuments().then(setCanApprove).catch(() => setCanApprove(false)); }, []);
   const [documents, setDocuments] = useState<DocumentWithRelations[]>(initialDocuments);
   const [docTypes, setDocTypes] = useState<DocType[]>(initialDocTypes);
   const [templates, setTemplates] = useState<Template[]>(initialTemplates);
@@ -372,7 +375,7 @@ export default function DocumentsClient({
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {doc.status === 'PENDING' && (
+                        {canApprove && doc.status === 'PENDING' && (
                           <button
                             onClick={() => handleApprove(doc.id, doc.title)}
                             disabled={isPending}
@@ -546,7 +549,7 @@ export default function DocumentsClient({
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as DocumentStatus })}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-400 transition-colors text-sm text-gray-700 dark:text-gray-200"
                 >
-                  {ALL_STATUSES.map((s) => (
+                  {ALL_STATUSES.filter(s => s !== 'APPROVED').map((s) => (
                     <option key={s} value={s}>
                       {STATUS_CONFIG[s].label}
                     </option>

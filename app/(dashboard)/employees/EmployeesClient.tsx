@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X, Search, Loader2 } from 'lucide-react';
-import { createEmployee, updateEmployee, deleteEmployee, getEmployees, getDepartments } from './actions';
+import { useState, useTransition, useEffect, useRef } from 'react';
+import { Edit2, Trash2, X, Search, Loader2 } from 'lucide-react';
+import { updateEmployee, deleteEmployee, getEmployees, getDepartments } from './actions';
+import { getDocumentActor } from '@/lib/document-actor';
 import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 // Types matched to schema and actions
@@ -12,6 +13,7 @@ type Department = {
 };
 
 type Employee = {
+  companyUserId?: string | null;
   id: string;
   code: string | null;
   name: string;
@@ -47,29 +49,28 @@ export default function EmployeesClient({
   const [filterDepartment, setFilterDepartment] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL');
   
+  const [loadError, setLoadError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const loadRequest = useRef(0);
   useEffect(() => {
     const fetchMyEmployees = async () => {
-      const userStr = localStorage.getItem("me_docflow_current_user");
-      let currentEmail = "melisara@siamretail.co.th";
-      if (userStr) {
-        try {
-          const u = JSON.parse(userStr);
-          if (u.email) currentEmail = u.email;
-        } catch (e) {}
-      }
+      const request = ++loadRequest.current;
+      const actor = getDocumentActor();
+      setEmployees([]); setClientDepartments([]); setLoading(true); setLoadError('');
+      setIsModalOpen(false); setFilterDepartment('ALL'); setFilterStatus('ALL');
       try {
-        const myEmps = await getEmployees(currentEmail);
-        setEmployees(myEmps as any);
-        const myDepts = await getDepartments(currentEmail);
-        setClientDepartments(myDepts as any);
-      } catch (err) {
-        setEmployees(initialEmployees);
-        setClientDepartments(departments);
-      }
+        const [rows, depts] = await Promise.all([getEmployees(actor), getDepartments(actor)]);
+        if (request !== loadRequest.current) return;
+        setEmployees(rows); setClientDepartments(depts);
+      } catch (error) {
+        if (request === loadRequest.current) setLoadError(error instanceof Error ? error.message : 'โหลดรายชื่อพนักงานไม่สำเร็จ');
+      } finally { if (request === loadRequest.current) setLoading(false); }
     };
-    fetchMyEmployees();
-  }, [initialEmployees]);
-  
+    void fetchMyEmployees();
+    window.addEventListener('activeCompanyChanged', fetchMyEmployees);
+    return () => { ++loadRequest.current; window.removeEventListener('activeCompanyChanged', fetchMyEmployees); };
+  }, []);
+
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -92,6 +93,7 @@ export default function EmployeesClient({
     const statusMatch = filterStatus === 'ALL' || emp.status === filterStatus;
     return searchMatch && deptMatch && statusMatch;
   });
+  const showEmployeeActions = filteredEmployees.some(employee => !employee.companyUserId);
 
   const formatDateString = (date?: Date | null) => {
     if (!date) return '';
@@ -152,24 +154,15 @@ export default function EmployeesClient({
           departmentId: restFormData.departmentId || undefined,
         };
 
-        const userStr = localStorage.getItem("me_docflow_current_user");
-        let currentEmail = "melisara@siamretail.co.th";
-        if (userStr) {
-          try {
-            const u = JSON.parse(userStr);
-            if (u.email) currentEmail = u.email;
-          } catch (e) {}
-        }
+        const actor = getDocumentActor();
 
         if (editingId) {
-          await updateEmployee(editingId, currentEmail, { ...payload, employeeEmail: payload.email }, submitData);
-        } else {
-          await createEmployee(currentEmail, { ...payload, employeeEmail: payload.email }, submitData);
+          await updateEmployee(editingId, actor, { ...payload, employeeEmail: payload.email }, submitData);
         }
         
         // Refetch employees after mutation to update the list locally
-        const myEmps = await getEmployees(currentEmail);
-        setEmployees(myEmps as any);
+        const myEmps = await getEmployees(actor);
+        if (getDocumentActor().companyId === actor.companyId) setEmployees(myEmps);
         
         setIsModalOpen(false);
       } catch (error) {
@@ -182,18 +175,11 @@ export default function EmployeesClient({
     if (confirm(t.employees.confirmDelete)) {
       startTransition(async () => {
         try {
-          const userStr = localStorage.getItem("me_docflow_current_user");
-          let currentEmail = "melisara@siamretail.co.th";
-          if (userStr) {
-            try {
-              const u = JSON.parse(userStr);
-              if (u.email) currentEmail = u.email;
-            } catch (e) {}
-          }
-          await deleteEmployee(id, currentEmail);
+          const actor = getDocumentActor();
+          await deleteEmployee(id, actor);
           
-          const myEmps = await getEmployees(currentEmail);
-          setEmployees(myEmps as any);
+          const myEmps = await getEmployees(actor);
+          if (getDocumentActor().companyId === actor.companyId) setEmployees(myEmps);
         } catch (error) {
           console.error('Failed to delete employee', error);
         }
@@ -216,6 +202,7 @@ export default function EmployeesClient({
   return (
     <div className="flex flex-col w-full max-w-7xl mx-auto py-8">
       
+      {loadError && <p role="alert" className="mb-4 rounded bg-red-50 p-3 text-red-700">{loadError}</p>}
       {/* Header */}
       <div className="mb-8">
         <div className="text-xs font-bold text-emerald-600 dark:text-emerald-500 tracking-wider mb-1 uppercase">
@@ -232,12 +219,7 @@ export default function EmployeesClient({
       {/* Toolbar / Search & Filter */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         
-        <button 
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" /> {t.employees.addEmployee}
-        </button>
+        <p className="text-sm text-gray-500">พนักงานทั้งหมด {employees.length} คน</p>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-3 flex flex-wrap items-center gap-3 transition-colors">
           <div className="relative min-w-[240px]">
@@ -292,13 +274,13 @@ export default function EmployeesClient({
                 <th className="px-3 py-3 font-normal whitespace-nowrap">{t.employees.colStartDate}</th>
                 <th className="px-3 py-3 font-normal whitespace-nowrap">{t.employees.colEndDate}</th>
                 <th className="px-3 py-3 font-normal whitespace-nowrap">{t.common.status}</th>
-                <th className="px-3 py-3 font-normal text-right whitespace-nowrap">{t.common.manage}</th>
+                {showEmployeeActions && <th className="px-3 py-3 font-normal text-right whitespace-nowrap">{t.common.manage}</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
               {filteredEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-3 py-8 text-center text-gray-400 dark:text-gray-500">
+                  <td colSpan={showEmployeeActions ? 11 : 10} className="px-3 py-8 text-center text-gray-400 dark:text-gray-500">
                     {t.employees.empty}
                   </td>
                 </tr>
@@ -324,8 +306,9 @@ export default function EmployeesClient({
                         {emp.status}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-right whitespace-nowrap">
+                    {showEmployeeActions && <td className="px-3 py-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
+                        {!emp.companyUserId && <>
                         <button
                           onClick={() => handleOpenModal(emp)}
                           className="flex items-center gap-1.5 px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors font-medium"
@@ -338,8 +321,9 @@ export default function EmployeesClient({
                         >
                           {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} {t.common.delete}
                         </button>
+                        </>}
                       </div>
-                    </td>
+                    </td>}
                   </tr>
                 ))
               )}

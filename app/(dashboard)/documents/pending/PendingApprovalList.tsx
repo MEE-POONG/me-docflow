@@ -2,15 +2,14 @@
 import { getDocumentActor } from '@/lib/document-actor'
 
 import { useState, useEffect, useTransition } from 'react'
+import { canApproveDocuments } from '@/app/actions/approval';
 import { CheckCircle2, XCircle, Eye, Search, Filter, Loader2, AlertCircle, Printer, X } from 'lucide-react'
 import { approveDocument, rejectDocument } from '@/app/actions/approval'
 import { format } from 'date-fns'
 import { th, enUS } from 'date-fns/locale'
 import Link from 'next/link'
+import { StandardDocumentPrintLayout } from '@/components/templates/StandardDocumentPrintLayout'
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
-import { PurchaseOrderPrintLayout } from '@/components/templates/PurchaseOrderPrintLayout'
-import { InvoicePrintLayout } from '@/components/templates/InvoicePrintLayout'
-import { WithholdingTaxPrintLayout } from '@/components/templates/WithholdingTaxPrintLayout'
 import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import { getPendingDocumentsByCompany, getTemplatesByCompany } from '../actions'
@@ -90,6 +89,8 @@ function hasLayoutElements(layoutJson: unknown) {
 export default function PendingApprovalList({ documents, templates }: Props) {
   const { t, language } = useLanguage()
   const dateLocale = language === 'en' ? enUS : th
+  const [canApprove, setCanApprove] = useState(false);
+  useEffect(() => { canApproveDocuments().then(setCanApprove).catch(() => setCanApprove(false)); }, []);
   const [searchTerm, setSearchTerm] = useState('')
   const [isPending, startTransition] = useTransition()
   const [processingId, setProcessingId] = useState<string | null>(null)
@@ -164,7 +165,8 @@ export default function PendingApprovalList({ documents, templates }: Props) {
 
     setProcessingId(id)
     startTransition(async () => {
-      await approveDocument(id)
+      const result = await approveDocument(id)
+      if (!result.success) { alert(result.error); setProcessingId(null); return }
       window.dispatchEvent(new Event('documentsChanged'))
       setProcessingId(null)
     })
@@ -329,14 +331,14 @@ export default function PendingApprovalList({ documents, templates }: Props) {
                       </button>
                       {doc.status === 'PENDING' && (
                         <>
-                          <button
+                          {canApprove && <button
                             onClick={() => handleApprove(doc.id)}
                             disabled={isPending && processingId === doc.id}
                             className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors disabled:opacity-50"
                             title={t.pendingApproval.approve}
                           >
                             {isPending && processingId === doc.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-                          </button>
+                          </button>}
                           <button
                             onClick={() => setShowRejectModal(doc.id)}
                             disabled={isPending && processingId === doc.id}
@@ -477,47 +479,9 @@ export default function PendingApprovalList({ documents, templates }: Props) {
 
               <div className="p-5 overflow-auto flex-1 bg-gray-50 dark:bg-gray-900/40">
                 {(() => {
-                  const getTemplateContent = (doc: Document) => {
-                    if (!doc.templateId) return null
-                    const template = myTemplates.find(t => t.id === doc.templateId)
-                    if (!template) return null
-                    return template.layoutJson
-                  }
                   const selectedTemplate = myTemplates.find(t => t.id === printTemplateId)
-                  const isPO = printPreviewDoc.documentType?.name?.includes('สั่งซื้อ') || printPreviewDoc.documentType?.name?.toUpperCase().includes('PO') || printPreviewDoc.documentType?.name?.toLowerCase().includes('purchase order')
-                  const isInvoice = printPreviewDoc.documentType?.name?.includes('ใบแจ้งหนี้') || printPreviewDoc.documentType?.name?.includes('ใบวางบิล') || printPreviewDoc.documentType?.name?.toLowerCase().includes('invoice') || printPreviewDoc.documentType?.name?.toLowerCase().includes('billing note')
-                  
-                  if (isPO && (!selectedTemplate || !hasLayoutElements(selectedTemplate.layoutJson))) {
-                    return (
-                      <div className="bg-white p-4 mx-auto" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
-                        <PurchaseOrderPrintLayout data={mapDocumentToTemplateData(printPreviewDoc, printPreviewDoc.company, printPreviewDoc.createdBy)} />
-                      </div>
-                    )
-                  }
-
-                  if (isInvoice && (!selectedTemplate || !hasLayoutElements(selectedTemplate.layoutJson))) {
-                    return (
-                      <div className="bg-white p-4 mx-auto" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
-                        <InvoicePrintLayout data={mapDocumentToTemplateData(printPreviewDoc, printPreviewDoc.company, printPreviewDoc.createdBy)} />
-                      </div>
-                    )
-                  }
-
-                  const isWithholdingTax = printPreviewDoc.documentType?.name?.includes('หัก ณ ที่จ่าย') || printPreviewDoc.documentType?.name?.includes('50 ทวิ')
-                  if (isWithholdingTax && (!selectedTemplate || !hasLayoutElements(selectedTemplate.layoutJson))) {
-                    return (
-                      <div className="bg-white p-4 mx-auto" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
-                        <WithholdingTaxPrintLayout data={mapDocumentToTemplateData(printPreviewDoc, printPreviewDoc.company, printPreviewDoc.createdBy)} />
-                      </div>
-                    )
-                  }
-
                   if (!selectedTemplate || !hasLayoutElements(selectedTemplate.layoutJson)) {
-                    return (
-                      <div className="p-10 text-center text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                        ไม่มีตัวอย่างสำหรับรูปแบบมาตรฐาน — เอกสารจะพิมพ์ด้วยรูปแบบทั่วไป
-                      </div>
-                    )
+                    return <StandardDocumentPrintLayout document={printPreviewDoc} company={printPreviewDoc.company} createdBy={printPreviewDoc.createdBy} />
                   }
                   return (
                     <DocumentPreview

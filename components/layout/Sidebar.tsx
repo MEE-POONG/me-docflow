@@ -20,7 +20,7 @@ import {
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSidebar } from "./SidebarContext";
 
-export default function Sidebar() {
+export default function Sidebar({ canManagePeople = false }: { canManagePeople?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [activeCompanyName, setActiveCompanyName] = useState("บริษัท ของคุณ จำกัด");
@@ -181,7 +181,7 @@ export default function Sidebar() {
               {isOpen && expanded.company && (
                 <div className="pl-11 pr-3 py-1 space-y-1">
                   <Link href="/organizations" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.customersVendors}</Link>
-                  <Link href="/employees" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.employees}</Link>
+                  {canManagePeople && <Link href="/employees" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.employees}</Link>}
                   <Link href="/departments" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.departments}</Link>
                 </div>
               )}
@@ -206,7 +206,7 @@ export default function Sidebar() {
               {isOpen && expanded.settings && (
                 <div className="pl-11 pr-3 py-1 space-y-1">
                   <Link href="/settings/company" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.companySettings}</Link>
-                  <Link href="/settings/users" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.users}</Link>
+                  {canManagePeople && <Link href="/settings/users" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.users}</Link>}
                   <Link href="/settings/documents" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">{t.sidebar.documentNumbers}</Link>
                   <Link href="/settings/categories" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">ตั้งค่าหมวดหมู่เอกสาร</Link>
                   <Link href="/settings/templates" className="block px-3 py-2 text-[13px] text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors">ตั้งค่าเทมเพลตกลาง</Link>

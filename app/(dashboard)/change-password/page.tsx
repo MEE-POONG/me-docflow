@@ -152,11 +152,15 @@ export default function ChangePasswordPage() {
     setTimeout(() => setMyPasswordSuccess(false), 4000);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm("คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?")) {
+      try {
+        const response = await fetch('/api/auth/logout', { method: 'POST' });
+        if (!response.ok) throw new Error();
+      } catch { alert('ออกจากระบบไม่สำเร็จ กรุณาลองอีกครั้ง'); return; }
       localStorage.removeItem("me_docflow_user_session");
       localStorage.removeItem("me_docflow_current_user");
-      router.push("/login");
+      window.location.href = '/login';
     }
   };
 

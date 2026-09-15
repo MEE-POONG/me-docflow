@@ -1,5 +1,7 @@
 'use server'
 
+import { applyLeaveEmployee } from '@/lib/leave-employee'
+import { requireDocumentUser, requireDocumentAccess } from '@/lib/document-access'
 import { signaturePayload } from '@/lib/document-signature'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
@@ -7,15 +9,7 @@ import type { DocumentActor } from '@/lib/document-actor'
 import { defaultNumberConfig, formatDocumentNumber, numberPeriod, validateNumberConfig, type NumberSettingsRow } from '@/lib/document-numbering'
 
 async function resolveActor(actor: DocumentActor) {
-  if (!actor || !/^[a-fA-F0-9]{24}$/.test(actor.companyId) || !actor.userEmail) {
-    throw new Error('ไม่พบข้อมูลบริษัทหรือผู้ใช้ กรุณาเข้าสู่ระบบใหม่')
-  }
-  const user = await prisma.companyUser.findFirst({
-    where: { companyId: actor.companyId, email: actor.userEmail.trim().toLowerCase(), status: 'ACTIVE' },
-    select: { id: true, companyId: true, company: { select: { id: true, name: true, taxId: true, address: true, phone: true, logoUrl: true } } },
-  })
-  if (!user) throw new Error('ไม่พบผู้ใช้ในบริษัทที่เลือก กรุณาเข้าสู่ระบบใหม่')
-  return user
+  return requireDocumentUser(actor)
 }
 
 export async function getDocumentCompany(actor: DocumentActor) {
@@ -134,6 +128,7 @@ export async function createDocument(input: DocumentInput) {
   try {
     const user = await resolveActor(input)
     await validateForm(input)
+    input = { ...input, dataJson: await applyLeaveEmployee(input.dataJson, input.documentTypeId) }
     const type = await prisma.documentType.findUniqueOrThrow({ where: { id: input.documentTypeId } })
     const defaults = defaultNumberConfig(type)
     const now = new Date()
@@ -183,7 +178,9 @@ export async function createDocument(input: DocumentInput) {
 export async function updateDocument(id: string, input: DocumentInput) {
   try {
     const user = await resolveActor(input)
+    await requireDocumentAccess(id, 'edit', input)
     await validateForm(input)
+    input = { ...input, dataJson: await applyLeaveEmployee(input.dataJson, input.documentTypeId, id) }
     const document = await prisma.document.update({
       where: { id, companyId: user.companyId, isLocked: false, status: { in: ['DRAFT', 'REJECTED'] } },
       data: documentData(input),
@@ -199,6 +196,7 @@ export async function updateDocument(id: string, input: DocumentInput) {
 export async function deleteDocument(id: string, actor: DocumentActor) {
   try {
     const user = await resolveActor(actor)
+    await requireDocumentAccess(id, 'manage', actor)
     await prisma.document.delete({ where: { id, companyId: user.companyId, isLocked: false } })
     refreshDocuments(id)
     return { success: true }
@@ -211,8 +209,9 @@ export async function deleteDocument(id: string, actor: DocumentActor) {
 export async function submitDocument(id: string, actor: DocumentActor) {
   try {
     const user = await resolveActor(actor)
+    await requireDocumentAccess(id, 'edit', actor)
     const current = await prisma.document.findFirst({
-      where: { id, companyId: user.companyId, createdById: user.id },
+      where: { id, companyId: user.companyId },
       select: { dataJson: true, isLocked: true, status: true },
     })
     const storedData = current && (typeof current.dataJson === 'string' ? JSON.parse(current.dataJson) : current.dataJson) as Record<string, any> | null
@@ -220,12 +219,12 @@ export async function submitDocument(id: string, actor: DocumentActor) {
       && storedData?.electronicSignature?.userId === user.id && !storedData?.approvalSubmittedAt ? storedData.electronicSignature : null
     const submitterSignature = storedData?.submitterSignature || legacySubmitterSignature
     if (!current || !storedData || !submitterSignature || submitterSignature.userId !== user.id) {
-      throw new Error('ผู้สร้างเอกสารต้องลงนามก่อนยื่นขออนุมัติ')
+      throw new Error('ผู้ยื่นต้องลงนามด้วยบัญชีตนเองก่อนยื่นขออนุมัติ')
     }
     if (storedData.approvalSubmittedAt) throw new Error('เอกสารนี้ถูกยื่นขออนุมัติแล้ว')
     const approvalSubmittedAt = new Date().toISOString()
     const document = await prisma.document.update({
-      where: { id, companyId: user.companyId, createdById: user.id, isLocked: current.isLocked, status: { in: ['DRAFT', 'REJECTED', 'PENDING'] } },
+      where: { id, companyId: user.companyId, isLocked: current.isLocked, status: { in: ['DRAFT', 'REJECTED', 'PENDING'] } },
       data: { status: 'PENDING', isLocked: false, dataJson: { ...signaturePayload(storedData), submitterSignature, approvalSubmittedAt } },
     })
     refreshDocuments(id)

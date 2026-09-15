@@ -4,13 +4,12 @@ import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, Loader2, Link as LinkIcon, ArrowLeft, ArrowRight, Search, Plus, Trash2, Printer, Download, MoreHorizontal, Share2, FileText, CheckCircle2, Send, Eye, X, Upload } from 'lucide-react'
 import { createDocument, updateDocument, getDocumentFormOptions } from '@/app/actions/documents'
+import { getLeaveEmployeeInfo } from '@/app/actions/leave-employee'
 import { getDocumentActor } from '@/lib/document-actor'
 import { validateDocumentFields } from '@/lib/document-form-validation'
+import { calculateLeaveDays } from '@/lib/leave-days'
+import { StandardDocumentPrintLayout } from '@/components/templates/StandardDocumentPrintLayout'
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
-import { PurchaseOrderPrintLayout } from '@/components/templates/PurchaseOrderPrintLayout'
-import { QuotationPrintLayout } from '@/components/templates/QuotationPrintLayout'
-import { InvoicePrintLayout } from '@/components/templates/InvoicePrintLayout'
-import { WithholdingTaxPrintLayout } from '@/components/templates/WithholdingTaxPrintLayout'
 import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import Link from 'next/link'
@@ -126,6 +125,36 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
   const [customData, setCustomData] = useState<Record<string, any>>(parsedData || {})
 
+  const [employeeInfoLoading, setEmployeeInfoLoading] = useState(false)
+  const [employeeInfoError, setEmployeeInfoError] = useState('')
+  const leaveTypeName = documentTypes.find(type => type.id === docInfo.documentTypeId)?.name || ''
+  const isLeaveEmployeeForm = leaveTypeName.includes('ลางาน') || leaveTypeName.toLowerCase().includes('leave')
+  const employeeDocumentId = savedDocument?.id || initialData?.id
+  useEffect(() => {
+    if (!isLeaveEmployeeForm) return
+    let active = true
+    async function load() {
+      setEmployeeInfoLoading(true); setEmployeeInfoError('')
+      try {
+        const fields = await getLeaveEmployeeInfo(employeeDocumentId)
+        if (active) setCustomData(previous => ({...previous,...fields}))
+      } catch(e) { if(active) setEmployeeInfoError(e instanceof Error ? e.message : 'โหลดข้อมูลพนักงานไม่สำเร็จ') }
+      finally { if(active) setEmployeeInfoLoading(false) }
+    }
+    void load(); window.addEventListener('focus',load)
+    return () => {active=false;window.removeEventListener('focus',load)}
+  },[isLeaveEmployeeForm,employeeDocumentId])
+
+  const handleLeaveDateChange = (field: 'leave_startDate' | 'leave_endDate', value: string) => {
+    setCustomData(previous => {
+      const next = { ...previous, [field]: value }
+      return {
+        ...next,
+        leave_totalDays: calculateLeaveDays(next.leave_startDate || '', next.leave_endDate || ''),
+      }
+    })
+  }
+
   // Structured Form Data
   const [formData, setFormData] = useState({
     partnerType: parsedData.partnerType || 'company', // company, individual
@@ -238,6 +267,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (isLeaveEmployeeForm && (employeeInfoLoading || employeeInfoError)) { alert(employeeInfoError || 'กำลังโหลดข้อมูลพนักงาน'); return }
     if (!validateDocumentFields(e.currentTarget as HTMLFormElement)) return
 
     // The standard document form is always the primary data source. Template
@@ -1940,22 +1970,25 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-rose-100 dark:border-rose-800/50">
                         <div className="md:col-span-2 border-b border-rose-100 dark:border-rose-800/50 pb-2 mb-2">
                           <h3 className="font-bold text-rose-700 dark:text-rose-500">ข้อมูลพนักงาน (Employee Info)</h3>
+                          <p className="mt-2 text-xs text-gray-500">ดึงข้อมูลของผู้สร้างเอกสารอัตโนมัติจากบัญชีพนักงาน หากข้อมูลไม่ครบ กรุณาให้หัวหน้าตรวจข้อมูลพนักงาน</p>
+                          {employeeInfoLoading && <p role="status" className="mt-2 text-sm">กำลังโหลดข้อมูลพนักงาน...</p>}
+                          {employeeInfoError && <p role="alert" className="mt-2 text-sm text-red-600">{employeeInfoError}</p>}
                         </div>
                         <div>
                           <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ชื่อ-นามสกุลพนักงาน (Name)</label>
-                          <input type="text" value={customData.leave_employeeName || ''} onChange={e => setCustomData({...customData, leave_employeeName: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
+                          <input type="text" value={customData.leave_employeeName || ''} readOnly placeholder="ยังไม่มีข้อมูลในระบบ" className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
                         </div>
                         <div>
                           <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">รหัสพนักงาน (Emp ID)</label>
-                          <input type="text" value={customData.leave_employeeId || ''} onChange={e => setCustomData({...customData, leave_employeeId: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
+                          <input type="text" value={customData.leave_employeeId || ''} readOnly placeholder="ยังไม่มีข้อมูลในระบบ" className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
                         </div>
                         <div>
                           <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ตำแหน่ง (Position)</label>
-                          <input type="text" value={customData.leave_position || ''} onChange={e => setCustomData({...customData, leave_position: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
+                          <input type="text" value={customData.leave_position || ''} readOnly placeholder="ยังไม่มีข้อมูลในระบบ" className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
                         </div>
                         <div>
                           <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">แผนก (Department)</label>
-                          <input type="text" value={customData.leave_department || ''} onChange={e => setCustomData({...customData, leave_department: e.target.value})} className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
+                          <input type="text" value={customData.leave_department || ''} readOnly placeholder="ยังไม่มีข้อมูลในระบบ" className="w-full p-2.5 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
                         </div>
                       </div>
 
@@ -2000,11 +2033,14 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ตั้งแต่วันที่ (Start Date)</label>
-                            <input type="date" value={customData.leave_startDate || ''} onChange={e => setCustomData({...customData, leave_startDate: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
+                            <input type="date" value={customData.leave_startDate || ''} onChange={e => handleLeaveDateChange('leave_startDate', e.target.value)} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
                           </div>
                           <div>
                             <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">ถึงวันที่ (End Date)</label>
-                            <input type="date" value={customData.leave_endDate || ''} onChange={e => setCustomData({...customData, leave_endDate: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
+                            <input type="date" min={customData.leave_startDate || undefined} value={customData.leave_endDate || ''} onChange={e => handleLeaveDateChange('leave_endDate', e.target.value)} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" />
+                            {customData.leave_startDate && customData.leave_endDate && customData.leave_endDate < customData.leave_startDate && (
+                              <p role="alert" className="mt-1 text-sm text-rose-600">วันสิ้นสุดต้องไม่อยู่ก่อนวันเริ่มลา</p>
+                            )}
                           </div>
                           <div>
                             <label className="block text-sm font-bold text-gray-600 dark:text-gray-300 mb-1">รวมเป็นเวลา (Total Days)</label>
@@ -2012,6 +2048,7 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                               <input type="number" step="0.5" min="0" value={customData.leave_totalDays || ''} onChange={e => setCustomData({...customData, leave_totalDays: e.target.value})} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md outline-none focus:ring-2 focus:ring-rose-500/50 dark:bg-gray-700" placeholder="0" />
                               <span className="text-gray-600 dark:text-gray-400 font-medium">วัน (Days)</span>
                             </div>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">คำนวณรวมวันเริ่มและวันสิ้นสุด รวมวันหยุด สามารถปรับจำนวนวันได้กรณีลาครึ่งวัน</p>
                           </div>
                         </div>
                       </div>
@@ -5626,64 +5663,8 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 )
               }
               const selectedDocType = documentTypes.find(t => t.id === docInfo.documentTypeId)
-              const isPO = selectedDocType?.name?.includes('สั่งซื้อ') || selectedDocType?.name?.toUpperCase().includes('PO') || selectedDocType?.name?.toLowerCase().includes('purchase order')
-              const isInvoice = selectedDocType?.name?.includes('ใบแจ้งหนี้') || selectedDocType?.name?.includes('ใบวางบิล') || selectedDocType?.name?.toLowerCase().includes('invoice') || selectedDocType?.name?.toLowerCase().includes('billing note')
-
-              if (isPO && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
-                return (
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
-                    <div className="bg-gray-50 dark:bg-gray-800 p-3 border-b border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      ตัวอย่างใบสั่งซื้อ (Purchase Order)
-                    </div>
-                    <div className="p-4 bg-gray-100 dark:bg-gray-900 overflow-x-auto">
-                      <div className="min-w-[800px] transform origin-top left-1/2 -translate-x-1/2 relative" style={{ transform: 'scale(0.85)' }}>
-                        <PurchaseOrderPrintLayout data={mapDocumentToTemplateData(savedDocument, company, { name: getCurrentUser().name })} />
-                      </div>
-                    </div>
-                  </div>
-                )
-              }
-
-              if (isQuotationDocument && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
-                return <QuotationPrintLayout data={mapDocumentToTemplateData(savedDocument, company, { name: getCurrentUser().name })} />
-              }
-
-              if (isInvoice && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
-                return (
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
-                    <div className="bg-gray-50 dark:bg-gray-800 p-3 border-b border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      ตัวอย่างใบแจ้งหนี้ (Invoice)
-                    </div>
-                    <div className="p-4 bg-gray-100 dark:bg-gray-900 overflow-x-auto">
-                      <div className="min-w-[800px] transform origin-top left-1/2 -translate-x-1/2 relative" style={{ transform: 'scale(0.85)' }}>
-                        <InvoicePrintLayout data={mapDocumentToTemplateData(savedDocument, company, { name: getCurrentUser().name })} />
-                      </div>
-                    </div>
-                  </div>
-                )
-              }
-
-              const isWithholdingTax = selectedDocType?.name?.includes('หัก ณ ที่จ่าย') || selectedDocType?.name?.includes('50 ทวิ')
-              if (isWithholdingTax && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
-                return (
-                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
-                    <div className="bg-gray-50 dark:bg-gray-800 p-3 border-b border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      ตัวอย่างหนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)
-                    </div>
-                    <div className="p-4 bg-gray-100 dark:bg-gray-900 overflow-x-auto">
-                      <div className="min-w-[800px] transform origin-top left-1/2 -translate-x-1/2 relative flex justify-center" style={{ transform: 'scale(0.85)' }}>
-                        <WithholdingTaxPrintLayout data={mapDocumentToTemplateData(savedDocument, company, { name: getCurrentUser().name })} />
-                      </div>
-                    </div>
-                  </div>
-                )
-              }
               if (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson)) {
-                return (
-                  <div className="p-10 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                    {t.createDocument.noTemplateDesign}
-                  </div>
-                )
+                return <StandardDocumentPrintLayout document={savedDocument} company={company} createdBy={{ name: getCurrentUser().name }} documentTypeName={selectedDocType?.name} />
               }
               return (
                 <DocumentPreview
@@ -5754,45 +5735,8 @@ export default function CreateDocumentForm({ folders, tags, categories, document
                 };
 
                 const previewTemplate = templates.find(pt => pt.id === previewTemplateId);
-                const selectedDocType = documentTypes.find(t => t.id === docInfo.documentTypeId);
-                const isPO = selectedDocType?.name?.includes('สั่งซื้อ') || selectedDocType?.name?.toUpperCase().includes('PO') || selectedDocType?.name?.toLowerCase().includes('purchase order');
-                const isInvoice = selectedDocType?.name?.includes('ใบแจ้งหนี้') || selectedDocType?.name?.includes('ใบวางบิล') || selectedDocType?.name?.toLowerCase().includes('invoice') || selectedDocType?.name?.toLowerCase().includes('billing note');
-                const isWithholdingTax = selectedDocType?.name?.includes('หัก ณ ที่จ่าย') || selectedDocType?.name?.includes('50 ทวิ');
-
-                if (isPO && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
-                  return (
-                    <div className="bg-white mx-auto shadow-sm" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
-                      <PurchaseOrderPrintLayout data={mapDocumentToTemplateData(dummyDocument, company, dummyDocument.createdBy)} />
-                    </div>
-                  );
-                }
-                
-                if (isQuotationDocument && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
-                  return <QuotationPrintLayout data={mapDocumentToTemplateData(dummyDocument, company, dummyDocument.createdBy)} />
-                }
-
-                if (isInvoice && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
-                  return (
-                    <div className="bg-white mx-auto shadow-sm" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
-                      <InvoicePrintLayout data={mapDocumentToTemplateData(dummyDocument, company, dummyDocument.createdBy)} />
-                    </div>
-                  );
-                }
-
-                if (isWithholdingTax && (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson))) {
-                  return (
-                    <div className="bg-white mx-auto shadow-sm" style={{ width: '100%', maxWidth: '800px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
-                      <WithholdingTaxPrintLayout data={mapDocumentToTemplateData(dummyDocument, company, dummyDocument.createdBy)} />
-                    </div>
-                  );
-                }
-
                 if (!previewTemplate || !hasLayoutElements(previewTemplate.layoutJson)) {
-                  return (
-                    <div className="p-10 text-center text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 max-w-lg mx-auto mt-10">
-                      ไม่มีเทมเพลตสำหรับรูปแบบมาตรฐาน กรุณาบันทึกเอกสารหรือเลือกเทมเพลตอื่น
-                    </div>
-                  );
+                  return <StandardDocumentPrintLayout document={dummyDocument} company={company} createdBy={dummyDocument.createdBy} />
                 }
 
                 return (

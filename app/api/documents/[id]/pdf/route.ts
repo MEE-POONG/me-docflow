@@ -1,3 +1,5 @@
+import { cookies } from 'next/headers'
+import { requireDocumentAccess } from '@/lib/document-access'
 import { chromium } from 'playwright'
 import { prisma } from '@/lib/prisma'
 import { getDocumentCompany } from '@/app/actions/documents'
@@ -11,7 +13,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { id } = await params
     const input = await request.json()
     const company = await getDocumentCompany(input)
-    const document = await prisma.document.findFirst({ where: { id, companyId: company.id } })
+    const { document } = await requireDocumentAccess(id, 'view', input)
     if (!document) return Response.json({ error: 'ไม่พบเอกสารในบริษัทนี้' }, { status: 404 })
     const templateId = document.isLocked ? document.templateId || '' : String(input.templateId ?? document.templateId ?? '')
     if (templateId && !document.isLocked) {
@@ -24,6 +26,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     url.searchParams.set('templateId', templateId)
     browser = await chromium.launch(process.env.PDF_CHROME_PATH ? { executablePath: process.env.PDF_CHROME_PATH } : process.platform === 'win32' ? { channel: 'chrome' } : {})
     const page = await browser.newPage()
+    const sessionCookie = (await cookies()).get('me_docflow_profile_session')
+    if (sessionCookie) await page.context().addCookies([{ name: sessionCookie.name, value: sessionCookie.value, url: new URL(base).origin, httpOnly: true, sameSite: 'Lax' }])
     const response = await page.goto(url.toString(), { waitUntil: 'networkidle', timeout: 60000 })
     if (!response?.ok()) throw new Error('โหลดเอกสารสำหรับ PDF ไม่สำเร็จ')
     await page.locator('.print-section').first().waitFor()

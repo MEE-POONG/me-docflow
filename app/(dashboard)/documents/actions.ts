@@ -1,4 +1,7 @@
 'use server';
+
+import { requireDocumentUser, requireDocumentAccess, documentPermissions, documentVisibilityWhere } from '@/lib/document-access';
+import { requireDocumentApprover } from '@/lib/document-approval-access';
 import { signaturePayload } from '@/lib/document-signature';
 
 import { prisma } from '@/lib/prisma';
@@ -7,33 +10,13 @@ import { DocumentStatus } from '@prisma/client';
 
 // Helper to get a default company since there's no auth yet
 async function getDefaultCompanyId() {
-  let company = await prisma.company.findFirst();
-  if (!company) {
-    company = await prisma.company.create({
-      data: {
-        name: 'Default Company',
-        legalName: 'Default Company Ltd.',
-      },
-    });
-  }
-  return company.id;
+  return (await requireDocumentUser()).companyId;
 }
 
 // Helper to get or create a default user
 async function getDefaultUserId(companyId: string) {
-  let user = await prisma.companyUser.findFirst({ where: { companyId } });
-  if (!user) {
-    user = await prisma.companyUser.create({
-      data: {
-        companyId,
-        name: 'Admin',
-        email: 'admin@default.com',
-        passwordHash: 'hashed',
-        role: 'OWNER',
-        status: 'ACTIVE',
-      },
-    });
-  }
+  const user = await requireDocumentUser();
+  if (user.companyId !== companyId) throw new Error('บริษัทไม่ถูกต้อง');
   return user.id;
 }
 
@@ -64,26 +47,12 @@ export type DocumentWithRelations = {
   category: { id: string; name: string };
   documentType: { id: string; name: string };
   createdBy: { id: string; name: string };
+  canManage?: boolean;
+  canEdit?: boolean;
 };
 
 export async function getDocuments(): Promise<DocumentWithRelations[]> {
-  const companyId = await getDefaultCompanyId();
-  return prisma.document.findMany({
-    where: { companyId },
-    orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      documentNo: true,
-      title: true,
-      status: true,
-      note: true,
-      createdAt: true,
-      updatedAt: true,
-      category: { select: { id: true, name: true } },
-      documentType: { select: { id: true, name: true } },
-      createdBy: { select: { id: true, name: true } },
-    },
-  });
+  return getDocumentsByCompany((await requireDocumentUser()).companyId);
 }
 
 function getValidCompanyId(companyId: string) {
@@ -92,11 +61,13 @@ function getValidCompanyId(companyId: string) {
 
 export async function getDocumentsByCompany(companyId: string): Promise<DocumentWithRelations[]> {
   if (!getValidCompanyId(companyId)) return [];
-  return prisma.document.findMany({
-    where: { companyId },
+  const user = await requireDocumentUser();
+  if (companyId !== user.companyId) throw new Error('บริษัทไม่ถูกต้อง');
+  const rows = await prisma.document.findMany({
+    where: documentVisibilityWhere(user),
     orderBy: { createdAt: 'desc' },
     select: {
-      id: true,
+      id: true, companyId: true, createdById: true, editorUserIds: true,
       documentNo: true,
       title: true,
       status: true,
@@ -108,13 +79,16 @@ export async function getDocumentsByCompany(companyId: string): Promise<Document
       createdBy: { select: { id: true, name: true } },
     },
   });
+  return rows.map(row => ({ ...row, ...documentPermissions(user, row) }));
 }
 
 export async function getPendingDocumentsByCompany(companyId: string) {
   if (!getValidCompanyId(companyId)) return [];
+  const user = await requireDocumentUser();
+  if (user.companyId !== companyId) throw new Error('บริษัทไม่ถูกต้อง');
   return prisma.document.findMany({
     where: {
-      companyId,
+      ...documentVisibilityWhere(user),
       status: {
         in: ['PENDING', 'APPROVED', 'REJECTED']
       }
@@ -238,6 +212,7 @@ export async function createDocument(data: {
   totalSatang?: number;
 }) {
   const companyId = await getDefaultCompanyId();
+  if (data.status === 'APPROVED') throw new Error('กรุณาส่งเอกสารรออนุมัติก่อน');
   const createdById = await getDefaultUserId(companyId);
 
   // Auto-generate documentNo based on count
@@ -281,9 +256,11 @@ export async function updateDocument(
     totalSatang?: number;
   }
 ) {
+  if (data.status === 'APPROVED') throw new Error('กรุณาใช้ปุ่มอนุมัติเอกสาร');
   const companyId = await getDefaultCompanyId();
+  await requireDocumentAccess(id, 'edit');
   const document = await prisma.document.update({
-    where: { id, companyId, isLocked: false },
+    where: { id, companyId, isLocked: false, status: { in: ['DRAFT', 'REJECTED'] } },
     data: {
       title: data.title,
       categoryId: data.categoryId,
@@ -302,7 +279,20 @@ export async function updateDocument(
 }
 
 export async function updateDocumentStatus(id: string, status: DocumentStatus) {
+  if (status === 'APPROVED') {
+    const user = await requireDocumentApprover();
+    await requireDocumentAccess(id);
+    await prisma.document.update({
+      where: { id, companyId: user.companyId, status: 'PENDING', isLocked: false },
+      data: { status, approvedAt: new Date(), approvedById: user.id },
+    });
+    revalidatePath('/documents');
+    revalidatePath('/documents/pending');
+    return;
+  }
   const companyId = await getDefaultCompanyId();
+  await requireDocumentAccess(id, 'edit');
+  if (status === 'PENDING') throw new Error('กรุณาลงนามและยื่นผ่านหน้าเอกสาร');
   await prisma.document.update({
     where: { id, companyId, isLocked: false },
     data: { status },
@@ -311,6 +301,7 @@ export async function updateDocumentStatus(id: string, status: DocumentStatus) {
 }
 
 export async function deleteDocument(id: string) {
+  await requireDocumentAccess(id, 'manage');
   const companyId = await getDefaultCompanyId();
   const locked = await prisma.document.findFirst({ where: { id, companyId, isLocked: true }, select: { id: true } });
   if (locked) throw new Error('เอกสารลงนามแล้ว ไม่สามารถลบได้');

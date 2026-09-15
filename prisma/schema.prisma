@@ -252,6 +252,7 @@ model CompanyUser {
   email        String
   passwordHash String
   phone        String?
+  position     String?
 
   role   CompanyUserRole @default(STAFF)
   status UserStatus      @default(ACTIVE)
@@ -282,6 +283,7 @@ model Department {
   name        String
   description String?
   isActive    Boolean @default(true)
+  positions   String[] @default([])
 
   users     CompanyUser[]
   employees Employee[]
@@ -494,6 +496,8 @@ model Document {
 
   employeeId String?   @db.ObjectId
   employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  editorUserIds String[] @default([]) @db.ObjectId
 
   documentNo String
   title      String

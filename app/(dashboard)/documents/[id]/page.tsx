@@ -1,3 +1,4 @@
+import { requireDocumentAccess } from '@/lib/document-access'
 import { DocumentSignaturePage } from '@/components/templates/DocumentSignaturePage'
 import { SignDocumentButton } from './SignDocumentButton'
 import { SubmitForApprovalButton } from './SubmitForApprovalButton'
@@ -8,11 +9,8 @@ import { ArrowLeft, Calendar, FileText, User, CheckCircle2, XCircle, Clock, File
 import { format } from 'date-fns'
 import { th } from 'date-fns/locale'
 import { PreviewActions, PrintHelper, PrintActions } from './PrintHelper'
+import { StandardDocumentPrintLayout } from '@/components/templates/StandardDocumentPrintLayout'
 import { DocumentPreview } from '@/components/templates/builder/DocumentPreview'
-import { PurchaseOrderPrintLayout } from '@/components/templates/PurchaseOrderPrintLayout'
-import { QuotationPrintLayout } from '@/components/templates/QuotationPrintLayout'
-import { InvoicePrintLayout } from '@/components/templates/InvoicePrintLayout'
-import { WithholdingTaxPrintLayout } from '@/components/templates/WithholdingTaxPrintLayout'
 import { mapDocumentToTemplateData } from '@/lib/template-data-mapping'
 
 
@@ -21,6 +19,7 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const documentId = resolvedParams.id;
+  const access = await requireDocumentAccess(documentId);
   const isPrint = resolvedSearchParams.print === 'true';
   const isPreview = resolvedSearchParams.preview === 'true';
   const selectedTemplateId = resolvedSearchParams.templateId;
@@ -58,21 +57,13 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
   const layoutData = activeTemplate?.layoutJson as { pages?: unknown[], elements?: unknown[] } | null | undefined
   const hasLayout = Boolean(layoutData && ((layoutData.pages?.length ?? 0) > 0 || (layoutData.elements?.length ?? 0) > 0))
 
-  const isPO = document.documentType?.name?.includes('สั่งซื้อ') || document.documentType?.name?.toUpperCase().includes('PO') || document.documentType?.name?.toLowerCase().includes('purchase order')
-  const isInvoice = document.documentType?.name?.includes('ใบแจ้งหนี้') || document.documentType?.name?.includes('ใบวางบิล') || document.documentType?.name?.toLowerCase().includes('invoice') || document.documentType?.name?.toLowerCase().includes('billing note')
-
   const typeName = document.documentType?.name || ''
-  const isQuotation = typeName.includes('ใบเสนอราคา') || typeName.toLowerCase().includes('quotation')
-  const isWithholdingTax = typeName.includes('หัก ณ ที่จ่าย') || typeName.includes('50 ทวิ')
   const mappedData = mapDocumentToTemplateData(document, document.company, document.createdBy)
   const documentBody = hasLayout && activeTemplate
     ? <DocumentPreview layoutJsonString={JSON.stringify(activeTemplate.layoutJson)} dataOverride={mappedData} />
-    : isQuotation ? <QuotationPrintLayout data={mappedData} signature={signature} submitterSignature={submitterSignature} />
-    : isPO ? <PurchaseOrderPrintLayout data={mappedData} />
-    : isInvoice ? <InvoicePrintLayout data={mappedData} />
-    : isWithholdingTax ? <WithholdingTaxPrintLayout data={mappedData} /> : null
+    : <StandardDocumentPrintLayout document={document} company={document.company} createdBy={document.createdBy} signature={signature} submitterSignature={submitterSignature} />
 
-  const hasInlineSignatures = isQuotation && !hasLayout
+  const hasInlineSignatures = !hasLayout
   const documentView = documentBody ? <>{documentBody}
     {submitterSignature && !hasInlineSignatures && <DocumentSignaturePage signature={submitterSignature} documentNo={document.documentNo} signerLabel="ผู้ยื่นขออนุมัติ" />}
     {signature && !hasInlineSignatures && <DocumentSignaturePage signature={signature} documentNo={document.documentNo} signerLabel="ผู้อนุมัติ" />}
@@ -109,24 +100,21 @@ export default async function DocumentDetailPage({ params, searchParams }: { par
         </Link>
 
         <div className="flex items-center gap-2">
-          {!document.isLocked && <Link href={`/documents/${document.id}/edit`} className="inline-flex h-9 items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50">
-            แก้ไขเอกสาร
-          </Link>}
-          {!document.isLocked && ['DRAFT', 'REJECTED', 'PENDING'].includes(document.status) && !submitterSignature && <SignDocumentButton
+          {access.canEdit && !document.isLocked && ['DRAFT', 'REJECTED', 'PENDING'].includes(document.status) && !submitterSignature && <SignDocumentButton
             signatureRole="submitter"
             autoOpen={resolvedSearchParams.sign === 'submitter'}
-            allowedSignerEmail={document.createdBy?.email}
+            allowedSignerEmail={access.user.email}
             inlineSignature={hasInlineSignatures}
             documentId={document.id}
             version={document.updatedAt.toISOString()}
             templateId={activeTemplate?.id || ''}
           />}
-          {(!document.isLocked || legacySubmitterSignature) && ['DRAFT', 'REJECTED', 'PENDING'].includes(document.status) && submitterSignature && !approvalSubmittedAt && <SubmitForApprovalButton
+          {access.canEdit && (!document.isLocked || legacySubmitterSignature) && ['DRAFT', 'REJECTED', 'PENDING'].includes(document.status) && submitterSignature && !approvalSubmittedAt && <SubmitForApprovalButton
             documentId={document.id}
             title={document.title}
-            allowedSignerEmail={document.createdBy?.email || ''}
+            allowedSignerEmail={submitterSignature?.userId === access.user.id ? access.user.email : 'unavailable'}
           />}
-          {!document.isLocked && document.status === 'APPROVED' && <SignDocumentButton inlineSignature={hasInlineSignatures} documentId={document.id} version={document.updatedAt.toISOString()} templateId={activeTemplate?.id || ''} />}
+          {access.user.position === 'หัวหน้า' && (!document.isLocked || legacySubmitterSignature) && (document.status === 'APPROVED' || (document.status === 'PENDING' && submitterSignature)) && <SignDocumentButton inlineSignature={hasInlineSignatures} documentId={document.id} version={document.updatedAt.toISOString()} templateId={activeTemplate?.id || ''} />}
           {(!document.isLocked || legacySubmitterSignature) && submitterSignature && <span className="text-sm text-emerald-700">ผู้ยื่นลงนามแล้ว</span>}
           {document.isLocked && !legacySubmitterSignature && <span className="text-sm text-blue-700">ลงนามแล้ว · ล็อกเอกสาร</span>}
           <PrintActions templates={document.isLocked ? [] : templates} currentTemplateId={activeTemplate?.id || null} documentId={document.id} documentTypeName={typeName} documentNo={document.documentNo} />

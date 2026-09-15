@@ -1,3 +1,4 @@
+import { requireDocumentUser, documentVisibilityWhere } from '@/lib/document-access';
 import { notFound } from 'next/navigation';
 import { PrismaClient } from '@prisma/client';
 import { getTemplateById } from '../../actions';
@@ -17,6 +18,7 @@ export default async function DesignerPage({ params }: Props) {
 
   const documents = await prisma.document.findMany({
     where: {
+      ...documentVisibilityWhere(await requireDocumentUser()),
       categoryId: template.categoryId,
       documentTypeId: template.documentTypeId,
     },

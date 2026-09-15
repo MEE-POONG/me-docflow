@@ -2,9 +2,13 @@ import React from 'react'
 
 const money = (value: unknown) => Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-type OnlineSignature = { image: string; name: string; signedAt: string }
+export type OnlineSignature = { image: string; name: string; signedAt: string }
 
-export function QuotationPrintLayout({ data, signature, submitterSignature }: { data: any; signature?: OnlineSignature | null; submitterSignature?: OnlineSignature | null }) {
+export function QuotationPrintLayout({ data, signature, submitterSignature, documentTitle = 'ใบเสนอราคา', dateLabel = 'วันที่เสนอราคา', dueDateLabel = 'ยืนราคาถึงวันที่', partyLabel = 'ลูกค้า', submitterLabel = 'ผู้เสนอราคา', approverLabel = 'ผู้อนุมัติสั่งซื้อ', children, details }: {
+  data: any; signature?: OnlineSignature | null; submitterSignature?: OnlineSignature | null;
+  documentTitle?: string; dateLabel?: string; dueDateLabel?: string; partyLabel?: string;
+  submitterLabel?: string; approverLabel?: string; children?: React.ReactNode; details?: React.ReactNode;
+}) {
   return (
     <article className="document-print-page relative mx-auto flex min-h-[297mm] w-full max-w-[210mm] flex-col bg-white p-8 text-[13px] leading-relaxed text-black shadow-lg print:shadow-none">
       <svg aria-hidden="true" className="absolute right-0 top-0 h-20 w-20 text-sky-500" viewBox="0 0 100 100" fill="currentColor"><path d="M0 0H100V100Z" /></svg>
@@ -16,18 +20,20 @@ export function QuotationPrintLayout({ data, signature, submitterSignature }: { 
           <p>โทร. {data.company_phone || '-'}</p>
         </div>
         <div className="pr-6">
-          <h1 className="mb-4 border-b pb-3 text-center text-3xl font-semibold text-sky-600">ใบเสนอราคา</h1>
+          <h1 className="mb-4 border-b border-sky-500 pb-3 text-center text-3xl font-semibold text-sky-600 break-words">{documentTitle}</h1>
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
             <dt>เลขที่เอกสาร</dt><dd className="text-right">{data.doc_no || '-'}</dd>
-            <dt>วันที่เสนอราคา</dt><dd className="text-right">{data.doc_date || '-'}</dd>
-            <dt>ยืนราคาถึงวันที่</dt><dd className="text-right">{data.expire_date || '-'}</dd>
+            <dt>{dateLabel}</dt><dd className="text-right">{data.doc_date || '-'}</dd>
+            {dueDateLabel && <><dt>{dueDateLabel}</dt><dd className="text-right">{data.expire_date || '-'}</dd></>}
           </dl>
         </div>
       </header>
+      {children ?? <>
       <section className="mb-8 grid grid-cols-2 gap-8">
-        <div><h2 className="font-semibold text-sky-700">ลูกค้า</h2><p className="font-semibold">{data.customer_name || '-'}</p><p className="whitespace-pre-wrap">{data.customer_address || '-'}</p></div>
+        <div><h2 className="font-semibold text-sky-700">{partyLabel}</h2><p className="font-semibold">{data.customer_name || '-'}</p><p className="whitespace-pre-wrap">{data.customer_address || '-'}</p></div>
         <div><h2 className="font-semibold text-sky-700">เลขที่อ้างอิง / ชื่อโครงการ</h2><p>{data.quotation_ref_no || '-'}</p></div>
       </section>
+      {details}
       <table className="mb-6 w-full border-collapse">
         <thead className="table-header-group"><tr className="border-y border-sky-200 bg-sky-50">
           {['#', 'รายละเอียด', 'จำนวน', 'หน่วย', 'ราคาต่อหน่วย', 'มูลค่า'].map((heading, index) => <th key={heading} className={'p-2 font-semibold ' + (index >= 2 ? 'text-right' : 'text-left')}>{heading}</th>)}
@@ -45,22 +51,23 @@ export function QuotationPrintLayout({ data, signature, submitterSignature }: { 
       </dl>
       {data.payment_terms && <section className="mb-5"><h2 className="font-semibold text-sky-700">เงื่อนไขการชำระเงิน</h2><p className="whitespace-pre-wrap">{data.payment_terms}</p></section>}
       {data.remarks && <section className="mb-5"><h2 className="font-semibold text-sky-700">หมายเหตุ</h2><p className="whitespace-pre-wrap">{data.remarks}</p></section>}
+      </>}
       <footer className="mt-auto grid grid-cols-2 items-start gap-20 pt-8 text-center break-inside-avoid">
         <div>
           <div className="flex h-24 items-end justify-center pb-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {submitterSignature && <img src={submitterSignature.image} alt="ลายเซ็นผู้ยื่นขออนุมัติ" width={240} height={88} className="h-full w-full object-contain" />}
           </div>
-          <p className="border-t pt-3">ผู้เสนอราคา</p>
+          <p className="border-t pt-3">{submitterLabel}</p>
           <p>{submitterSignature?.name || data.employee?.name || '-'}</p>
           {submitterSignature && <p>วันที่ {new Date(submitterSignature.signedAt).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}</p>}
         </div>
         <div>
           <div className="flex h-24 items-end justify-center pb-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            {signature && <img src={signature.image} alt="ลายเซ็นผู้อนุมัติสั่งซื้อ" width={240} height={88} className="h-full w-full object-contain" />}
+            {signature && <img src={signature.image} alt="ลายเซ็นผู้อนุมัติ" width={240} height={88} className="h-full w-full object-contain" />}
           </div>
-          <p className="border-t pt-3">ผู้อนุมัติสั่งซื้อ</p>
+          <p className="border-t pt-3">{approverLabel}</p>
           {signature && <p>{signature.name}</p>}
           <p>{signature ? `วันที่ ${new Date(signature.signedAt).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}` : 'วันที่ ................................'}</p>
         </div>

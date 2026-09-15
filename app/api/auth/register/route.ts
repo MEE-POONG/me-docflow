@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { createProfileSession } from '@/lib/profile-session';
 import { CompanyUserRole, CompanyStatus, UserStatus, Prisma } from '@prisma/client';
 
 export async function POST(request: Request) {
@@ -88,6 +89,7 @@ export async function POST(request: Request) {
 
     // 6. Return response (excluding password hash)
     const { passwordHash: _, ...userWithoutPassword } = result;
+    await createProfileSession(result.id, result.companyId);
 
     return NextResponse.json(
       { 

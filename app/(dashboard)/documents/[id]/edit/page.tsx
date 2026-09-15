@@ -1,3 +1,4 @@
+import { requireDocumentAccess } from '@/lib/document-access'
 import { PrismaClient } from '@prisma/client'
 import { notFound } from 'next/navigation'
 import CreateDocumentForm from '../../create/CreateDocumentForm'
@@ -7,6 +8,8 @@ const prisma = new PrismaClient()
 export default async function EditDocumentPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const documentId = resolvedParams.id;
+  const access = await requireDocumentAccess(documentId, 'edit');
+  if (access.document.isLocked || !['DRAFT', 'REJECTED'].includes(access.document.status)) notFound();
 
   const document = await prisma.document.findUnique({
     where: { id: documentId },

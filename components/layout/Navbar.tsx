@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, Bell, Moon, Sun, ChevronDown, User, LogOut, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from 'next/link';
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSidebar } from "./SidebarContext";
@@ -23,10 +24,15 @@ export default function Navbar() {
   const { toggle } = useSidebar();
   const router = useRouter();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm("คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?")) {
+      try {
+        const response = await fetch('/api/auth/logout', { method: 'POST' });
+        if (!response.ok) throw new Error();
+      } catch { alert('ออกจากระบบไม่สำเร็จ กรุณาลองอีกครั้ง'); return; }
       localStorage.removeItem("me_docflow_user_session");
-      router.push("/login");
+      localStorage.removeItem("me_docflow_current_user");
+      window.location.href = '/login';
     }
   };
 
@@ -71,17 +77,9 @@ export default function Navbar() {
   };
 
   const handleSelectCompany = (companyId: string) => {
-    const updatedCompanies = companies.map(c => ({
-      ...c,
-      isActive: c.id === companyId
-    }));
-    localStorage.setItem("me_docflow_companies", JSON.stringify(updatedCompanies));
-    const selectedCompany = updatedCompanies.find(c => c.id === companyId);
-    const storedUser = JSON.parse(localStorage.getItem("me_docflow_current_user") || '{}');
-    localStorage.setItem("me_docflow_current_user", JSON.stringify({ ...storedUser, companyId, companyName: selectedCompany?.companyName || selectedCompany?.name || '' }));
     setIsCompanyMenuOpen(false);
-    window.dispatchEvent(new Event("activeCompanyChanged"));
-    window.location.reload();
+    const storedUser = JSON.parse(localStorage.getItem('me_docflow_current_user') || '{}');
+    if (companyId !== storedUser.companyId) window.location.href = '/login';
   };
 
   useEffect(() => {
@@ -300,6 +298,9 @@ export default function Navbar() {
                 </div>
               </div>
               <div className="border-t border-gray-100 dark:border-gray-700 p-2">
+                <Link href="/profile" onClick={() => setIsUserMenuOpen(false)} className="mb-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 dark:text-gray-200 dark:hover:bg-gray-700">
+                  <User className="h-4 w-4" /><span>โปรไฟล์ของฉัน</span>
+                </Link>
                 <button 
                   onClick={handleDeleteAccount}
                   disabled={isDeleting}

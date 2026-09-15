@@ -1,22 +1,24 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import { requireDocumentAccess } from '@/lib/document-access'
+import { prisma } from '@/lib/prisma'
+import { getDocumentApprover, requireDocumentApprover } from '@/lib/document-approval-access'
 import { revalidatePath } from 'next/cache'
 
-const prisma = new PrismaClient()
+export async function canApproveDocuments() {
+  return !!await getDocumentApprover()
+}
 
 export async function approveDocument(documentId: string) {
   try {
-    // In a real app, we would verify the user's permissions and session here.
-    // For this mock, we will just update the document status directly.
-
+    const user = await requireDocumentApprover()
+    await requireDocumentAccess(documentId)
     await prisma.document.update({
-      where: { id: documentId },
+      where: { id: documentId, companyId: user.companyId, status: 'PENDING', isLocked: false },
       data: {
         status: 'APPROVED',
         approvedAt: new Date(),
-        // Mocking action user ID for now
-        // approvedById: 'some-user-id' 
+        approvedById: user.id, 
       }
     })
 
@@ -26,14 +28,15 @@ export async function approveDocument(documentId: string) {
     return { success: true }
   } catch (error) {
     console.error('Failed to approve document:', error)
-    return { success: false, error: 'Failed to approve document' }
+    return { success: false, error: error instanceof Error ? error.message : 'อนุมัติเอกสารไม่สำเร็จ' }
   }
 }
 
 export async function rejectDocument(documentId: string, reason: string) {
   try {
+    const { user } = await requireDocumentAccess(documentId)
     await prisma.document.update({
-      where: { id: documentId },
+      where: { id: documentId, companyId: user.companyId },
       data: {
         status: 'REJECTED',
         rejectedAt: new Date(),

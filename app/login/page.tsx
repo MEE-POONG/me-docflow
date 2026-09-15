@@ -64,6 +64,9 @@ export default function LoginPage() {
   const [loginIdentifier, setLoginIdentifier] = useState(""); // Email or Phone
   const [loginPassword, setLoginPassword] = useState("");
 
+  const [loginCompanies, setLoginCompanies] = useState<{id: string; name: string; department: string; position: string}[]>([]);
+  const [loginCompanyId, setLoginCompanyId] = useState('');
+
   // Register State
   const [regStep, setRegStep] = useState<1 | 2 | 3>(1);
   const [regEmail, setRegEmail] = useState("");
@@ -142,9 +145,10 @@ export default function LoginPage() {
       localStorage.setItem('me_docflow_admin_logged_in', 'true'); router.push('/admin/dashboard'); return;
     }
     try {
-      const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: loginIdentifier, password: loginPassword }) });
+      const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier: loginIdentifier, password: loginPassword, companyId: loginCompanyId || undefined }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
+      if (data.selectCompany) { setLoginCompanies(data.companies); return; }
       localStorage.setItem('me_docflow_current_user', JSON.stringify(data.user));
       localStorage.setItem('me_docflow_user_session', 'true');
       const companies = JSON.parse(localStorage.getItem('me_docflow_companies') || '[]').filter((c: any) => c.id !== data.user.companyId).map((c: any) => ({ ...c, isActive: false }));
@@ -340,6 +344,7 @@ export default function LoginPage() {
           {activeTab === "login" ? (
             /* ================= LOGIN FORM ================= */
             <form onSubmit={handleLogin} className="space-y-5">
+              {loginCompanies.length > 1 && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><label htmlFor="login-company" className="block font-semibold">เลือกบริษัทที่ต้องการเข้าใช้งาน</label><p className="my-2 text-sm">บัญชีนี้อยู่ในหลายบริษัท กรุณาตรวจชื่อและแผนก</p><select id="login-company" required value={loginCompanyId} onChange={e => setLoginCompanyId(e.target.value)} className="w-full rounded-lg border bg-white p-3"><option value="">เลือกบริษัท</option>{loginCompanies.map(c => <option key={c.id} value={c.id}>{c.name} — {c.department} {c.position} ({c.id.slice(-6)})</option>)}</select></div>}
               <div>
                 <label className="block text-sm font-medium text-gray-700">อีเมล หรือ เบอร์โทรศัพท์</label>
                 <div className="mt-1.5 relative">
@@ -350,7 +355,7 @@ export default function LoginPage() {
                     type="text"
                     required
                     value={loginIdentifier}
-                    onChange={(e) => setLoginIdentifier(e.target.value)}
+                    onChange={(e) => { setLoginIdentifier(e.target.value); setLoginCompanyId(''); setLoginCompanies([]); }}
                     className="appearance-none block w-full pl-11 pr-3 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
                     placeholder="you@example.com หรือ 0812345678"
                   />
@@ -367,7 +372,7 @@ export default function LoginPage() {
                     type={showLoginPassword ? "text" : "password"}
                     required
                     value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
+                    onChange={(e) => { setLoginPassword(e.target.value); setLoginCompanyId(''); setLoginCompanies([]); }}
                     className="appearance-none block w-full pl-11 pr-10 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 text-sm transition-all"
                     placeholder="••••••••"
                   />

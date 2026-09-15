@@ -1,5 +1,6 @@
 'use client'
 
+import DocumentAccessButton from './DocumentAccessButton'
 import { useTransition } from 'react'
 import { Edit2, Trash2, Loader2, FileText, Send } from 'lucide-react'
 import Link from 'next/link'
@@ -7,7 +8,7 @@ import { deleteDocument } from '@/app/actions/documents'
 import { useLanguage } from '@/lib/i18n/LanguageContext'
 import { getDocumentActor } from '@/lib/document-actor'
 
-export default function DocumentActions({ id, title, status }: { id: string, title: string, status?: string }) {
+export default function DocumentActions({ id, title, status, canEdit = false, canManage = false }: { id: string, title: string, status?: string, canEdit?: boolean, canManage?: boolean }) {
   const [isPending, startTransition] = useTransition()
   const { t } = useLanguage()
 
@@ -34,7 +35,7 @@ export default function DocumentActions({ id, title, status }: { id: string, tit
         <FileText className="w-4 h-4" />
       </Link>
       
-      {(!status || status === 'DRAFT' || status === 'REJECTED') && (
+      {canEdit && (!status || status === 'DRAFT' || status === 'REJECTED') && (
         <>
           <Link
             href={`/documents/${id}/edit`}
@@ -53,14 +54,15 @@ export default function DocumentActions({ id, title, status }: { id: string, tit
         </>
       )}
 
-      <button
+      {canManage && <DocumentAccessButton id={id} title={title} />}
+      {canManage && <button
         onClick={handleDelete}
         disabled={isPending}
         className="inline-flex items-center justify-center p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors disabled:opacity-50"
         title={t.common.delete}
       >
         {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-      </button>
+      </button>}
     </div>
   )
 }
