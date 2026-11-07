@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     for (const user of users) {
       if (await bcrypt.compare(password, user.passwordHash)) matched.push(user)
     }
-    if (!companyId && matched.length > 1) return Response.json({ selectCompany: true, companies: matched.map(user => ({ id: user.companyId, name: user.company.name, department: user.department?.name || 'ยังไม่ระบุแผนก', position: user.position || '' })) })
+    if (!companyId && matched.length > 1) return Response.json({ selectCompany: true, companies: matched.map(user => ({ id: user.companyId, name: user.company.name, department: user.department?.name || 'ยังไม่ระบุแผนก', position: user.position || '', role: user.role.toLowerCase() })) })
     for (const user of matched) {
       if (companyId && user.companyId !== companyId) continue
       await ensureEmployeeCode(user.id)

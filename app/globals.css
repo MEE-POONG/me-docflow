@@ -34,6 +34,28 @@ body {
   color: var(--foreground);
 }
 
+@media print {
+  @page { size: A4; margin: 16mm; }
+  body:has(.payroll-print-slip) { margin: 0 !important; background: #fff !important; }
+  body:has(.payroll-print-slip) main,
+  body:has(.payroll-print-slip) .overflow-hidden { overflow: visible !important; }
+  body:has(.payroll-print-slip) * { visibility: hidden !important; }
+  body:has(.payroll-print-slip) .payroll-print-slip,
+  body:has(.payroll-print-slip) .payroll-print-slip * { visibility: visible !important; }
+  body:has(.payroll-print-slip) .payroll-print-slip {
+    position: fixed !important;
+    inset: 0 !important;
+    width: auto !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #111827 !important;
+    box-shadow: none !important;
+  }
+  body:has(.payroll-print-slip) .payroll-print-slip .no-print { display: none !important; }
+}
+
 /* Admin Portal uses one consistent Thai/Latin typeface on every control. */
 .admin-sarabun,
 .admin-sarabun * {

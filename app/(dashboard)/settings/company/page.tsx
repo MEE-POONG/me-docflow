@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { getCurrentCompany, saveCurrentCompany } from './actions'
+import { storeCompanySession } from '@/lib/company-session-client'
 const labels = {name:'ชื่อบริษัท',legalName:'ชื่อจดทะเบียน',taxId:'เลขประจำตัวผู้เสียภาษี',address:'ที่อยู่',phone:'เบอร์โทรศัพท์',email:'อีเมลบริษัท'}
 type Company = Awaited<ReturnType<typeof getCurrentCompany>>['company']
 export default function CompanySettingsPage() {
@@ -18,7 +19,7 @@ export default function CompanySettingsPage() {
       if(!result.success) {setError(result.error || 'บันทึกไม่สำเร็จ');return}
       setSaved(true)
       const response=await fetch('/api/auth/me',{cache:'no-store'})
-      if(response.ok) {const {user}=await response.json();localStorage.setItem('me_docflow_current_user',JSON.stringify(user));localStorage.setItem('me_docflow_companies',JSON.stringify([{id:user.companyId,companyName:user.companyName,isActive:true}]));window.dispatchEvent(new Event('activeCompanyChanged'))}
+      if(response.ok) {const {user,companies}=await response.json();storeCompanySession(user,companies)}
     } catch {setError('บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง')} finally {setBusy(false)}
   }
   return <div className="mx-auto max-w-4xl space-y-6"><div><p className="text-xs font-bold text-emerald-600">การตั้งค่าระบบ</p><h1 className="mt-2 text-3xl font-bold">ข้อมูลบริษัท</h1><p className="mt-2 text-sm text-gray-500">ข้อมูลบริษัทส่วนกลางสำหรับผู้ใช้งานทุกบัญชีภายในบริษัทเดียวกัน</p></div>

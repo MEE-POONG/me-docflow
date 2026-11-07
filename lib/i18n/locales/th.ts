@@ -94,7 +94,7 @@ const th = {
     formPosition: "ตำแหน่ง",
     formDepartment: "แผนก",
     selectDepartment: "เลือกแผนก",
-    formSalary: "เงินเดือน (บาท)",
+    formSalary: "เงินเดือนต่อเดือน (บาท)",
     formStatus: "สถานะ",
     statusActive: "ACTIVE (ปกติ)",
     statusInvited: "INVITED (รอตอบรับ)",

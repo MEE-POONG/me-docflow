@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { getCompanyUsers, getCompanyUserDepartments, saveCompanyUser, deactivateCompanyUser } from './actions';
 import { getDocumentActor } from '@/lib/document-actor';
 import { normalizeLegacyCompanyRole } from '@/lib/company-user-roles';
+import { companyUserPositions } from '@/lib/company-user-positions';
 import { useRouter } from "next/navigation";
 import { 
   UserPlus, 
@@ -57,7 +58,9 @@ export default function UsersSettingsPage() {
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const loadRequest = useRef(0);
-  const availablePositions = departments.find(item => item.id === departmentId)?.positions || [];
+  const availablePositions: readonly string[] = departmentId
+    ? departments.find(item => item.id === departmentId)?.positions || []
+    : companyUserPositions;
 
 
 
@@ -275,12 +278,12 @@ export default function UsersSettingsPage() {
 
             <div>
               <label htmlFor="user-position" className="block text-xs font-bold text-gray-700 uppercase mb-1">ตำแหน่งงาน</label>
-              <select id="user-position" disabled={!departmentId || departmentsLoading || !!departmentError} value={position} onChange={e => setPosition(e.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+              <select id="user-position" disabled={departmentsLoading || !!departmentError} value={position} onChange={e => setPosition(e.target.value)} className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
                 <option value="">ยังไม่ระบุตำแหน่ง</option>
                 {position && !availablePositions.includes(position) && <option value={position} disabled>{position} (ไม่ได้กำหนดในแผนก กรุณาเลือกใหม่)</option>}
                 {availablePositions.map(item => <option key={item} value={item}>{item}</option>)}
               </select>
-              {!departmentId && <p className="mt-1 text-xs text-gray-500">เลือกแผนกก่อนเลือกตำแหน่งงาน</p>}
+              {!departmentId && <p className="mt-1 text-xs text-gray-500">เลือกตำแหน่งมาตรฐานได้เลย หรือเลือกแผนกก่อนเพื่อใช้ตำแหน่งเฉพาะแผนก</p>}
               {departmentId && !departmentsLoading && !departmentError && availablePositions.length === 0 && <p className="mt-1 text-xs text-amber-700">แผนกนี้ยังไม่ได้กำหนดตำแหน่ง กรุณาแก้ไขแผนกและเลือกตำแหน่งก่อน</p>}
             </div>
 

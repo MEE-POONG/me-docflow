@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test",
+    "test:finance": "node --test tests/accounting-payroll.test.cjs"
   },
   "dependencies": {
     "@prisma/client": "6.4.1",

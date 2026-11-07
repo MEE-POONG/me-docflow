@@ -113,6 +113,39 @@ enum PartnerType {
   VENDOR
 }
 
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum AccountingEntryType {
+  INCOME
+  EXPENSE
+  JOURNAL
+  SETTLEMENT
+  PAYROLL
+  PAYROLL_PAYMENT
+}
+
+enum AccountingEntryStatus {
+  POSTED
+  VOID
+}
+
+enum SettlementStatus {
+  OPEN
+  SETTLED
+  NOT_APPLICABLE
+}
+
+enum PayrollRunStatus {
+  POSTED
+  PAID
+}
+
 /**
  * =========================
  * SYSTEM ADMIN
@@ -218,6 +251,9 @@ model Company {
   documentFiles          DocumentFile[]
   customers              BusinessPartner[]
   employees              Employee[]
+  accounts               Account[]
+  accountingEntries      AccountingEntry[]
+  payrollRuns            PayrollRun[]
   approvalFlows          ApprovalFlow[]
   approvalSteps          ApprovalStep[]
   documentApprovals      DocumentApproval[]
@@ -282,7 +318,7 @@ model Department {
 
   name        String
   description String?
-  isActive    Boolean @default(true)
+  isActive    Boolean  @default(true)
   positions   String[] @default([])
 
   users     CompanyUser[]
@@ -384,9 +420,9 @@ model DocumentTemplate {
   description String?
 
   templateMode TemplateMode @default(FORM)
-  
-  formType     String?      @default("STANDARD")
-  formSchema   Json?
+
+  formType   String? @default("STANDARD")
+  formSchema Json?
 
   /**
    * layoutJson ใช้เก็บตำแหน่งกล่องข้อความ รูปภาพ ตาราง ลายเซ็น
@@ -661,6 +697,96 @@ model Employee {
 
 /**
  * =========================
+ * ACCOUNTING
+ * ผังบัญชี รายการบัญชีคู่ และรอบเงินเดือน
+ * =========================
+ */
+
+model Account {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  code        String
+  name        String
+  type        AccountType
+  description String?
+  isSystem    Boolean     @default(false)
+  isActive    Boolean     @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([companyId, type])
+}
+
+model AccountingEntry {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  entryDate         DateTime
+  referenceNo       String
+  entryType         AccountingEntryType
+  status            AccountingEntryStatus @default(POSTED)
+  settlementStatus  SettlementStatus      @default(NOT_APPLICABLE)
+  description       String
+  counterpartyName  String?
+  amountSatang      Int
+  totalDebitSatang  Int
+  totalCreditSatang Int
+  lines             Json
+
+  sourceEntryId      String? @db.ObjectId
+  sourcePayrollRunId String? @db.ObjectId
+  period             String?
+  createdById        String  @db.ObjectId
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, referenceNo])
+  @@index([companyId])
+  @@index([companyId, entryDate])
+  @@index([companyId, entryType])
+  @@index([companyId, sourceEntryId])
+  @@index([companyId, sourcePayrollRunId])
+}
+
+model PayrollRun {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  companyId String  @db.ObjectId
+  company   Company @relation(fields: [companyId], references: [id])
+
+  period           String
+  payDate          DateTime
+  status           PayrollRunStatus @default(POSTED)
+  employeeCount    Int
+  grossPaySatang   Int
+  additionsSatang  Int
+  deductionsSatang Int
+  netPaySatang     Int
+  slips            Json
+  journalEntryId   String?          @db.ObjectId
+  paymentEntryId   String?          @db.ObjectId
+  createdById      String           @db.ObjectId
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, period])
+  @@index([companyId])
+  @@index([companyId, payDate])
+  @@index([companyId, status])
+}
+
+/**
+ * =========================
  * APPROVAL FLOW
  * ระบบอนุมัติเอกสาร
  * =========================
@@ -819,11 +945,11 @@ model AuditLog {
  */
 
 model MasterBusinessType {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  value     String   @unique
-  label     String
-  isActive  Boolean  @default(true)
-  
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  value    String  @unique
+  label    String
+  isActive Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

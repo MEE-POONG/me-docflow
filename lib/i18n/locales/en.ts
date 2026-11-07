@@ -94,7 +94,7 @@ const en = {
     formPosition: "Position",
     formDepartment: "Department",
     selectDepartment: "Select Department",
-    formSalary: "Salary",
+    formSalary: "Monthly salary (THB)",
     formStatus: "Status",
     statusActive: "ACTIVE",
     statusInvited: "INVITED",

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { storeCompanySession } from '@/lib/company-session-client';
 import {
   Phone,
   Lock,
@@ -64,7 +65,7 @@ export default function LoginPage() {
   const [loginIdentifier, setLoginIdentifier] = useState(""); // Email or Phone
   const [loginPassword, setLoginPassword] = useState("");
 
-  const [loginCompanies, setLoginCompanies] = useState<{id: string; name: string; department: string; position: string}[]>([]);
+  const [loginCompanies, setLoginCompanies] = useState<{id: string; name: string; department: string; position: string; role: string}[]>([]);
   const [loginCompanyId, setLoginCompanyId] = useState('');
 
   // Register State
@@ -149,11 +150,14 @@ export default function LoginPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       if (data.selectCompany) { setLoginCompanies(data.companies); return; }
-      localStorage.setItem('me_docflow_current_user', JSON.stringify(data.user));
-      localStorage.setItem('me_docflow_user_session', 'true');
-      const companies = JSON.parse(localStorage.getItem('me_docflow_companies') || '[]').filter((c: any) => c.id !== data.user.companyId).map((c: any) => ({ ...c, isActive: false }));
-      localStorage.setItem('me_docflow_companies', JSON.stringify([...companies, { id: data.user.companyId, companyName: data.user.companyName, ownerEmail: data.user.email, isActive: true }]));
-      window.dispatchEvent(new Event('activeCompanyChanged'));
+      const companies = loginCompanies.map(company => ({
+        id: company.id,
+        companyName: company.name,
+        ownerEmail: data.user.email,
+        isActive: false,
+        role: company.role,
+      }));
+      storeCompanySession(data.user, companies.length ? companies : undefined);
       router.push('/dashboard');
     } catch (error) { alert(error instanceof Error ? error.message : 'เข้าสู่ระบบไม่สำเร็จ'); }
   };

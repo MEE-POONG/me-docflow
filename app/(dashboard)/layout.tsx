@@ -4,6 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
 import { SidebarProvider } from "@/components/layout/SidebarContext";
 import { connection } from "next/server";
+import { getFinanceCapabilities } from '@/lib/finance-access';
 
 export default async function DashboardLayout({
   children,
@@ -13,13 +14,16 @@ export default async function DashboardLayout({
   // Dashboard routes depend on tenant/session data and MongoDB. Defer the entire
   // route group until a real request so production builds never query the database.
   await connection();
-  const canManagePeople = !!(await getPeopleManager().catch(() => null));
+  const [canManagePeople, financeCapabilities] = await Promise.all([
+    getPeopleManager().then(Boolean).catch(() => false),
+    getFinanceCapabilities(),
+  ]);
 
   return (
     <SidebarProvider>
       <SessionSync />
       <div className="flex min-h-screen bg-[#f8f9fa] dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 transition-colors">
-        <Sidebar canManagePeople={canManagePeople} />
+        <Sidebar canManagePeople={canManagePeople} {...financeCapabilities} />
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <Navbar />
           <main className="flex-1 p-4 md:p-8 overflow-y-auto">

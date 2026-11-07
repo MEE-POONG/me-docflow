@@ -1,11 +1,13 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import reactHooks from "eslint-plugin-react-hooks";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    plugins: { "react-hooks": reactHooks },
     rules: {
       // The existing application still has broad API/form payloads whose exact shapes
       // are supplied at runtime. Keep these visible without blocking builds while the
@@ -16,6 +18,13 @@ const eslintConfig = defineConfig([
       // than release-blocking errors.
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/purity": "warn",
+    },
+  },
+  {
+    files: ["**/*.js", "**/*.cjs"],
+    rules: {
+      // Repository maintenance scripts and Node's built-in test runner use CommonJS.
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
   // Override default ignores of eslint-config-next.

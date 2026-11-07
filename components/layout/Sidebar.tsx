@@ -2,27 +2,26 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   ShieldCheck,
   LayoutDashboard,
   FileText,
-  LayoutTemplate,
   Building2,
   Settings,
   PieChart,
   ChevronDown,
   ChevronRight,
-  LogOut,
   Key,
-  Menu
+  Menu,
+  Wallet,
+  Calculator
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { useSidebar } from "./SidebarContext";
 
-export default function Sidebar({ canManagePeople = false }: { canManagePeople?: boolean }) {
+export default function Sidebar({ canManagePeople = false, canManageAccounting = false, canViewPayroll = false }: { canManagePeople?: boolean; canManageAccounting?: boolean; canManagePayroll?: boolean; canViewPayroll?: boolean }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [activeCompanyName, setActiveCompanyName] = useState("บริษัท ของคุณ จำกัด");
   const { t } = useLanguage();
   const { isOpen, close, toggle } = useSidebar();
@@ -38,7 +37,7 @@ export default function Sidebar({ canManagePeople = false }: { canManagePeople?:
           const user = JSON.parse(userStr);
           currentCompanyId = user.companyId || "";
           registeredCompanyName = user.companyName || "";
-        } catch (e) { }
+        } catch { }
       }
       if (saved) {
         try {
@@ -54,7 +53,7 @@ export default function Sidebar({ canManagePeople = false }: { canManagePeople?:
             );
             return;
           }
-        } catch (e) { }
+        } catch { }
       }
       if (registeredCompanyName) setActiveCompanyName(registeredCompanyName);
     };
@@ -147,6 +146,16 @@ export default function Sidebar({ canManagePeople = false }: { canManagePeople?:
                 </div>
               )}
             </div>
+
+            {(canManageAccounting || canViewPayroll) && <div className="pt-2">
+              <p className={`${isOpen ? 'px-3' : 'sr-only'} mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400`}>การเงินและบุคคล</p>
+              {canManageAccounting && <Link href="/accounting" className={`flex items-center ${isOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg transition-colors ${pathname.startsWith('/accounting') ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`} title={!isOpen ? 'บัญชีบริษัท' : undefined}>
+                <Calculator size={20} className="shrink-0 text-gray-400" />{isOpen && <span className="text-sm truncate">บัญชีบริษัท</span>}
+              </Link>}
+              {canViewPayroll && <Link href="/payroll" className={`flex items-center ${isOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg transition-colors ${pathname.startsWith('/payroll') ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`} title={!isOpen ? 'เงินเดือนและสลิป' : undefined}>
+                <Wallet size={20} className="shrink-0 text-gray-400" />{isOpen && <span className="text-sm truncate">เงินเดือนและสลิป</span>}
+              </Link>}
+            </div>}
 
             {/* Template */}
 

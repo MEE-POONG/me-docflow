@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useTransition, useEffect, useRef } from 'react';
+import { useState, useTransition, useEffect } from 'react';
+import Link from 'next/link';
 import { Edit2, Trash2, X, Search, Loader2 } from 'lucide-react';
 import { updateEmployee, deleteEmployee, getEmployees, getDepartments } from './actions';
 import { getDocumentActor } from '@/lib/document-actor';
@@ -38,11 +39,12 @@ export default function EmployeesClient({
   initialEmployees: Employee[];
   departments: Department[];
 }) {
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [clientDepartments, setClientDepartments] = useState<Department[]>(departments);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingLinkedUser, setEditingLinkedUser] = useState(false);
   const { t } = useLanguage();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,25 +52,23 @@ export default function EmployeesClient({
   const [filterStatus, setFilterStatus] = useState('ALL');
   
   const [loadError, setLoadError] = useState('');
-  const [loading, setLoading] = useState(true);
-  const loadRequest = useRef(0);
   useEffect(() => {
+    let request = 0;
     const fetchMyEmployees = async () => {
-      const request = ++loadRequest.current;
+      const requestId = ++request;
       const actor = getDocumentActor();
-      setEmployees([]); setClientDepartments([]); setLoading(true); setLoadError('');
+      setEmployees([]); setClientDepartments([]); setLoadError('');
       setIsModalOpen(false); setFilterDepartment('ALL'); setFilterStatus('ALL');
       try {
         const [rows, depts] = await Promise.all([getEmployees(actor), getDepartments(actor)]);
-        if (request !== loadRequest.current) return;
+        if (requestId !== request) return;
         setEmployees(rows); setClientDepartments(depts);
       } catch (error) {
-        if (request === loadRequest.current) setLoadError(error instanceof Error ? error.message : 'โหลดรายชื่อพนักงานไม่สำเร็จ');
-      } finally { if (request === loadRequest.current) setLoading(false); }
+        if (requestId === request) setLoadError(error instanceof Error ? error.message : 'โหลดรายชื่อพนักงานไม่สำเร็จ');
+      }
     };
-    void fetchMyEmployees();
     window.addEventListener('activeCompanyChanged', fetchMyEmployees);
-    return () => { ++loadRequest.current; window.removeEventListener('activeCompanyChanged', fetchMyEmployees); };
+    return () => { request += 1; window.removeEventListener('activeCompanyChanged', fetchMyEmployees); };
   }, []);
 
   const [formData, setFormData] = useState({
@@ -93,7 +93,7 @@ export default function EmployeesClient({
     const statusMatch = filterStatus === 'ALL' || emp.status === filterStatus;
     return searchMatch && deptMatch && statusMatch;
   });
-  const showEmployeeActions = filteredEmployees.some(employee => !employee.companyUserId);
+  const showEmployeeActions = filteredEmployees.length > 0;
 
   const formatDateString = (date?: Date | null) => {
     if (!date) return '';
@@ -102,6 +102,7 @@ export default function EmployeesClient({
   };
 
   const handleOpenModal = (emp?: Employee) => {
+    setEditingLinkedUser(Boolean(emp?.companyUserId));
     if (emp) {
       setEditingId(emp.id);
       setFormData({
@@ -137,6 +138,7 @@ export default function EmployeesClient({
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
+    setEditingLinkedUser(false);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -163,10 +165,11 @@ export default function EmployeesClient({
         // Refetch employees after mutation to update the list locally
         const myEmps = await getEmployees(actor);
         if (getDocumentActor().companyId === actor.companyId) setEmployees(myEmps);
-        
+        setLoadError('');
         setIsModalOpen(false);
+        setEditingLinkedUser(false);
       } catch (error) {
-        console.error('Failed to save employee', error);
+        setLoadError(error instanceof Error ? error.message : 'บันทึกข้อมูลพนักงานไม่สำเร็จ');
       }
     });
   };
@@ -213,6 +216,11 @@ export default function EmployeesClient({
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           {t.employees.subtitle}
+        </p>
+        <p className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">
+          เพิ่มพนักงานพร้อมบัญชีเข้าใช้ที่{' '}
+          <Link href="/settings/users" className="font-semibold underline underline-offset-2">ตั้งค่า &gt; ผู้ใช้งาน</Link>
+          {' '}ระบบสร้างโปรไฟล์พนักงานให้อัตโนมัติ จากนั้นกด “แก้ไข” ในรายชื่อนี้เพื่อกำหนดเงินเดือน
         </p>
       </div>
 
@@ -308,20 +316,19 @@ export default function EmployeesClient({
                     </td>
                     {showEmployeeActions && <td className="px-3 py-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
-                        {!emp.companyUserId && <>
                         <button
                           onClick={() => handleOpenModal(emp)}
+                          aria-label={`${t.common.edit} ${emp.name}`}
                           className="flex items-center gap-1.5 px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors font-medium"
                         >
                           <Edit2 className="w-3 h-3" /> {t.common.edit}
                         </button>
-                        <button
+                        {!emp.companyUserId && <button
                           onClick={() => handleDelete(emp.id)}
                           className="flex items-center gap-1.5 px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors font-medium"
                         >
                           {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />} {t.common.delete}
-                        </button>
-                        </>}
+                        </button>}
                       </div>
                     </td>}
                   </tr>
@@ -349,12 +356,16 @@ export default function EmployeesClient({
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              {editingLinkedUser && <p className="rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:bg-sky-950/30 dark:text-sky-200">
+                พนักงานนี้ผูกกับบัญชีผู้ใช้แล้ว ชื่อ อีเมล แผนก และสถานะให้แก้ที่ ตั้งค่า &gt; ผู้ใช้งาน; หน้านี้ใช้กำหนดเงินเดือนและวันที่ทำงาน
+              </p>}
               <div className="grid grid-cols-2 gap-5">
                 
                 <div className="space-y-1.5 col-span-2 sm:col-span-1">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.employees.formCode}</label>
                   <input
                     type="text"
+                    disabled={editingLinkedUser}
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 transition-colors text-sm text-gray-700 dark:text-gray-200"
@@ -367,6 +378,7 @@ export default function EmployeesClient({
                   <input
                     required
                     type="text"
+                    disabled={editingLinkedUser}
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 transition-colors text-sm text-gray-700 dark:text-gray-200"
@@ -378,6 +390,7 @@ export default function EmployeesClient({
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.employees.formEmail}</label>
                   <input
                     type="email"
+                    disabled={editingLinkedUser}
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 transition-colors text-sm text-gray-700 dark:text-gray-200"
@@ -389,6 +402,7 @@ export default function EmployeesClient({
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.employees.formPhone}</label>
                   <input
                     type="text"
+                    disabled={editingLinkedUser}
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 transition-colors text-sm text-gray-700 dark:text-gray-200"
@@ -400,6 +414,7 @@ export default function EmployeesClient({
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.employees.formPosition}</label>
                   <input
                     type="text"
+                    disabled={editingLinkedUser}
                     value={formData.position}
                     onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 transition-colors text-sm text-gray-700 dark:text-gray-200"
@@ -410,6 +425,7 @@ export default function EmployeesClient({
                 <div className="space-y-1.5 col-span-2 sm:col-span-1">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.employees.formDepartment}</label>
                   <select
+                  disabled={editingLinkedUser}
                   value={formData.departmentId}
                   onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 dark:bg-gray-800 transition-colors"
@@ -425,6 +441,8 @@ export default function EmployeesClient({
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.employees.formSalary}</label>
                   <input
                     type="number"
+                    min="0.01"
+                    step="0.01"
                     value={formData.salaryBaht}
                     onChange={(e) => setFormData({ ...formData, salaryBaht: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 transition-colors text-sm text-gray-700 dark:text-gray-200"
@@ -435,6 +453,7 @@ export default function EmployeesClient({
                 <div className="space-y-1.5 col-span-2 sm:col-span-1">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.employees.formStatus}</label>
                   <select
+                    disabled={editingLinkedUser}
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'DELETED' })}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 transition-colors text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"

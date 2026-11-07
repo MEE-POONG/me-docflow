@@ -42,7 +42,6 @@ export async function saveCompanyUser(actor: DocumentActor, input: { id?: string
     const departmentId = input.departmentId === undefined ? current?.departmentId ?? null : input.departmentId || null
     const position = input.position === undefined ? current?.position ?? null : input.position || null
     if (position && !isCompanyUserPosition(position)) throw new Error('กรุณาเลือกตำแหน่งงานที่กำหนดไว้')
-    if (position && !departmentId) throw new Error('กรุณาเลือกแผนกก่อนเลือกตำแหน่งงาน')
     if (departmentId) {
       if (!/^[a-f\d]{24}$/i.test(departmentId)) throw new Error('แผนกที่เลือกไม่ถูกต้อง')
       const department = await prisma.department.findFirst({ where: { id: departmentId, companyId: admin.companyId, isActive: true }, select: { id: true, positions: true } })
